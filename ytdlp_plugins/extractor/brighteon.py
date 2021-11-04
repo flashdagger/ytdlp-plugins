@@ -70,6 +70,7 @@ class BrighteonIE(InfoExtractor):
             },
             "params": {
                 "skip_download": True,
+                "nocheckcertificate": True,
             },
         },
         {
@@ -324,6 +325,7 @@ class BrighteontvIE(BrighteonIE):
             },
             "params": {
                 "skip_download": True,
+                "nocheckcertificate": True,
             },
         }
     ]

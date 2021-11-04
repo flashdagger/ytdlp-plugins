@@ -11,3 +11,10 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-v --tb=line -p no:warnings"
+testpaths = [
+    "test",
+]
