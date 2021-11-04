@@ -100,7 +100,7 @@ class FakeYDL(YoutubeDL):
 
 def gettestcases(include_onlymatching=False):
     from inspect import getfile
-    from ytdlp_plugins import initialize
+    from . import initialize
 
     initialize()
 

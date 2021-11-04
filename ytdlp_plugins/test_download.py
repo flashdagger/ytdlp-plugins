@@ -1,34 +1,11 @@
 #!/usr/bin/env python3
 
-from __future__ import unicode_literals
-
-# Allow direct execution
-import os
-import sys
-import unittest
-from pathlib import Path
-
-SELF_PATH = Path(__file__)
-PROJECT_PATH = SELF_PATH.parents[1]
-
-sys.path.insert(0, str(PROJECT_PATH))
-
-from test.helper import (
-    assertGreaterEqual,
-    expect_info_dict,
-    expect_warnings,
-    get_params,
-    gettestcases,
-    #    is_download_test,
-    report_warning,
-    try_rm,
-)
-
-
 import hashlib
 import io
 import json
+import os
 import socket
+import unittest
 
 import yt_dlp.YoutubeDL
 from yt_dlp.compat import (
@@ -36,13 +13,24 @@ from yt_dlp.compat import (
     compat_urllib_error,
     compat_HTTPError,
 )
+from yt_dlp.extractor import get_info_extractor
 from yt_dlp.utils import (
     DownloadError,
     ExtractorError,
     format_bytes,
     UnavailableVideoError,
 )
-from yt_dlp.extractor import get_info_extractor
+
+from ._helper import (
+    assertGreaterEqual,
+    expect_info_dict,
+    expect_warnings,
+    get_params,
+    gettestcases,
+    is_download_test,
+    report_warning,
+    try_rm,
+)
 
 RETRIES = 3
 
@@ -53,7 +41,7 @@ class YoutubeDL(yt_dlp.YoutubeDL):
         self.processed_info_dicts = []
         super(YoutubeDL, self).__init__(*args, **kwargs)
 
-    def report_warning(self, message):
+    def report_warning(self, message, _only_once=False):
         # Don't accept warnings during tests
         raise ExtractorError(message)
 
@@ -70,7 +58,7 @@ def _file_md5(fn):
 defs = gettestcases()
 
 
-# @is_download_test
+@is_download_test
 class TestDownload(unittest.TestCase):
     # Parallel testing in nosetests. See
     # http://nose.readthedocs.org/en/latest/doc_tests/test_multiprocess/multiprocess.html
@@ -333,7 +321,3 @@ for name, num_tests in tests_counter.items():
     test_method.add_ie = ""
     setattr(TestDownload, test_method.__name__, test_method)
     del test_method
-
-
-if __name__ == "__main__":
-    unittest.main()
