@@ -14,14 +14,18 @@ from shutil import copytree
 from zipfile import ZipFile
 from zipimport import zipimporter
 
+from yt_dlp import main as ytdlp_main, extractor as ytdlp_ie, postprocessor as ytdlp_pp
+
 __version__ = "0.1.0"
 PACKAGE_NAME = __name__
 _INITIALIZED = False
 
 
+# pylint: disable=abstract-method
 class PluginLoader(Loader):
     """Dummy loader for virtual namespace packages"""
 
+    # pylint: disable=unused-argument, no-self-use
     def exec_module(self, module):
         return None
 
@@ -46,9 +50,10 @@ class PluginFinder(MetaPathFinder):
 
     def zip_has_dir(self, archive, path):
         if archive not in self._zip_content_cache:
-            self._zip_content_cache[archive] = [
-                Path(name) for name in ZipFile(archive).namelist()
-            ]
+            with ZipFile(archive) as fd:
+                self._zip_content_cache[archive] = [
+                    Path(name) for name in fd.namelist()
+                ]
         return any(path in file.parents for file in self._zip_content_cache[archive])
 
     def search_locations(self, fullname):
@@ -64,7 +69,7 @@ class PluginFinder(MetaPathFinder):
                         locations.append(str(candidate))
         return locations
 
-    def find_spec(self, fullname, path=None, target=None):
+    def find_spec(self, fullname, _path=None, _target=None):
         if fullname not in self.packages:
             return None
 
@@ -83,6 +88,7 @@ class PluginFinder(MetaPathFinder):
                 del sys.modules[package]
 
 
+# pylint: disable=global-statement, protected-access
 def initialize():
     global _INITIALIZED
     if _INITIALIZED:
@@ -103,6 +109,16 @@ def initialize():
     sys.meta_path.insert(
         0, PluginFinder(f"{PACKAGE_NAME}.extractor", f"{PACKAGE_NAME}.postprocessor")
     )
+
+    ie_plugins = load_plugins("extractor", "IE")
+    ytdlp_ie.__dict__.update(ie_plugins)
+    ytdlp_ie._PLUGIN_CLASSES.update(ie_plugins)
+    ytdlp_ie._ALL_CLASSES[:0] = ie_plugins.values()
+
+    pp_plugins = load_plugins("postprocessor", "PP")
+    ytdlp_pp.__dict__.update(pp_plugins)
+    ytdlp_pp._PLUGIN_CLASSES.update(pp_plugins)
+
     _INITIALIZED = True
 
 
@@ -118,7 +134,7 @@ def iter_modules(subpackage):
         yield from pkgutil_iter_modules(path=pkg.__path__, prefix=f"{fullname}.")
 
 
-def load_plugins(name, suffix, namespace):
+def load_plugins(name, suffix):
     classes = {}
 
     def gen_predicate(package_name):
@@ -131,7 +147,7 @@ def load_plugins(name, suffix, namespace):
 
         return check_predicate
 
-    for finder, module_name, is_pkg in iter_modules(name):
+    for finder, module_name, _is_pkg in iter_modules(name):
         try:
             if isinstance(finder, zipimporter):
                 module = finder.load_module(module_name)
@@ -139,16 +155,14 @@ def load_plugins(name, suffix, namespace):
                 spec = finder.find_spec(module_name)
                 module = module_from_spec(spec)
                 spec.loader.exec_module(module)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             print(f"Error while importing module '{module_name}'", file=sys.stderr)
             traceback.print_exc(limit=-1)
             continue
 
         sys.modules[module_name] = module
         module_classes = dict(getmembers(module, gen_predicate(module_name)))
-        name_collisions = (set(classes.keys()) | set(namespace.keys())) & set(
-            module_classes.keys()
-        )
+        name_collisions = set(classes.keys()) & set(module_classes.keys())
         classes.update(
             {
                 key: value
@@ -157,14 +171,9 @@ def load_plugins(name, suffix, namespace):
             }
         )
 
-    namespace.update(classes)
     return classes
 
 
-initialize()
-
-
 def main(argv=None):
-    import yt_dlp
-
-    yt_dlp.main(argv=argv)
+    initialize()
+    ytdlp_main(argv=argv)

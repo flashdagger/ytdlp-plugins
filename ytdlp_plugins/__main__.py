@@ -1,15 +1,13 @@
 # coding: utf-8
 
 import sys
+from pathlib import Path
 
-if __package__ is None and not hasattr(sys, "frozen"):
-    # direct call of __main__.py
-    import os.path
-
-    path = os.path.realpath(os.path.abspath(__file__))
-    sys.path.insert(0, os.path.dirname(os.path.dirname(path)))
-
-import ytdlp_plugins
+if __package__ is None and getattr(sys, "frozen", False) is False:
+    root_path = Path(__file__).parents[1]
+    sys.path.insert(0, str(root_path))
 
 if __name__ == "__main__":
+    import ytdlp_plugins
+
     ytdlp_plugins.main()
