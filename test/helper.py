@@ -1,14 +1,11 @@
-from __future__ import unicode_literals
-
 import errno
 import hashlib
 import io
 import json
+import os
 import re
-import ssl
 import sys
 import types
-import os
 from pathlib import Path
 
 import yt_dlp.extractor
@@ -83,8 +80,8 @@ class FakeYDL(YoutubeDL):
     def to_screen(self, s, skip_eol=None):
         print(s)
 
-    def trouble(self, s, tb=None):
-        raise Exception(s)
+    def trouble(self, message=None, tb=None):
+        raise Exception(message)
 
     def download(self, x):
         self.result.append(x)
@@ -103,6 +100,9 @@ class FakeYDL(YoutubeDL):
 
 def gettestcases(include_onlymatching=False):
     from inspect import getfile
+    from ytdlp_plugins import initialize
+
+    initialize()
 
     for klass in yt_dlp.extractor._PLUGIN_CLASSES.values():
         module_file = Path(getfile(klass))
@@ -335,12 +335,3 @@ def expect_warnings(ydl, warnings_re):
             real_warning(w)
 
     ydl.report_warning = _report_warning
-
-
-def http_server_port(httpd):
-    if os.name == "java" and isinstance(httpd.socket, ssl.SSLSocket):
-        # In Jython SSLSocket is not a subclass of socket.socket
-        sock = httpd.socket.sock
-    else:
-        sock = httpd.socket
-    return sock.getsockname()[1]
