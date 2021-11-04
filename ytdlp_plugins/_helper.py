@@ -20,16 +20,6 @@ from yt_dlp.utils import (
 )
 
 SELF_PATH = Path(__file__)
-PROJECT_PATH = SELF_PATH.parents[1]
-
-if "pytest" in sys.modules:
-    import pytest
-
-    is_download_test = pytest.mark.download
-else:
-
-    def is_download_test(testClass):
-        return testClass
 
 
 def get_params(override=None):
@@ -103,10 +93,11 @@ def gettestcases(include_onlymatching=False):
     from . import initialize
 
     initialize()
+    project_plugins = Path.cwd() / "ytdlp_plugins"
 
     for klass in yt_dlp.extractor._PLUGIN_CLASSES.values():
         module_file = Path(getfile(klass))
-        if PROJECT_PATH not in module_file.parents:
+        if project_plugins.is_dir() and project_plugins != module_file.parents[1]:
             continue
         ie = klass()
         for tc in ie.get_testcases(include_onlymatching):

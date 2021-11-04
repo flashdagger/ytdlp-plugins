@@ -27,7 +27,6 @@ from ._helper import (
     expect_warnings,
     get_params,
     gettestcases,
-    is_download_test,
     report_warning,
     try_rm,
 )
@@ -58,7 +57,6 @@ def _file_md5(fn):
 defs = gettestcases()
 
 
-@is_download_test
 class TestDownload(unittest.TestCase):
     # Parallel testing in nosetests. See
     # http://nose.readthedocs.org/en/latest/doc_tests/test_multiprocess/multiprocess.html
