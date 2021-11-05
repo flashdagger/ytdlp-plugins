@@ -16,7 +16,7 @@ from zipimport import zipimporter
 
 from yt_dlp import main as ytdlp_main, extractor as ytdlp_ie, postprocessor as ytdlp_pp
 
-__version__ = "2021.10.22.post1"
+__version__ = "2021.11.05"
 PACKAGE_NAME = __name__
 _INITIALIZED = False
 
