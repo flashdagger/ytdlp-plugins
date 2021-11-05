@@ -21,6 +21,7 @@ __version__ = "2021.11.05.post3"
 PACKAGE_NAME = __name__
 _INITIALIZED = False
 _FOUND = {}
+_OVERRIDDEN = []
 
 
 # pylint: disable=abstract-method
@@ -127,9 +128,15 @@ def iter_modules(subpackage):
         yield from pkgutil_iter_modules(path=pkg.__path__, prefix=f"{fullname}.")
 
 
+def detect_collisions(from_dict, to_dict):
+    collisions = set(from_dict.keys()) & set(to_dict.keys())
+    _OVERRIDDEN.extend(to_dict[key] for key in collisions)
+
+
 # noinspection PyBroadException
-def load_plugins(name, suffix):
+def load_plugins(name, suffix, namespace=None):
     classes = {}
+    namespace = namespace or {}
 
     def gen_predicate(package_name):
         def check_predicate(obj):
@@ -156,14 +163,12 @@ def load_plugins(name, suffix):
 
         sys.modules[module_name] = module
         module_classes = dict(getmembers(module, gen_predicate(module_name)))
-        name_collisions = set(classes.keys()) & set(module_classes.keys())
-        classes.update(
-            {
-                key: value
-                for key, value in module_classes.items()
-                if key not in name_collisions
-            }
-        )
+
+        detect_collisions(module_classes, classes)
+        classes.update(module_classes)
+
+    detect_collisions(classes, namespace)
+    namespace.update(classes)
 
     return classes
 
@@ -175,14 +180,12 @@ def add_plugins():
         postprocessor,
     )
 
-    ie_plugins = load_plugins("extractor", "IE")
+    ie_plugins = load_plugins("extractor", "IE", extractor.__dict__)
     _FOUND.update(ie_plugins)
-    extractor.__dict__.update(ie_plugins)
     getattr(extractor, "_ALL_CLASSES", [])[:0] = ie_plugins.values()
 
-    pp_plugins = load_plugins("postprocessor", "PP")
+    pp_plugins = load_plugins("postprocessor", "PP", postprocessor.__dict__)
     _FOUND.update(pp_plugins)
-    postprocessor.__dict__.update(pp_plugins)
 
 
 def monkey_patch(orig):
@@ -196,6 +199,12 @@ def monkey_patch(orig):
     return decorator
 
 
+def tabify(items, join_string=" "):
+    tabs = tuple(map(lambda x: max(len(str(s)) for s in x), zip(*items)))
+    for item in items:
+        yield join_string.join(f"{part!s:<{width}}" for part, width in zip(item, tabs))
+
+
 @monkey_patch(YoutubeDL.print_debug_header)
 def plugin_debug_header(self):
     plugin_list = []
@@ -207,18 +216,25 @@ def plugin_debug_header(self):
             version = f"(v{version})"
         alt_name = getattr(cls(), "IE_NAME", "")
         alt_name = "" if name.startswith(alt_name) else f"[{alt_name}]"
-        plugin_list.append((module_info, name, alt_name, version))
+        plugin_list.append((repr(name), alt_name, module_info, version))
 
     if plugin_list:
         plural_s = "s" if len(plugin_list) > 1 else ""
         self.write_debug(
-            f"Found plugin{plural_s} which are not part of yt-dlp. Use at your own risk."
+            f"Found {len(plugin_list)} plugin{plural_s} which are not part of yt-dlp. "
+            f"Use at your own risk."
         )
-        tab = tuple(map(lambda x: max(len(s) for s in x), zip(*plugin_list)))
-        for module_info, name, alt_name, version in sorted(plugin_list):
-            self.write_debug(
-                f"{name!r:{tab[1]}} {alt_name:{tab[2]}} {module_info:{tab[0]}} {version}"
-            )
+        for line in tabify(sorted(plugin_list)):
+            self.write_debug(line)
+    if _OVERRIDDEN:
+        self.write_debug(
+            f"There are also {len(_OVERRIDDEN)} overridden classes due to name collisions:"
+        )
+        items = [
+            (f"{cls.__name__!r}", f"from {cls.__module__!r}") for cls in _OVERRIDDEN
+        ]
+        for line in tabify(items):
+            self.write_debug(line)
 
     return plugin_debug_header.__original__(self)
 

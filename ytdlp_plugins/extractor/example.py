@@ -3,8 +3,8 @@
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import determine_ext
 
-
 __version__ = "2021.11.05.post3"
+
 
 # ℹ️ Instructions on making extractors can be found at:
 # 🔗 https://github.com/yt-dlp/yt-dlp/blob/master/CONTRIBUTING.md#adding-support-for-a-new-site
