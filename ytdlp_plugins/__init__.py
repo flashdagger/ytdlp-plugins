@@ -200,24 +200,23 @@ def monkey_patch(orig):
 def plugin_debug_header(self):
     plugin_list = []
     for name, cls in _FOUND.items():
-        _alt_name, _module_name = name, "<builtin>"
-        with suppress(AttributeError):
-            _module_name = getmodule(cls).__name__
-        with suppress(AttributeError):
-            _alt_name = cls().IE_NAME
-        full_name = (
-            f"{name!r}" if name.startswith(_alt_name) else f"{name!r} [{_alt_name}]"
-        )
-        plugin_list.append((_module_name, full_name))
+        module = getmodule(cls)
+        module_info = f"imported from {module.__name__}" if module else ""
+        version = getattr(module, "__version__", None)
+        if version:
+            module_info = f"{module_info} (v{version})"
+        alt_name = getattr(cls(), "IE_NAME", "")
+        alt_name = "" if name.startswith(alt_name) else f"[{alt_name}]"
+        plugin_list.append((module_info, name, alt_name))
 
     if plugin_list:
         plural_s = "s" if len(plugin_list) > 1 else ""
         self.write_debug(
-            f"Loaded plugin{plural_s} which are not part of yt-dlp. Use at your own risk."
+            f"Using plugin{plural_s} which are not part of yt-dlp. Use at your own risk."
         )
-        gap_size = max(len(name) for _, name in plugin_list)
-        for module, name in sorted(plugin_list):
-            self.write_debug(f"{name:{gap_size}} imported from {module}")
+        tab = tuple(map(lambda x: max(len(s) for s in x), zip(*plugin_list)))
+        for module_info, name, alt_name in sorted(plugin_list):
+            self.write_debug(f" {name:{tab[1]}} {alt_name:{tab[2]}} {module_info}")
 
     return plugin_debug_header.__original__(self)
 
