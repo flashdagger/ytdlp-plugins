@@ -7,7 +7,15 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
-from ytdlp_plugins import PACKAGE_NAME, directories, load_plugins, initialize
+import yt_dlp
+
+from ytdlp_plugins import (
+    PACKAGE_NAME,
+    directories,
+    load_plugins,
+    initialize,
+    _OVERRIDDEN,
+)
 
 ROOT_DIR = Path(__file__).parents[1].absolute()
 
@@ -62,6 +70,13 @@ class TestPlugins(unittest.TestCase):
                     zipmodule_path / PACKAGE_NAME / plugin_type,
                     map(Path, package.__path__),
                 )
+
+    def test_overridden_classes(self):
+        names = {cls.__name__ for cls in _OVERRIDDEN}
+        self.assertGreaterEqual(len(names), 2)
+        namespace = set(yt_dlp.extractor.__dict__.keys())
+        for name in names:
+            self.assertIn(name, namespace)
 
 
 if __name__ == "__main__":
