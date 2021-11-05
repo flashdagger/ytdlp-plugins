@@ -200,15 +200,15 @@ def monkey_patch(orig):
 def plugin_debug_header(self):
     plugin_list = []
     for name, cls in _FOUND.items():
-        alt_name, module_name = name, "<builtin>"
+        _alt_name, _module_name = name, "<builtin>"
         with suppress(AttributeError):
-            module_name = getmodule(cls).__name__
+            _module_name = getmodule(cls).__name__
         with suppress(AttributeError):
-            alt_name = cls().IE_NAME
+            _alt_name = cls().IE_NAME
         full_name = (
-            f"{name!r}" if name.startswith(alt_name) else f"{name!r} [{alt_name}]"
+            f"{name!r}" if name.startswith(_alt_name) else f"{name!r} [{_alt_name}]"
         )
-        plugin_list.append((module_name, full_name))
+        plugin_list.append((_module_name, full_name))
 
     if plugin_list:
         plural_s = "s" if len(plugin_list) > 1 else ""
