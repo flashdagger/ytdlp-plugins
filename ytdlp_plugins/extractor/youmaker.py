@@ -12,6 +12,8 @@ from yt_dlp.utils import (
     traverse_obj,
 )
 
+__version__ = "2021.11.05"
+
 
 class ParsedURL(object):
     """
