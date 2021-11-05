@@ -1,0 +1,20 @@
+[tool.black]
+line-length = 88
+target_version = ['py36', 'py37', 'py38', 'py39']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | cache
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-v --tb=line -p no:warnings"
+testpaths = [
+    "test",
+]
