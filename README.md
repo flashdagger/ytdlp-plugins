@@ -20,6 +20,11 @@ hls-360p mp4 640x360    |  914k m3u8_n | unknown  914k unknown   0k
 hls-720p mp4 1280x720   | 2628k m3u8_n | unknown 2628k unknown   0k
 ```
 
+these plugin packages are currently available:
+* [ytdlp-brighteon](https://pypi.org/project/ytdlp-brighteon/)
+* [ytdlp-youmaker](https://pypi.org/project/ytdlp-youmaker/)
+* [ytdlp-servustv](https://pypi.org/project/ytdlp-servustv/)
+
 
 ## about yt-dlp
 yt-dlp is a [youtube-dl](https://github.com/ytdl-org/youtube-dl) fork based on the now inactive [youtube-dlc](https://github.com/blackjack4494/yt-dlc). The main focus of this project is adding new features and patches while also keeping up to date with the original project
