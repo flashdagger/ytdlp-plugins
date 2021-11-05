@@ -1,4 +1,4 @@
-# A plugin manager for yt-dlp
+# a plugin manager for yt-dlp
 
 ## about ytdlp-plugins
 `ytdlp-plugins` extends the possibilities of yt-dlp by allowing to install new extractors from python packages.
@@ -24,13 +24,10 @@ hls-720p mp4 1280x720   | 2628k m3u8_n | unknown 2628k unknown   0k
 ## about yt-dlp
 yt-dlp is a [youtube-dl](https://github.com/ytdl-org/youtube-dl) fork based on the now inactive [youtube-dlc](https://github.com/blackjack4494/yt-dlc). The main focus of this project is adding new features and patches while also keeping up to date with the original project
 
-Plugins are loaded from `<root-dir>/ytdlp_plugins/<type>/__init__.py`; where `<root-dir>` is the directory of the binary (`<root-dir>/yt-dlp`), or the root directory of the module if you are running directly from source-code (`<root dir>/yt_dlp/__main__.py`). Plugins are currently not supported for the `pip` version
-
-Plugins can be of `<type>`s `extractor` or `postprocessor`. Extractor plugins do not need to be enabled from the CLI and are automatically invoked when the input URL is suitable for it. Postprocessor plugins can be invoked using `--use-postprocessor NAME`.
-
 Note that **all** plugins are imported even if not invoked, and that **there are no checks** performed on plugin code. Use plugins at your own risk and only if you trust the code
 
-## INSTALLATION
+
+## installation
 You can install ytdlp-lugins via pip:
 * Use [PyPI package](https://pypi.org/project/yt-dlp): 
 
@@ -45,7 +42,9 @@ Note that on some systems, you may need to use `py` or `python` instead of `pyth
 ytdlp-plugins enables all plugins and forwards all parameters to yt-dlp:
 
 `ytdlp-plugins --list-extractors`
+
 or
+
 `python3 -m ytdlp-plugins --list-extractors`
 
 

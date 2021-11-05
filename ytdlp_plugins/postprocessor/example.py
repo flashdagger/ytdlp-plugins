@@ -1,11 +1,9 @@
 # coding: utf-8
 
-# ⚠ Don't use relative imports
 from yt_dlp.postprocessor.common import PostProcessor
 
 
-# ℹ️ See the docstring of yt_dlp.postprocessor.common.PostProcessor
-class TestPluginBPP(PostProcessor):
+class ExamplePluginPP(PostProcessor):
     def __init__(self, downloader=None, **kwargs):
         # ⚠ Only kwargs can be passed from the CLI, and all argument values will be string
         # Also, "downloader", "when" and "key" are reserved names
