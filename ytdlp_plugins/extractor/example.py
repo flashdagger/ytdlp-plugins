@@ -3,7 +3,7 @@
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import determine_ext
 
-__version__ = "2021.11.05.post3"
+__version__ = "2021.11.05.post4"
 
 
 # ℹ️ Instructions on making extractors can be found at:
