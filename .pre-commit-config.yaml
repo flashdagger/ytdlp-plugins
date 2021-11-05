@@ -11,4 +11,3 @@ repos:
       language: script
       entry: ./use_venv.py pyflakes
       types: [python]
-      exclude: ^tests/
