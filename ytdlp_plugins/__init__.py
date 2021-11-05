@@ -202,21 +202,23 @@ def plugin_debug_header(self):
     for name, cls in _FOUND.items():
         module = getmodule(cls)
         module_info = f"imported from {module.__name__}" if module else ""
-        version = getattr(module, "__version__", None)
+        version = getattr(module, "__version__", "")
         if version:
-            module_info = f"{module_info} (v{version})"
+            version = f"(v{version})"
         alt_name = getattr(cls(), "IE_NAME", "")
         alt_name = "" if name.startswith(alt_name) else f"[{alt_name}]"
-        plugin_list.append((module_info, name, alt_name))
+        plugin_list.append((module_info, name, alt_name, version))
 
     if plugin_list:
         plural_s = "s" if len(plugin_list) > 1 else ""
         self.write_debug(
-            f"Using plugin{plural_s} which are not part of yt-dlp. Use at your own risk."
+            f"Found plugin{plural_s} which are not part of yt-dlp. Use at your own risk."
         )
         tab = tuple(map(lambda x: max(len(s) for s in x), zip(*plugin_list)))
-        for module_info, name, alt_name in sorted(plugin_list):
-            self.write_debug(f" {name:{tab[1]}} {alt_name:{tab[2]}} {module_info}")
+        for module_info, name, alt_name, version in sorted(plugin_list):
+            self.write_debug(
+                f" {name:{tab[1]}} {alt_name:{tab[2]}} {module_info:{tab[0]}} {version}"
+            )
 
     return plugin_debug_header.__original__(self)
 
