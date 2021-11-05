@@ -201,7 +201,7 @@ def plugin_debug_header(self):
     plugin_list = []
     for name, cls in _FOUND.items():
         module = getmodule(cls)
-        module_info = f"imported from {module.__name__}" if module else ""
+        module_info = f"from {module.__name__!r}" if module else ""
         version = getattr(module, "__version__", "")
         if version:
             version = f"(v{version})"
@@ -217,7 +217,7 @@ def plugin_debug_header(self):
         tab = tuple(map(lambda x: max(len(s) for s in x), zip(*plugin_list)))
         for module_info, name, alt_name, version in sorted(plugin_list):
             self.write_debug(
-                f" {name:{tab[1]}} {alt_name:{tab[2]}} {module_info:{tab[0]}} {version}"
+                f"{name!r:{tab[1]}} {alt_name:{tab[2]}} {module_info:{tab[0]}} {version}"
             )
 
     return plugin_debug_header.__original__(self)
