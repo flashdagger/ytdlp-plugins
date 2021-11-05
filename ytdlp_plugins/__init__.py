@@ -6,19 +6,21 @@ from contextlib import suppress
 from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec, find_spec
-from inspect import getmembers, isclass
+from inspect import getmembers, isclass, getfile
 from itertools import accumulate
 from pathlib import Path
 from pkgutil import iter_modules as pkgutil_iter_modules
 from shutil import copytree
+from unittest.mock import patch
 from zipfile import ZipFile
 from zipimport import zipimporter
 
-from yt_dlp import main as ytdlp_main, extractor as ytdlp_ie, postprocessor as ytdlp_pp
+from yt_dlp import YoutubeDL, main as ytdlp_main
 
 __version__ = "2021.11.05.post1"
 PACKAGE_NAME = __name__
 _INITIALIZED = False
+_FOUND = {}
 
 
 # pylint: disable=abstract-method
@@ -110,15 +112,6 @@ def initialize():
         0, PluginFinder(f"{PACKAGE_NAME}.extractor", f"{PACKAGE_NAME}.postprocessor")
     )
 
-    ie_plugins = load_plugins("extractor", "IE")
-    ytdlp_ie.__dict__.update(ie_plugins)
-    ytdlp_ie._PLUGIN_CLASSES.update(ie_plugins)
-    ytdlp_ie._ALL_CLASSES[:0] = ie_plugins.values()
-
-    pp_plugins = load_plugins("postprocessor", "PP")
-    ytdlp_pp.__dict__.update(pp_plugins)
-    ytdlp_pp._PLUGIN_CLASSES.update(pp_plugins)
-
     _INITIALIZED = True
 
 
@@ -134,6 +127,7 @@ def iter_modules(subpackage):
         yield from pkgutil_iter_modules(path=pkg.__path__, prefix=f"{fullname}.")
 
 
+# noinspection PyBroadException
 def load_plugins(name, suffix):
     classes = {}
 
@@ -174,6 +168,58 @@ def load_plugins(name, suffix):
     return classes
 
 
+def add_plugins():
+    # pylint: disable=import-outside-toplevel
+    from yt_dlp import (
+        extractor,
+        postprocessor,
+    )
+
+    ie_plugins = load_plugins("extractor", "IE")
+    _FOUND.update(ie_plugins)
+    extractor.__dict__.update(ie_plugins)
+    extractor._ALL_CLASSES[:0] = ie_plugins.values()
+
+    pp_plugins = load_plugins("postprocessor", "PP")
+    _FOUND.update(pp_plugins)
+    postprocessor.__dict__.update(pp_plugins)
+
+
+def monkey_patch(orig):
+    def decorator(func):
+        def decorated(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        decorated.__original__ = orig
+        return decorated
+
+    return decorator
+
+
+@monkey_patch(YoutubeDL.print_debug_header)
+def plugin_debug_header(self):
+    plugin_list = []
+    for name, cls in _FOUND.items():
+        alt_name = cls().IE_NAME if hasattr(cls, "IE_NAME") else name
+        path = Path(getfile(cls))
+        with suppress(ValueError):
+            path = path.relative_to(Path.cwd())
+        full_name = (
+            f"{name!r}" if name.startswith(alt_name) else f"{name!r} [{alt_name}]"
+        )
+        plugin_list.append((path, full_name))
+
+    if plugin_list:
+        self.write_debug("The following plugins that are not released by yt-dlp:")
+        gap_size = max(len(name) for _, name in plugin_list)
+        for path, name in sorted(plugin_list):
+            self.write_debug(f"  {name:{gap_size}} imported from '{path!s}'")
+
+    return plugin_debug_header.__original__(self)
+
+
 def main(argv=None):
     initialize()
-    ytdlp_main(argv=argv)
+    add_plugins()
+    with patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header):
+        ytdlp_main(argv=argv)
