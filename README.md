@@ -48,3 +48,12 @@ ytdlp-plugins enables all plugins and forwards all parameters to yt-dlp:
 or
 `python3 -m ytdlp-plugins --list-extractors`
 
+
+## running tests
+You can run the extractor unittests on all installed plugins:
+
+`python3 -m unittest ytdlp_plugins.test_download`
+
+or with pytest
+
+`pytest --pyargs ytdlp_plugins.test_download`
