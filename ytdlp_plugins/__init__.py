@@ -1,5 +1,6 @@
 # coding: utf-8
 import importlib
+import inspect
 import sys
 import traceback
 from contextlib import suppress
@@ -15,7 +16,7 @@ from unittest.mock import patch
 from zipfile import ZipFile
 from zipimport import zipimporter
 
-from yt_dlp import YoutubeDL, main as ytdlp_main
+from yt_dlp import YoutubeDL, utils, main as ytdlp_main
 
 __version__ = "2021.11.05.post1"
 PACKAGE_NAME = __name__
@@ -178,7 +179,7 @@ def add_plugins():
     ie_plugins = load_plugins("extractor", "IE")
     _FOUND.update(ie_plugins)
     extractor.__dict__.update(ie_plugins)
-    extractor._ALL_CLASSES[:0] = ie_plugins.values()
+    getattr(extractor, "_ALL_CLASSES", [])[:0] = ie_plugins.values()
 
     pp_plugins = load_plugins("postprocessor", "PP")
     _FOUND.update(pp_plugins)
@@ -210,7 +211,9 @@ def plugin_debug_header(self):
         plugin_list.append((path, full_name))
 
     if plugin_list:
-        self.write_debug("The following plugins that are not released by yt-dlp:")
+        self.write_debug(
+            "The following plugins are not part of yt-dlp. Use at your own risk."
+        )
         gap_size = max(len(name) for _, name in plugin_list)
         for path, name in sorted(plugin_list):
             self.write_debug(f"  {name:{gap_size}} imported from '{path!s}'")
@@ -218,8 +221,31 @@ def plugin_debug_header(self):
     return plugin_debug_header.__original__(self)
 
 
+def calling_plugin_class():
+    plugins = set(_FOUND.values())
+    for frame_info in inspect.stack():
+        try:
+            cls = frame_info[0].f_locals["self"].__class__
+        except (KeyError, AttributeError):
+            cls = None
+        if cls in plugins:
+            return cls
+    return None
+
+
+@monkey_patch(utils.bug_reports_message)
+def bug_reports_message(*args, **kwargs):
+    cls = calling_plugin_class()
+    if cls is None:
+        return bug_reports_message.__original__(*args, **kwargs)
+    with suppress(AttributeError):
+        return "; " + cls().IE_BUG_REPORT
+    return ""
+
+
+@patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header)
+@patch("yt_dlp.utils.bug_reports_message", bug_reports_message)
 def main(argv=None):
     initialize()
     add_plugins()
-    with patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header):
-        ytdlp_main(argv=argv)
+    ytdlp_main(argv=argv)
