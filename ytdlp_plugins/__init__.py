@@ -17,7 +17,7 @@ from zipimport import zipimporter
 
 from yt_dlp import YoutubeDL, utils, main as ytdlp_main
 
-__version__ = "2021.11.05.post2"
+__version__ = "2021.11.05.post3"
 PACKAGE_NAME = __name__
 _INITIALIZED = False
 _FOUND = {}
