@@ -1,3 +1,4 @@
+# coding: utf-8
 import errno
 import hashlib
 import io
@@ -8,7 +9,6 @@ import sys
 import types
 from pathlib import Path
 
-import yt_dlp.extractor
 from yt_dlp import YoutubeDL
 from yt_dlp.compat import (
     compat_os_name,
@@ -90,12 +90,15 @@ class FakeYDL(YoutubeDL):
 
 def gettestcases(include_onlymatching=False):
     from inspect import getfile
-    from . import initialize
+    from . import initialize, add_plugins, _FOUND
 
     initialize()
+    add_plugins()
     project_plugins = Path.cwd() / "ytdlp_plugins"
 
-    for klass in yt_dlp.extractor._PLUGIN_CLASSES.values():
+    for name, klass in _FOUND.items():
+        if not name.endswith("IE"):
+            continue
         module_file = Path(getfile(klass))
         if project_plugins.is_dir() and project_plugins != module_file.parents[1]:
             continue

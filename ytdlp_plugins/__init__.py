@@ -1,13 +1,12 @@
 # coding: utf-8
 import importlib
-import inspect
 import sys
 import traceback
 from contextlib import suppress
 from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec, find_spec
-from inspect import getmembers, isclass, getfile
+from inspect import getmembers, isclass, stack, getmodule
 from itertools import accumulate
 from pathlib import Path
 from pkgutil import iter_modules as pkgutil_iter_modules
@@ -201,29 +200,31 @@ def monkey_patch(orig):
 def plugin_debug_header(self):
     plugin_list = []
     for name, cls in _FOUND.items():
-        alt_name = cls().IE_NAME if hasattr(cls, "IE_NAME") else name
-        path = Path(getfile(cls))
-        with suppress(ValueError):
-            path = path.relative_to(Path.cwd())
+        alt_name, module_name = name, "<builtin>"
+        with suppress(AttributeError):
+            module_name = getmodule(cls).__name__
+        with suppress(AttributeError):
+            alt_name = cls().IE_NAME
         full_name = (
             f"{name!r}" if name.startswith(alt_name) else f"{name!r} [{alt_name}]"
         )
-        plugin_list.append((path, full_name))
+        plugin_list.append((module_name, full_name))
 
     if plugin_list:
+        plural_s = "s" if len(plugin_list) > 1 else ""
         self.write_debug(
-            "The following plugins are not part of yt-dlp. Use at your own risk."
+            f"Loaded plugin{plural_s} which are not part of yt-dlp. Use at your own risk."
         )
         gap_size = max(len(name) for _, name in plugin_list)
-        for path, name in sorted(plugin_list):
-            self.write_debug(f"  {name:{gap_size}} imported from '{path!s}'")
+        for module, name in sorted(plugin_list):
+            self.write_debug(f"{name:{gap_size}} imported from {module}")
 
     return plugin_debug_header.__original__(self)
 
 
 def calling_plugin_class():
     plugins = set(_FOUND.values())
-    for frame_info in inspect.stack():
+    for frame_info in stack():
         try:
             cls = frame_info[0].f_locals["self"].__class__
         except (KeyError, AttributeError):
