@@ -119,8 +119,10 @@ class BrighteonIE(InfoExtractor):
             return self._parse_json(
                 get_element_by_id("__NEXT_DATA__", webpage), video_id=video_id
             )
-        except TypeError:
-            raise ExtractorError("Could not extract JSON metadata", video_id=video_id)
+        except TypeError as exc:
+            raise ExtractorError(
+                "Could not extract JSON metadata", video_id=video_id
+            ) from exc
 
     @staticmethod
     def _rename_formats(formats, prefix):
@@ -133,6 +135,17 @@ class BrighteonIE(InfoExtractor):
                     f'{item["height"]}p' if item.get("height") else item["format_id"]
                 )
             item["format_id"] = f"{prefix}-{suffix}"
+
+    @staticmethod
+    def estimate_filesize(formats, duration):
+        if not duration:
+            return
+        for item in formats:
+            if item.get("filesize") or item.get("filesize_approx"):
+                continue
+            tbr = item.get("tbr")
+            if tbr:
+                item["filesize_approx"] = 128 * tbr * duration
 
     def _download_formats(self, sources, video_id):
         formats = []
@@ -163,6 +176,7 @@ class BrighteonIE(InfoExtractor):
     def _entry_from_info(self, video_info, channel_info, from_playlist=False):
         video_id = video_info["id"]
         url = f"{self._BASE_URL}/{video_id}"
+        duration = parse_duration(video_info.get("duration"))
 
         if from_playlist:
             _type = "url"
@@ -172,6 +186,7 @@ class BrighteonIE(InfoExtractor):
             formats = self._download_formats(
                 video_info.get("source"), video_id=video_id
             )
+            self.estimate_filesize(formats, duration)
             self._sort_formats(formats)
 
         # merge channel_info items into video_info
@@ -188,7 +203,7 @@ class BrighteonIE(InfoExtractor):
             "title": video_info.get("name"),
             "description": video_info.get("description"),
             "timestamp": parse_iso8601(video_info.get("createdAt")),
-            "duration": parse_duration(video_info.get("duration")),
+            "duration": duration,
             "channel": video_info.get("channelName"),
             "channel_id": video_info.get("channelId"),
             "channel_url": video_info.get("channelShortUrl")
