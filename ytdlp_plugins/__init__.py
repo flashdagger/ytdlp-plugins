@@ -2,7 +2,7 @@
 import importlib
 import sys
 import traceback
-from contextlib import suppress
+from contextlib import suppress, ExitStack, contextmanager
 from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec, find_spec
@@ -214,31 +214,29 @@ def plugin_debug_header(self):
     plugin_list = []
     for name, cls in _FOUND.items():
         module = getmodule(cls)
+        version = getattr(cls, "__version__", None) or getattr(
+            module, "__version__", None
+        )
+        version = f"(v{version})" if version else ""
         module_info = f"from {module.__name__!r}" if module else ""
-        version = getattr(module, "__version__", "")
-        if version:
-            version = f"(v{version})"
-        alt_name = getattr(cls(), "IE_NAME", "")
-        alt_name = "" if name.startswith(alt_name) else f"[{alt_name}]"
-        plugin_list.append((repr(name), alt_name, module_info, version))
+        alt_name = getattr(cls(), "IE_NAME", name)
+        plugin_list.append((f"[{alt_name}]", module_info, version))
 
     if plugin_list:
         plural_s = "s" if len(plugin_list) > 1 else ""
         self.write_debug(
-            f"Found {len(plugin_list)} plugin{plural_s} which are not part of yt-dlp. "
+            f"Loaded {len(plugin_list)} plugin{plural_s} which are not part of yt-dlp. "
             f"Use at your own risk."
         )
-        for line in tabify(sorted(plugin_list), join_string=" ", alignment="<^<<"):
-            self.write_debug(line)
+        for line in tabify(sorted(plugin_list), join_string=" "):
+            self.write_debug(" " + line)
     if _OVERRIDDEN:
-        self.write_debug(
-            f"There are also {len(_OVERRIDDEN)} overridden classes due to name collisions:"
-        )
+        self.write_debug("Overridden classes due to name collisions:")
         items = [
             (f"{cls.__name__!r}", f"from {cls.__module__!r}") for cls in _OVERRIDDEN
         ]
         for line in tabify(items):
-            self.write_debug(line)
+            self.write_debug(" " + line)
 
     return plugin_debug_header.__original__(self)
 
@@ -261,13 +259,34 @@ def bug_reports_message(*args, **kwargs):
     if cls is None:
         return bug_reports_message.__original__(*args, **kwargs)
     with suppress(AttributeError):
-        return "; " + cls().IE_BUG_REPORT
+        return "; " + cls().BUG_REPORT
     return ""
 
 
-@patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header)
-@patch("yt_dlp.utils.bug_reports_message", bug_reports_message)
+PATCHES = (
+    patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header),
+    patch("yt_dlp.utils.bug_reports_message", bug_reports_message),
+)
+
+
+def patch_decorator(func):
+    for p in reversed(PATCHES):
+        func = p(func)
+    return func
+
+
+@contextmanager
+def patch_context():
+    _stack = ExitStack()
+    try:
+        yield [_stack.enter_context(ctx) for ctx in PATCHES]
+    finally:
+        pass
+        # stack.close()
+
+
 def main(argv=None):
     initialize()
     add_plugins()
-    ytdlp_main(argv=argv)
+    with patch_context():
+        ytdlp_main(argv=argv)

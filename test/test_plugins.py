@@ -10,11 +10,12 @@ from zipfile import ZipFile
 import yt_dlp
 
 from ytdlp_plugins import (
+    _OVERRIDDEN,
     PACKAGE_NAME,
     directories,
-    load_plugins,
     initialize,
-    _OVERRIDDEN,
+    load_plugins,
+    patch_context,
 )
 
 ROOT_DIR = Path(__file__).parents[1].absolute()
@@ -77,6 +78,24 @@ class TestPlugins(unittest.TestCase):
         namespace = set(yt_dlp.extractor.__dict__.keys())
         for name in names:
             self.assertIn(name, namespace)
+
+    def test_bug_report_message(self):
+        orig_bug_report = yt_dlp.utils.bug_reports_message()
+        self.assertIn("yt-dlp", orig_bug_report)
+        params = dict(skip_download=True)
+        ydl = yt_dlp.YoutubeDL(params, auto_init=True)
+        with self.assertRaises(yt_dlp.utils.DownloadError) as context:
+            with patch_context():
+                ydl.download(["failingplugin:hello"])
+
+        exc, obj, _ = context.exception.exc_info
+        self.assertEqual(orig_bug_report, yt_dlp.utils.bug_reports_message())
+        self.assertIs(exc, yt_dlp.utils.ExtractorError)
+        self.assertNotIn(
+            orig_bug_report,
+            str(obj),
+            "Bug report message is not suppressed",
+        )
 
 
 if __name__ == "__main__":
