@@ -7,7 +7,7 @@ from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec, find_spec
 from inspect import getmembers, isclass, stack, getmodule
-from itertools import accumulate
+from itertools import accumulate, cycle
 from pathlib import Path
 from pkgutil import iter_modules as pkgutil_iter_modules
 from shutil import copytree
@@ -199,10 +199,14 @@ def monkey_patch(orig):
     return decorator
 
 
-def tabify(items, join_string=" "):
+def tabify(items, join_string=" ", alignment="<"):
     tabs = tuple(map(lambda x: max(len(str(s)) for s in x), zip(*items)))
     for item in items:
-        yield join_string.join(f"{part!s:<{width}}" for part, width in zip(item, tabs))
+        aligning = cycle(alignment)
+        yield join_string.join(
+            f"{part!s:{align}{width}}"
+            for part, width, align in zip(item, tabs, aligning)
+        )
 
 
 @monkey_patch(YoutubeDL.print_debug_header)
@@ -224,7 +228,7 @@ def plugin_debug_header(self):
             f"Found {len(plugin_list)} plugin{plural_s} which are not part of yt-dlp. "
             f"Use at your own risk."
         )
-        for line in tabify(sorted(plugin_list)):
+        for line in tabify(sorted(plugin_list), join_string=" ", alignment="<^<<"):
             self.write_debug(line)
     if _OVERRIDDEN:
         self.write_debug(
