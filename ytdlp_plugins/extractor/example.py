@@ -1,4 +1,5 @@
-# coding: utf-8
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import determine_ext, ExtractorError

@@ -1,4 +1,6 @@
-# coding: utf-8
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+
 import importlib
 import sys
 import traceback
@@ -14,7 +16,7 @@ from unittest.mock import patch
 from zipfile import ZipFile
 from zipimport import zipimporter
 
-from yt_dlp import YoutubeDL, utils, main as ytdlp_main
+from yt_dlp import YoutubeDL, utils as ytdlp_utils, main as ytdlp_main
 
 __version__ = "2021.11.05.post5"
 PACKAGE_NAME = __name__
@@ -239,7 +241,7 @@ def plugin_debug_header(self):
     return plugin_debug_header.__original__(self)
 
 
-@monkey_patch(utils.bug_reports_message)
+@monkey_patch(ytdlp_utils.bug_reports_message)
 def bug_reports_message(*args, **kwargs):
     cls = calling_plugin_class()
     if cls is None:
