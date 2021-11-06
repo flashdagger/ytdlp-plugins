@@ -178,7 +178,11 @@ class BrighteonIE(InfoExtractor):
         url = f"{self._BASE_URL}/{video_id}"
         duration = parse_duration(video_info.get("duration"))
 
-        if from_playlist:
+        if isinstance(self.get_param("forceprint"), list):
+            # we are not interested in the formats
+            _type = "video"
+            formats = None
+        elif from_playlist:
             _type = "url"
             formats = None
         else:
