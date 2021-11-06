@@ -79,9 +79,10 @@ class TestPlugins(unittest.TestCase):
         for name in names:
             self.assertIn(name, namespace)
 
-    def test_bug_report_message(self):
+    def test_patched_bug_report_message(self):
         orig_bug_report = yt_dlp.utils.bug_reports_message()
         self.assertIn("yt-dlp", orig_bug_report)
+
         params = dict(skip_download=True)
         ydl = yt_dlp.YoutubeDL(params, auto_init=True)
         with self.assertRaises(yt_dlp.utils.DownloadError) as context:
@@ -92,6 +93,25 @@ class TestPlugins(unittest.TestCase):
         self.assertEqual(orig_bug_report, yt_dlp.utils.bug_reports_message())
         self.assertIs(exc, yt_dlp.utils.ExtractorError)
         self.assertNotIn(
+            orig_bug_report,
+            str(obj),
+            "Bug report message is not suppressed",
+        )
+
+    def test_orig_bug_report_message(self):
+        orig_bug_report = yt_dlp.utils.bug_reports_message()
+        self.assertIn("yt-dlp", orig_bug_report)
+
+        params = dict(skip_download=True)
+        ydl = yt_dlp.YoutubeDL(params, auto_init=True)
+        with self.assertRaises(yt_dlp.utils.DownloadError) as context:
+            with patch_context():
+                ydl.download(["http://www.vimeo.com/123/123"])
+
+        exc, obj, _ = context.exception.exc_info
+        self.assertEqual(orig_bug_report, yt_dlp.utils.bug_reports_message())
+        self.assertIs(exc, yt_dlp.utils.ExtractorError)
+        self.assertIn(
             orig_bug_report,
             str(obj),
             "Bug report message is not suppressed",
