@@ -45,20 +45,24 @@ class ServusTVIE(InfoExtractor):
     _TESTS = [
         {
             # new URL schema
-            "url": "https://www.servustv.com/volkskultur/v/aa-28jq9b51h1w11/",
+            "url": "https://www.servustv.com/aktuelles/v/aa-28jer1rfh1w11/",
             "info_dict": {
-                "id": "aa-28jq9b51h1w11",
+                "id": "aa-28jer1rfh1w11",
                 "ext": "mp4",
-                "title": "Der Hof meines Vertrauens",
-                "description": "Rinder, Gemüse, Schnecken - drei Selbstvermarkter zeigen ihren Hof.",
+                "title": "Die Top-Themen vom 05.11.",
+                "description": "md5:c913d5aba429acf4ade46a181d9532f0",
+                "duration": 587,
+                "timestamp": 1636135770,
+                "upload_date": "20211105",
+                "is_live": False,
+                "categories": ["Servus Nachrichten 19:00"],
+                "age_limit": 0,
                 "thumbnail": r"re:^https?://.*\.jpg",
-                "timestamp": 1635538304,
-                "upload_date": "20211029",
             },
             "params": {
                 "skip_download": True,
                 "format": "bestvideo",
-                "geo_bypass_country": "AT",
+                "geo_bypass_country": "DE",
             },
         },
         {
