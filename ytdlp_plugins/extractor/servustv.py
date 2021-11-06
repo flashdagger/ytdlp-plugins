@@ -2,12 +2,12 @@
 import json
 from operator import itemgetter
 
-from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.compat import (
     compat_parse_qs,
     compat_urllib_parse_unquote_plus,
     compat_urllib_parse_urlparse,
 )
+from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     get_element_by_id,
     parse_iso8601,
@@ -16,6 +16,7 @@ from yt_dlp.utils import (
     GeoRestrictedError,
     OnDemandPagedList,
 )
+from ytdlp_plugins.utils import estimate_filesize
 
 __version__ = "2021.11.05"
 
@@ -134,12 +135,15 @@ class ServusTVIE(InfoExtractor):
             if "height" in fmt:
                 fmt["format_id"] = f"{fmt['height']}p"
 
+        duration = None if is_live else info.get("duration")
+        estimate_filesize(formats, duration)
+
         return {
             "id": video_id,
             "title": info.get("title"),
             "description": info.get("description"),
             "thumbnail": info.get("poster"),
-            "duration": None if is_live else info.get("duration"),
+            "duration": duration,
             "timestamp": parse_iso8601(info.get("currentSunrise")),
             "is_live": is_live,
             "categories": [info["label"]] if info.get("label") else [],
