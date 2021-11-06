@@ -19,7 +19,7 @@ from yt_dlp.utils import (
     OnDemandPagedList,
 )
 
-__version__ = "2021.11.06"
+__version__ = "2021.11.06.post1"
 
 
 class BrighteonIE(InfoExtractor):
