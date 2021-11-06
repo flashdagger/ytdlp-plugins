@@ -9,8 +9,7 @@ from importlib.util import module_from_spec, find_spec
 from inspect import getmembers, isclass, stack, getmodule
 from itertools import accumulate, cycle
 from pathlib import Path
-from pkgutil import iter_modules as pkgutil_iter_modules
-from shutil import copytree
+from pkgutil import iter_modules
 from unittest.mock import patch
 from zipfile import ZipFile
 from zipimport import zipimporter
@@ -94,26 +93,13 @@ class PluginFinder(MetaPathFinder):
 # pylint: disable=global-statement, protected-access
 def initialize():
     global _INITIALIZED
-    if _INITIALIZED:
-        return
 
-    # are we running from PyInstaller single executable?
-    # then copy the plugin directory if exist
-    root = Path(sys.executable).parent
-    meipass = Path(getattr(sys, "_MEIPASS", root))
-    if getattr(sys, "frozen", False) and root != meipass:
-        try:
-            copytree(root / PACKAGE_NAME, meipass / PACKAGE_NAME, dirs_exist_ok=True)
-        except FileNotFoundError:
-            pass
-        except OSError as exc:
-            print(exc, file=sys.stderr)
-
-    sys.meta_path.insert(
-        0, PluginFinder(f"{PACKAGE_NAME}.extractor", f"{PACKAGE_NAME}.postprocessor")
-    )
-
-    _INITIALIZED = True
+    if not _INITIALIZED:
+        sys.meta_path.insert(
+            0,
+            PluginFinder(f"{PACKAGE_NAME}.extractor", f"{PACKAGE_NAME}.postprocessor"),
+        )
+        _INITIALIZED = True
 
 
 def directories():
@@ -121,16 +107,16 @@ def directories():
     return spec.submodule_search_locations if spec else []
 
 
-def iter_modules(subpackage):
+def iter_plugin_modules(subpackage):
     fullname = f"{PACKAGE_NAME}.{subpackage}"
     with suppress(ModuleNotFoundError):
         pkg = importlib.import_module(fullname)
-        yield from pkgutil_iter_modules(path=pkg.__path__, prefix=f"{fullname}.")
+        yield from iter_modules(path=pkg.__path__, prefix=f"{fullname}.")
 
 
-def detect_collisions(from_dict, to_dict):
+def detected_collisions(from_dict, to_dict):
     collisions = set(from_dict.keys()) & set(to_dict.keys())
-    _OVERRIDDEN.extend(to_dict[key] for key in collisions)
+    return [to_dict[key] for key in collisions]
 
 
 # noinspection PyBroadException
@@ -148,7 +134,7 @@ def load_plugins(name, suffix, namespace=None):
 
         return check_predicate
 
-    for finder, module_name, _is_pkg in iter_modules(name):
+    for finder, module_name, _is_pkg in iter_plugin_modules(name):
         try:
             if isinstance(finder, zipimporter):
                 module = finder.load_module(module_name)
@@ -164,10 +150,10 @@ def load_plugins(name, suffix, namespace=None):
         sys.modules[module_name] = module
         module_classes = dict(getmembers(module, gen_predicate(module_name)))
 
-        detect_collisions(module_classes, classes)
+        _OVERRIDDEN.extend(detected_collisions(module_classes, classes))
         classes.update(module_classes)
 
-    detect_collisions(classes, namespace)
+    _OVERRIDDEN.extend(detected_collisions(classes, namespace))
     namespace.update(classes)
 
     return classes
@@ -209,6 +195,18 @@ def tabify(items, join_string=" ", alignment="<"):
         )
 
 
+def calling_plugin_class():
+    plugins = set(_FOUND.values())
+    for frame_info in stack():
+        try:
+            cls = frame_info[0].f_locals["self"].__class__
+        except (KeyError, AttributeError):
+            cls = None
+        if cls in plugins:
+            return cls
+    return None
+
+
 @monkey_patch(YoutubeDL.print_debug_header)
 def plugin_debug_header(self):
     plugin_list = []
@@ -241,18 +239,6 @@ def plugin_debug_header(self):
     return plugin_debug_header.__original__(self)
 
 
-def calling_plugin_class():
-    plugins = set(_FOUND.values())
-    for frame_info in stack():
-        try:
-            cls = frame_info[0].f_locals["self"].__class__
-        except (KeyError, AttributeError):
-            cls = None
-        if cls in plugins:
-            return cls
-    return None
-
-
 @monkey_patch(utils.bug_reports_message)
 def bug_reports_message(*args, **kwargs):
     cls = calling_plugin_class()
@@ -263,15 +249,15 @@ def bug_reports_message(*args, **kwargs):
     return ""
 
 
-PATCHES = (
+_PATCHES = (
     patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header),
     patch("yt_dlp.utils.bug_reports_message", bug_reports_message),
 )
 
 
 def patch_decorator(func):
-    for p in reversed(PATCHES):
-        func = p(func)
+    for _patch in _PATCHES:
+        func = _patch(func)
     return func
 
 
@@ -279,14 +265,13 @@ def patch_decorator(func):
 def patch_context():
     _stack = ExitStack()
     try:
-        yield [_stack.enter_context(ctx) for ctx in PATCHES]
+        yield [_stack.enter_context(ctx) for ctx in _PATCHES]
     finally:
-        pass
-        # stack.close()
+        _stack.close()
 
 
+@patch_decorator
 def main(argv=None):
     initialize()
     add_plugins()
-    with patch_context():
-        ytdlp_main(argv=argv)
+    ytdlp_main(argv=argv)
