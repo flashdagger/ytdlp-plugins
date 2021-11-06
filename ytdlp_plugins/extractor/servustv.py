@@ -28,8 +28,11 @@ class ServusTVIE(InfoExtractor):
                         /[\w-]+/(?:v|[bp]/[\w-]+)
                         /(?P<id>[A-Za-z0-9-]+)
                     """
+
+    PAGE_SIZE = 20
     _GEO_COUNTRIES = ["AT", "DE", "CH", "LI", "LU", "IT"]
     _GEO_BYPASS = False
+
     _API_URL = "https://api-player.redbull.com/stv/servus-tv"
     _QUERY_API_URL = "https://backend.servustv.com/wp-json/rbmh/v2/query-filters/query/"
     _LIVE_URLS = {
@@ -120,7 +123,7 @@ class ServusTVIE(InfoExtractor):
                 errnote="Stream not available",
             )
         except ExtractorError as exc:
-            raise ExtractorError(exc.msg, video_id=video_id, expected=True)
+            raise ExtractorError(exc.msg, video_id=video_id, expected=True) from exc
 
         self._sort_formats(formats)
         for fmt in formats:
@@ -162,14 +165,14 @@ class ServusTVIE(InfoExtractor):
             )
 
     def _paged_playlist_by_query(
-        self, query_type, query_id, extra_query=(), page_size=20, ie=None
+        self, query_type, query_id, extra_query=(), extractor=None
     ):
         query = {
             query_type: query_id,
             "geo_override": self.country_code,
             "post_type": "media_asset",
             "filter_playability": "true",
-            "per_page": page_size,
+            "per_page": self.PAGE_SIZE,
         }
         assert "per_page" not in extra_query
         query.update(extra_query)
@@ -181,7 +184,7 @@ class ServusTVIE(InfoExtractor):
                 query=query,
                 video_id=f"{query_type}-{query_id}",
                 note=f"Downloading entries "
-                f"{page_number * page_size + 1}-{(page_number + 1) * page_size}",
+                f"{page_number * self.PAGE_SIZE + 1}-{(page_number + 1) * self.PAGE_SIZE}",
             )
 
             for item in info["posts"]:
@@ -191,16 +194,17 @@ class ServusTVIE(InfoExtractor):
                     item
                 )
                 yield self.url_result(
-                    url, ie=ie or self.ie_key(), video_id=video_id, video_title=title
+                    url,
+                    ie=extractor or self.ie_key(),
+                    video_id=video_id,
+                    video_title=title,
                 )
 
-        return OnDemandPagedList(fetch_page, page_size)
+        return OnDemandPagedList(fetch_page, self.PAGE_SIZE)
 
     @staticmethod
     def _page_id(json_obj):
-        for key, value in traverse_obj(
-            json_obj, ("source", "data"), default={}
-        ).items():
+        for value in traverse_obj(json_obj, ("source", "data"), default={}).values():
             if isinstance(value, dict) and "id" in value:
                 return value["id"]
         return None
@@ -215,8 +219,10 @@ class ServusTVIE(InfoExtractor):
 
         try:
             return json.loads(json_string or "{}")
-        except json.JSONDecodeError:
-            raise ExtractorError("Bad JSON metadata", video_id=video_id, expected=False)
+        except json.JSONDecodeError as exc:
+            raise ExtractorError(
+                "Bad JSON metadata", video_id=video_id, expected=False
+            ) from exc
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
@@ -334,7 +340,7 @@ class ServusSearchIE(ServusTVIE):
                     "f[primary_type_group]": "all-videos",
                     "orderby": "rbmh_score_search",
                 },
-                ie=ServusTVIE.ie_key(),
+                extractor=ServusTVIE.ie_key(),
             ),
             playlist_id=search_id,
             playlist_title=f"search: '{search_term}'",

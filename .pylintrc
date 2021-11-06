@@ -146,6 +146,8 @@ disable=print-statement,
         unsupported-assignment-operation,
         bad-continuation,
         no-name-in-module,
+        line-too-long,
+        abstract-method,
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
