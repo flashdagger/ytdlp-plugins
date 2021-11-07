@@ -18,3 +18,9 @@ addopts = "-v --tb=line -p no:warnings"
 testpaths = [
     "test",
 ]
+cache_dir = ".cache/pytest"
+
+[tool.mypy]
+python_version = "3.6"
+cache_dir = ".cache/mypy"
+ignore_missing_imports = true
