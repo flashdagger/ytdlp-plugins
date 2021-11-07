@@ -3,10 +3,11 @@
 
 
 def estimate_filesize(formats, duration):
-    if not duration:
+    if not (formats and duration):
         return
+
     for item in formats:
-        if item.get("filesize") or item.get("filesize_approx"):
+        if any(map(item.get, ("filesize", "filesize_approx", "fs_approx"))):
             continue
         tbr = item.get("tbr")
         if tbr:
