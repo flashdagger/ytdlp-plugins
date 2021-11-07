@@ -96,6 +96,27 @@ class ServusTVIE(InfoExtractor):
     def country_code(self):
         return self.country_override or self._GEO_COUNTRIES[0]
 
+    def _manage_formats(self, formats):
+        audio_ids = set()
+        video_ids = set()
+        requested_format = self.get_param("format")
+
+        self._sort_formats(formats)
+        for fmt in formats:
+            if "height" in fmt:
+                fmt["format_id"] = f"{fmt['height']}p"
+            (audio_ids if fmt.get("vcodec") == "none" else video_ids).add(
+                fmt["format_id"]
+            )
+
+        if self._downloader and len(audio_ids) == 1 and requested_format in video_ids:
+            audio_id = audio_ids.pop()
+            requested_format = f"{requested_format}+{audio_id}"
+            self.to_screen(f"Adding audio stream {audio_id!r} to format")
+            self._downloader.format_selector = self._downloader.build_format_selector(
+                requested_format
+            )
+
     def _entry_by_id(self, video_id, video_url=None, is_live=False):
         info = (
             self._download_json(
@@ -124,17 +145,13 @@ class ServusTVIE(InfoExtractor):
             formats, subtitles = self._extract_m3u8_formats_and_subtitles(
                 info["videoUrl"],
                 video_id=video_id,
-                entry_protocol="m3u8" if is_live else "m3u8_native",
+                entry_protocol="m3u8",
                 errnote="Stream not available",
             )
         except ExtractorError as exc:
             raise ExtractorError(exc.msg, video_id=video_id, expected=True) from exc
 
-        self._sort_formats(formats)
-        for fmt in formats:
-            if "height" in fmt:
-                fmt["format_id"] = f"{fmt['height']}p"
-
+        self._manage_formats(formats)
         duration = None if is_live else info.get("duration")
         estimate_filesize(formats, duration)
 
