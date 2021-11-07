@@ -3,11 +3,11 @@ from contextlib import suppress
 from operator import itemgetter
 from sys import maxsize
 
-from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.compat import (
     compat_urllib_parse_urlparse,
     compat_parse_qs,
 )
+from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     get_element_by_id,
     int_or_none,
@@ -18,6 +18,7 @@ from yt_dlp.utils import (
     update_url_query,
     OnDemandPagedList,
 )
+from ytdlp_plugins.utils import estimate_filesize
 
 __version__ = "2021.11.06.post1"
 
@@ -136,17 +137,6 @@ class BrighteonIE(InfoExtractor):
                 )
             item["format_id"] = f"{prefix}-{suffix}"
 
-    @staticmethod
-    def estimate_filesize(formats, duration):
-        if not duration:
-            return
-        for item in formats:
-            if item.get("filesize") or item.get("filesize_approx"):
-                continue
-            tbr = item.get("tbr")
-            if tbr:
-                item["filesize_approx"] = 128 * tbr * duration
-
     def _download_formats(self, sources, video_id):
         formats = []
         if not sources:
@@ -190,7 +180,7 @@ class BrighteonIE(InfoExtractor):
             formats = self._download_formats(
                 video_info.get("source"), video_id=video_id
             )
-            self.estimate_filesize(formats, duration)
+            estimate_filesize(formats, duration)
             self._sort_formats(formats)
 
         # merge channel_info items into video_info
