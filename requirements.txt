@@ -1,0 +1,9 @@
+# dev requirements
+black
+bump2version
+mypy
+pre-commit
+pyflakes
+pylint
+pytest
+twine
