@@ -11,6 +11,7 @@ from yt_dlp.utils import (
     OnDemandPagedList,
     traverse_obj,
 )
+from ytdlp_plugins.utils import estimate_filesize
 
 __version__ = "2021.11.05"
 
@@ -356,14 +357,12 @@ class YoumakerIE(InfoExtractor):
         format_mapping = {item["url"]: item for item in formats}
         formats = list(format_mapping.values())
 
+        estimate_filesize(formats, duration)
         self._sort_formats(formats)
         for item in formats:
             height = try_get(item, itemgetter("height"), int)
             if height:
                 item["format_id"] = f"{height}p"
-            tbr = try_get(item, itemgetter("tbr"), (int, float))
-            if duration and tbr:
-                item["filesize_approx"] = 128 * tbr * duration
 
         return {
             "id": video_uid,
