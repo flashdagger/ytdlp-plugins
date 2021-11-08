@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-import errno
 import hashlib
 import io
 import json
-import os
 import re
 import sys
 import types
@@ -22,11 +20,11 @@ from yt_dlp.utils import (
 )
 
 SELF_PATH = Path(__file__)
+PARAMETERS_FILE = SELF_PATH.with_name("parameters.json")
+LOCAL_PARAMETERS_FILE = SELF_PATH.with_name("local_parameters.json")
 
 
 def get_params(override=None):
-    PARAMETERS_FILE = SELF_PATH.with_name("parameters.json")
-    LOCAL_PARAMETERS_FILE = SELF_PATH.with_name("local_parameters.json")
     with io.open(PARAMETERS_FILE, encoding="utf-8") as pf:
         parameters = json.load(pf)
     if LOCAL_PARAMETERS_FILE.exists():
@@ -35,15 +33,6 @@ def get_params(override=None):
     if override:
         parameters.update(override)
     return parameters
-
-
-def try_rm(filename):
-    """Remove a file if it exists"""
-    try:
-        os.remove(filename)
-    except OSError as ose:
-        if ose.errno != errno.ENOENT:
-            raise
 
 
 def report_warning(message):
@@ -55,7 +44,7 @@ def report_warning(message):
         _msg_header = "\033[0;33mWARNING:\033[0m"
     else:
         _msg_header = "WARNING:"
-    output = "%s %s\n" % (_msg_header, message)
+    output = f"{_msg_header} {message}\n"
     if "b" in getattr(sys.stderr, "mode", "") or sys.version_info[0] < 3:
         output = output.encode(preferredencoding())
     sys.stderr.write(output)
@@ -119,66 +108,66 @@ def expect_value(self, got, expected, field):
 
         self.assertTrue(
             isinstance(got, compat_str),
-            "Expected a %s object, but got %s for field %s"
-            % (compat_str.__name__, type(got).__name__, field),
+            f"Expected a {compat_str.__name__} object, "
+            f"but got {type(got).__name__} for field {field}",
         )
         self.assertTrue(
             match_rex.match(got),
-            "field %s (value: %r) should match %r" % (field, got, match_str),
+            f"field {field} (value: {got!r}) should match {match_str!r}",
         )
     elif isinstance(expected, compat_str) and expected.startswith("startswith:"):
         start_str = expected[len("startswith:") :]
         self.assertTrue(
             isinstance(got, compat_str),
-            "Expected a %s object, but got %s for field %s"
-            % (compat_str.__name__, type(got).__name__, field),
+            f"Expected a {compat_str.__name__} object, "
+            f"but got {type(got).__name__} for field {field}",
         )
         self.assertTrue(
             got.startswith(start_str),
-            "field %s (value: %r) should start with %r" % (field, got, start_str),
+            f"field {field} (value: {got!r}) should start with {start_str!r}",
         )
     elif isinstance(expected, compat_str) and expected.startswith("contains:"):
         contains_str = expected[len("contains:") :]
         self.assertTrue(
             isinstance(got, compat_str),
-            "Expected a %s object, but got %s for field %s"
-            % (compat_str.__name__, type(got).__name__, field),
+            f"Expected a {compat_str.__name__} object, "
+            f"but got {type(got).__name__} for field {field}",
         )
         self.assertTrue(
             contains_str in got,
-            "field %s (value: %r) should contain %r" % (field, got, contains_str),
+            f"field {field} (value: {got!r}) should contain {contains_str!r}",
         )
     elif isinstance(expected, type):
         self.assertTrue(
             isinstance(got, expected),
-            "Expected type %r for field %s, but got value %r of type %r"
-            % (expected, field, got, type(got)),
+            f"Expected type {expected!r} for field {field}, "
+            f"but got value {got!r} of type {type(got)!r}",
         )
     elif isinstance(expected, dict) and isinstance(got, dict):
         expect_dict(self, got, expected)
     elif isinstance(expected, list) and isinstance(got, list):
-        self.assertEqual(
+        self.assert_equal(
             len(expected),
             len(got),
-            "Expect a list of length %d, but got a list of length %d for field %s"
-            % (len(expected), len(got), field),
+            f"Expect a list of length {len(expected):d}, "
+            f"but got a list of length {len(got):d} for field {field}",
         )
         for index, (item_got, item_expected) in enumerate(zip(got, expected)):
             type_got = type(item_got)
             type_expected = type(item_expected)
-            self.assertEqual(
+            self.assert_equal(
                 type_expected,
                 type_got,
-                "Type mismatch for list item at index %d for field %s, expected %r, got %r"
-                % (index, field, type_expected, type_got),
+                f"Type mismatch for list item at index {index:d} for field {field}, "
+                f"expected {type_expected!r}, got {type_got!r}",
             )
             expect_value(self, item_got, item_expected, field)
     else:
         if isinstance(expected, compat_str) and expected.startswith("md5:"):
             self.assertTrue(
                 isinstance(got, compat_str),
-                "Expected field %s to be a unicode object, but got value %r of type %r"
-                % (field, got, type(got)),
+                f"Expected field {field} to be a unicode object, "
+                f"but got value {got!r} of type {type(got)!r}",
             )
             got = "md5:" + md5(got)
         elif isinstance(expected, compat_str) and re.match(
@@ -186,30 +175,33 @@ def expect_value(self, got, expected, field):
         ):
             self.assertTrue(
                 isinstance(got, (list, dict)),
-                "Expected field %s to be a list or a dict, but it is of type %s"
-                % (field, type(got).__name__),
+                f"Expected field {field} to be a list or a dict, "
+                f"but it is of type {type(got).__name__}",
             )
             op, _, expected_num = expected.partition(":")
             expected_num = int(expected_num)
             if op == "mincount":
-                assert_func = assertGreaterEqual
-                msg_tmpl = "Expected %d items in field %s, but only got %d"
+                assert_func = assert_greater_or_equal
+                msg_tmpl = "Expected {} items in field {}, but only got {}"
             elif op == "maxcount":
-                assert_func = assertLessEqual
-                msg_tmpl = "Expected maximum %d items in field %s, but got %d"
+                assert_func = assert_less_or_equal
+                msg_tmpl = "Expected maximum {} items in field {}, but got {}"
             elif op == "count":
-                assert_func = assertEqual
-                msg_tmpl = "Expected exactly %d items in field %s, but got %d"
+                assert_func = assert_equal
+                msg_tmpl = "Expected exactly {} items in field {}, but got {}"
             else:
                 assert False
             assert_func(
-                self, len(got), expected_num, msg_tmpl % (expected_num, field, len(got))
+                self,
+                len(got),
+                expected_num,
+                msg_tmpl.format(expected_num, field, len(got)),
             )
             return
         self.assertEqual(
             expected,
             got,
-            "Invalid value for field %s, expected %r, got %r" % (field, expected, got),
+            f"Invalid value for field {field}, expected {expected!r}, got {got!r}",
         )
 
 
@@ -227,10 +219,10 @@ def expect_info_dict(self, got_dict, expected_dict):
         if expected_dict.get("ext"):
             mandatory_fields.extend(("url", "ext"))
         for key in mandatory_fields:
-            self.assertTrue(got_dict.get(key), "Missing mandatory field %s" % key)
+            self.assertTrue(got_dict.get(key), f"Missing mandatory field {key}")
     # Check for mandatory fields that are automatically set by YoutubeDL
     for key in ["webpage_url", "extractor", "extractor_key"]:
-        self.assertTrue(got_dict.get(key), "Missing field: %s" % key)
+        self.assertTrue(got_dict.get(key), f"Missing field: {key}")
 
     # Are checkable fields missing from the test case definition?
     test_info_dict = dict(
@@ -260,8 +252,8 @@ def expect_info_dict(self, got_dict, expected_dict):
 
         def _repr(v):
             if isinstance(v, compat_str):
-                return "'%s'" % v.replace("\\", "\\\\").replace("'", "\\'").replace(
-                    "\n", "\\n"
+                return "{!r}".format(
+                    v.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
                 )
             else:
                 return repr(v)
@@ -269,7 +261,7 @@ def expect_info_dict(self, got_dict, expected_dict):
         info_dict_str = ""
         if len(missing_keys) != len(expected_dict):
             info_dict_str += "".join(
-                "    %s: %s,\n" % (_repr(k), _repr(v))
+                "    {}: {},\n".format(_repr(k), _repr(v))
                 for k, v in test_info_dict.items()
                 if k not in missing_keys
             )
@@ -277,24 +269,27 @@ def expect_info_dict(self, got_dict, expected_dict):
             if info_dict_str:
                 info_dict_str += "\n"
         info_dict_str += "".join(
-            "    %s: %s,\n" % (_repr(k), _repr(test_info_dict[k])) for k in missing_keys
+            "    {}: {},\n".format(_repr(k), _repr(test_info_dict[k]))
+            for k in missing_keys
         )
         write_string("\n'info_dict': {\n" + info_dict_str + "},\n", out=sys.stderr)
         self.assertFalse(
             missing_keys,
-            "Missing keys in test definition: %s" % (", ".join(sorted(missing_keys))),
+            "Missing keys in test definition: {}".format(
+                ", ".join(sorted(missing_keys))
+            ),
         )
 
 
-def assertRegexpMatches(self, text, regexp, msg=None):
+def assert_regex_matches(self, text, regex, msg=None):
     if hasattr(self, "assertRegexp"):
-        return self.assertRegexp(text, regexp, msg)
+        return self.assertRegexp(text, regex, msg)
     else:
-        m = re.match(regexp, text)
+        m = re.match(regex, text)
         if not m:
-            note = "Regexp didn't match: %r not found" % (regexp)
+            note = f"Regexp didn't match: {regex!r} not found"
             if len(text) < 1000:
-                note += " in %r" % text
+                note += f" in {text}"
             if msg is None:
                 msg = note
             else:
@@ -302,24 +297,24 @@ def assertRegexpMatches(self, text, regexp, msg=None):
             self.assertTrue(m, msg)
 
 
-def assertGreaterEqual(self, got, expected, msg=None):
+def assert_greater_or_equal(self, got, expected, msg=None):
     if not (got >= expected):
         if msg is None:
-            msg = "%r not greater than or equal to %r" % (got, expected)
+            msg = f"{got!r} not greater than or equal to {expected!r}"
         self.assertTrue(got >= expected, msg)
 
 
-def assertLessEqual(self, got, expected, msg=None):
+def assert_less_or_equal(self, got, expected, msg=None):
     if not (got <= expected):
         if msg is None:
-            msg = "%r not less than or equal to %r" % (got, expected)
+            msg = f"{got!r} not less than or equal to {expected!r}"
         self.assertTrue(got <= expected, msg)
 
 
-def assertEqual(self, got, expected, msg=None):
+def assert_equal(self, got, expected, msg=None):
     if not (got == expected):
         if msg is None:
-            msg = "%r not equal to %r" % (got, expected)
+            msg = f"{got!r} not equal to {expected!r}"
         self.assertTrue(got == expected, msg)
 
 
