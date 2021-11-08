@@ -1,5 +1,4 @@
 # coding: utf-8
-import json
 from operator import itemgetter
 
 from yt_dlp.compat import (
@@ -96,10 +95,26 @@ class ServusTVIE(InfoExtractor):
     def country_code(self):
         return self.country_override or self._GEO_COUNTRIES[0]
 
-    def _manage_formats(self, formats):
+    def initialize(self):
+        geo_bypass_country = self.get_param("geo_bypass_country")
+        if geo_bypass_country:
+            self.country_override = geo_bypass_country.upper()
+            self.to_screen(f"Set countrycode to {self.country_code!r}")
+
+    def download_formats(self, info, video_id):
         audio_ids = set()
         video_ids = set()
         requested_format = self.get_param("format")
+
+        try:
+            formats, subtitles = self._extract_m3u8_formats_and_subtitles(
+                info["videoUrl"],
+                video_id=video_id,
+                entry_protocol="m3u8",
+                errnote="Stream not available",
+            )
+        except ExtractorError as exc:
+            raise ExtractorError(exc.msg, video_id=video_id, expected=True) from exc
 
         self._sort_formats(formats)
         for fmt in formats:
@@ -116,6 +131,8 @@ class ServusTVIE(InfoExtractor):
             self._downloader.format_selector = self._downloader.build_format_selector(
                 requested_format
             )
+
+        return formats, subtitles
 
     def _entry_by_id(self, video_id, video_url=None, is_live=False):
         info = (
@@ -141,17 +158,7 @@ class ServusTVIE(InfoExtractor):
         if errors and info.get("videoUrl") is None:
             raise ExtractorError(errormsg, video_id=video_id, expected=True)
 
-        try:
-            formats, subtitles = self._extract_m3u8_formats_and_subtitles(
-                info["videoUrl"],
-                video_id=video_id,
-                entry_protocol="m3u8",
-                errnote="Stream not available",
-            )
-        except ExtractorError as exc:
-            raise ExtractorError(exc.msg, video_id=video_id, expected=True) from exc
-
-        self._manage_formats(formats)
+        formats, subtitles = self.download_formats(info, video_id)
         duration = None if is_live else info.get("duration")
         estimate_filesize(formats, duration)
 
@@ -227,6 +234,14 @@ class ServusTVIE(InfoExtractor):
 
         return OnDemandPagedList(fetch_page, self.PAGE_SIZE)
 
+    def _og_search_title(self, html, **kwargs):
+        site_name = self._og_search_property("site_name", html, default=None)
+        title = super()._og_search_title(html, **kwargs)
+        if site_name and title:
+            title = title.replace(f" - {site_name}", "", 1)
+
+        return title
+
     @staticmethod
     def _page_id(json_obj):
         for value in traverse_obj(json_obj, ("source", "data"), default={}).values():
@@ -235,19 +250,24 @@ class ServusTVIE(InfoExtractor):
         return None
 
     @staticmethod
-    def _json_extract(webpage, video_id):
-        json_string = get_element_by_id("__FRONTITY_CONNECT_STATE__", webpage)
-        if not json_string:
-            raise ExtractorError(
-                "Missing HTML metadata", video_id=video_id, expected=True
-            )
+    def taxonomy(json_obj, page_id):
+        asset_paths = (
+            ("source", "media_asset", str(page_id), "categories"),
+            # ('source', 'page', str(page_id), 'asset_content_color'),
+        )
 
-        try:
-            return json.loads(json_string or "{}")
-        except json.JSONDecodeError as exc:
-            raise ExtractorError(
-                "Bad JSON metadata", video_id=video_id, expected=False
-            ) from exc
+        for path in asset_paths:
+            asset_ids = traverse_obj(json_obj, path, default=())
+            query_type = path[-1]
+            query_id = asset_ids and asset_ids[0]
+            if query_id:
+                return query_type, query_id
+
+        raise ExtractorError(
+            "Website contains no supported playlists",
+            video_id=page_id,
+            expected=True,
+        )
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
@@ -256,11 +276,6 @@ class ServusTVIE(InfoExtractor):
             key.lower(): value[0]
             for key, value in compat_parse_qs(parsed_url.query).items()
         }
-
-        geo_bypass_country = self.get_param("geo_bypass_country")
-        if geo_bypass_country:
-            self.country_override = geo_bypass_country.upper()
-            self.to_screen(f"Set countrycode to {self.country_code!r}")
 
         # server accepts tz database names
         # see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
@@ -273,7 +288,13 @@ class ServusTVIE(InfoExtractor):
             return self._entry_by_id(video_id)
 
         webpage = self._download_webpage(url, video_id=video_id)
-        json_obj = self._json_extract(webpage, video_id=video_id)
+        try:
+            json_obj = self._parse_json(
+                get_element_by_id("__FRONTITY_CONNECT_STATE__", webpage), video_id
+            )
+        except TypeError as exc:
+            raise ExtractorError("Cannot extract metadata.") from exc
+
         if self.country_override is None:
             self.country_override = traverse_obj(
                 json_obj, ("geolocation", "countryCode"), default=None
@@ -290,31 +311,7 @@ class ServusTVIE(InfoExtractor):
 
         # create playlist
         page_id = self._page_id(json_obj)
-        if page_id is None:
-            raise ExtractorError("Missing page id", video_id=video_id)
-
-        asset_paths = (
-            ("source", "media_asset", str(page_id), "categories"),
-            # ('source', 'page', str(page_id), 'asset_content_color'),
-        )
-
-        for *path, asset_name in asset_paths:
-            asset_ids = traverse_obj(json_obj, (*path, asset_name), default=())
-            if asset_ids:
-                query_id, query_type = asset_ids[0], asset_name
-                break
-        else:
-            raise ExtractorError(
-                "Website contains no supported playlists",
-                video_id=page_id,
-                expected=True,
-            )
-
-        site_name = self._og_search_property("site_name", webpage, default=None)
-        playlist_title = self._og_search_title(webpage, default=None)
-        if site_name and playlist_title:
-            playlist_title = playlist_title.replace(f" - {site_name}", "", 1)
-        playlist_description = self._og_search_description(webpage, default=None)
+        query_type, query_id = self.taxonomy(json_obj, page_id)
 
         return self.playlist_result(
             self._paged_playlist_by_query(
@@ -323,8 +320,8 @@ class ServusTVIE(InfoExtractor):
                 extra_query={"order": "desc", "orderby": "rbmh_playability"},
             ),
             playlist_id=str(page_id),
-            playlist_title=playlist_title,
-            playlist_description=playlist_description,
+            playlist_title=self._og_search_title(webpage, default=None),
+            playlist_description=self._og_search_description(webpage, default=None),
         )
 
 
