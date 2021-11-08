@@ -53,7 +53,7 @@ class ServusTVIE(InfoExtractor):
                 "title": "Die Top-Themen vom 05.11.",
                 "description": "md5:c913d5aba429acf4ade46a181d9532f0",
                 "duration": 587,
-                "timestamp": 1636135770,
+                "timestamp": int,
                 "upload_date": "20211105",
                 "is_live": False,
                 "categories": ["Servus Nachrichten 19:00"],
