@@ -74,12 +74,20 @@ class TestPlugins(unittest.TestCase):
                     map(Path, package.__path__),
                 )
 
-    def test_overridden_classes(self):
-        names = {cls.__name__ for cls in _OVERRIDDEN}
-        self.assertGreaterEqual(len(names), 2)
-        namespace = set(yt_dlp.extractor.__dict__.keys())
-        for name in names:
-            self.assertIn(name, namespace)
+    def test_overridden_classes_(self):
+        overridden_names = {cls.__name__ for cls in _OVERRIDDEN}
+        self.assertGreaterEqual(len(overridden_names), 2)
+        all_names = set(yt_dlp.extractor.__dict__.keys())
+
+        not_in_names = ", ".join(overridden_names - all_names)
+        self.assertFalse(not_in_names, f"missing {not_in_names} in extractor namespace")
+
+        all_classes = getattr(yt_dlp.extractor, "_ALL_CLASSES", ())
+        for cls in _OVERRIDDEN:
+            self.assertFalse(
+                cls in all_classes,
+                f"Overridden class {cls.__name__!r} still found in _ALL_CLASSES",
+            )
 
     def test_patched_bug_report_message(self):
         orig_bug_report = yt_dlp.utils.bug_reports_message()

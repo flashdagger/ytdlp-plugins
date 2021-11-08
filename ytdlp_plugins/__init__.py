@@ -170,7 +170,11 @@ def add_plugins():
 
     ie_plugins = load_plugins("extractor", "IE", extractor.__dict__)
     _FOUND.update(ie_plugins)
-    getattr(extractor, "_ALL_CLASSES", [])[:0] = ie_plugins.values()
+    all_classes = getattr(extractor, "_ALL_CLASSES", [])
+    for cls in _OVERRIDDEN:
+        with suppress(ValueError):
+            all_classes.remove(cls)
+    all_classes[:0] = ie_plugins.values()
 
     pp_plugins = load_plugins("postprocessor", "PP", postprocessor.__dict__)
     _FOUND.update(pp_plugins)

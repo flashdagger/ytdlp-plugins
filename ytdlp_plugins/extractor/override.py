@@ -14,6 +14,7 @@ from .example import ExamplePluginIE as _ExamplePluginIE
 
 # original BitChuteIE defined in yt_dlp.extractor.bitchute
 class BitChuteIE(_BitChuteIE):
+    IE_NAME = "bitchute:override"
     _TESTS = ()
 
 
