@@ -5,8 +5,9 @@ import hashlib
 import json
 import os
 import socket
+from contextlib import suppress
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Sequence
 
 import yt_dlp.YoutubeDL
 from yt_dlp.compat import (
@@ -155,19 +156,19 @@ def generator(test_case, test_name):
             _tc_filename.write_text(json.dumps(_info_dict, indent=4), encoding="utf-8")
             return _info_dict
 
-        def try_rm_tcs_files(tcs: Optional[Sequence] = None) -> None:
-            if tcs is None:
-                tcs = test_cases
+        def try_rm_tcs_files(tcs: Sequence) -> None:
+            def unlink_if_exist(path: Path):
+                with suppress(FileNotFoundError):
+                    path.unlink()
+
             for _tc in tcs:
                 _tc_filename = get_tc_filename(_tc)
                 self.assertFalse(_tc_filename.is_dir())
-                _tc_filename.unlink(missing_ok=True)
-                _tc_filename.with_name(_tc_filename.name + ".part").unlink(
-                    missing_ok=True
-                )
-                _tc_filename.with_suffix(".info.json").unlink(missing_ok=True)
+                unlink_if_exist(_tc_filename)
+                unlink_if_exist(_tc_filename.with_name(_tc_filename.name + ".part"))
+                unlink_if_exist(_tc_filename.with_suffix(".info.json"))
 
-        try_rm_tcs_files()
+        try_rm_tcs_files(test_cases)
         succeeded_testcases = []
         try:
             try_num = 1
