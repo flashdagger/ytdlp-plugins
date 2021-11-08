@@ -5,7 +5,7 @@ import unittest
 from ytdlp_plugins import utils
 
 
-class TestPlugins(unittest.TestCase):
+class TestUtils(unittest.TestCase):
     def test_estimate_filesize(self):
         tbr = 12345
         item = dict(tbr=tbr)
@@ -21,7 +21,7 @@ class TestPlugins(unittest.TestCase):
         self.assertIn("filesize_approx", formats[0])
         self.assertIsInstance(formats[0]["filesize_approx"], (int, float))
 
-    def test_estimate_filesize2(self):
+    def test_estimate_filesize_1(self):
         tbr = 12345
         item = dict(tbr=tbr, filesize=10 * tbr)
         formats = [dict(item)]

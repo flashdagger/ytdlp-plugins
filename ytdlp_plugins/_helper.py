@@ -8,6 +8,7 @@ import re
 import sys
 import types
 from pathlib import Path
+from typing import Union
 from unittest import TestCase
 
 from yt_dlp import YoutubeDL
@@ -96,11 +97,14 @@ def gettestcases(include_onlymatching=False):
             continue
         ie = klass()
         for tc in ie.get_testcases(include_onlymatching):
+            tc["cls"] = klass
             yield tc
 
 
-def md5(string):
-    return hashlib.md5(string.encode("utf-8")).hexdigest()
+def md5(data: Union[Path, str]) -> str:
+    if isinstance(data, Path):
+        return hashlib.md5(data.read_bytes()).hexdigest()
+    return hashlib.md5(data.encode("utf-8")).hexdigest()
 
 
 class DownloadTestcase(TestCase):

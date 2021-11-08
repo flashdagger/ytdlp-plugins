@@ -74,7 +74,7 @@ class TestPlugins(unittest.TestCase):
                     map(Path, package.__path__),
                 )
 
-    def test_overridden_classes_(self):
+    def test_overridden_classes(self):
         overridden_names = {cls.__name__ for cls in _OVERRIDDEN}
         self.assertGreaterEqual(len(overridden_names), 2)
         all_names = set(yt_dlp.extractor.__dict__.keys())
