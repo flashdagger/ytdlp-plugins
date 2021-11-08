@@ -222,9 +222,9 @@ def plugin_debug_header(self):
             module, "__version__", None
         )
         version = f"(v{version})" if version else ""
-        module_info = f"from {module.__name__!r}" if module else ""
+        cls_path = f"{module.__name__}.{name}" if module else name
         alt_name = getattr(cls(), "IE_NAME", name)
-        plugin_list.append((f"[{alt_name}]", module_info, version))
+        plugin_list.append((f"[{alt_name}]", f"via {cls_path!r}", version))
 
     if plugin_list:
         plural_s = "s" if len(plugin_list) > 1 else ""
