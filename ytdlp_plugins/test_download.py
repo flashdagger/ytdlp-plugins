@@ -5,7 +5,6 @@ import hashlib
 import json
 import os
 import socket
-import unittest
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -24,12 +23,11 @@ from yt_dlp.utils import (
 )
 
 from ._helper import (
-    assert_greater_or_equal,
-    expect_info_dict,
     expect_warnings,
     get_params,
     gettestcases,
     report_warning,
+    DownloadTestcase,
 )
 
 RETRIES = 3
@@ -58,7 +56,7 @@ def _file_md5(fn: Path) -> str:
 defs = gettestcases()
 
 
-class TestDownload(unittest.TestCase):
+class TestDownload(DownloadTestcase):
     # Parallel testing in nosetests. See
     # http://nose.readthedocs.org/en/latest/doc_tests/test_multiprocess/multiprocess.html
     _multiprocess_shared_ = True
@@ -204,10 +202,12 @@ def generator(test_case, tname):
             if is_playlist:
                 self.assertTrue(res_dict["_type"] in ["playlist", "multi_video"])
                 self.assertTrue("entries" in res_dict)
-                expect_info_dict(self, res_dict, test_case.get("info_dict", {}))
+                DownloadTestcase.expect_info_dict(
+                    self, res_dict, test_case.get("info_dict", {})
+                )
 
             if "playlist_mincount" in test_case:
-                assert_greater_or_equal(
+                DownloadTestcase.assertGreaterEqual(
                     self,
                     len(res_dict["entries"]),
                     test_case["playlist_mincount"],
@@ -216,7 +216,7 @@ def generator(test_case, tname):
                     f"but got only {len(res_dict['entries']):d}",
                 )
             if "playlist_count" in test_case:
-                self.assert_equal(
+                self.assertEqual(
                     len(res_dict["entries"]),
                     test_case["playlist_count"],
                     f"Expected {test_case['playlist_count']:d} entries "
@@ -225,7 +225,7 @@ def generator(test_case, tname):
                 )
             if "playlist_duration_sum" in test_case:
                 got_duration = sum(e["duration"] for e in res_dict["entries"])
-                self.assert_equal(test_case["playlist_duration_sum"], got_duration)
+                self.assertEqual(test_case["playlist_duration_sum"], got_duration)
 
             # Generalize both playlists and single videos to unified format for
             # simplicity
@@ -235,7 +235,9 @@ def generator(test_case, tname):
             for tc_num, tc in enumerate(test_cases):
                 tc_res_dict = res_dict["entries"][tc_num]
                 # First, check test cases' data against extracted data alone
-                expect_info_dict(self, tc_res_dict, tc.get("info_dict", {}))
+                DownloadTestcase.expect_info_dict(
+                    self, tc_res_dict, tc.get("info_dict", {})
+                )
                 # Now, check downloaded file consistency
                 tc_filename = get_tc_filename(tc)
 
@@ -259,7 +261,7 @@ def generator(test_case, tname):
                         if params.get("test"):
                             expected_minsize = max(expected_minsize, 10000)
                         got_fsize = os.path.getsize(tc_filename)
-                        assert_greater_or_equal(
+                        DownloadTestcase.assertGreaterEqual(
                             self,
                             got_fsize,
                             expected_minsize,
@@ -272,7 +274,9 @@ def generator(test_case, tname):
                         self.assertEqual(tc["md5"], md5_for_file)
                 # Finally, check test cases' data again but this time against
                 # extracted data from info JSON file written during processing
-                expect_info_dict(self, info_dict, tc.get("info_dict", {}))
+                DownloadTestcase.expect_info_dict(
+                    self, info_dict, tc.get("info_dict", {})
+                )
                 succeeded_testcases.append(tc)
         finally:
             try_rm_tcs_files(succeeded_testcases)

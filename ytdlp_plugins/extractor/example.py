@@ -28,12 +28,17 @@ class ExamplePluginIE(InfoExtractor):
     ]
 
     def _real_extract(self, url):
-        self.to_screen('URL "%s" sucessfully captured' % url)
+        self.to_screen(f"URL {url!r} sucessfully captured")
         media_id = self._match_id(url)
         media_url = "https://c.tenor.com/y2Mxb8a-DwAAAAAM/davizinmakermeuovo.gif"
         ext = determine_ext(media_url)
 
-        return {"id": media_id, "title": media_id, "url": media_url, "ext": ext}
+        return {
+            "id": media_id,
+            "title": media_id,
+            "url": media_url,
+            "ext": ext,
+        }
 
 
 class FailingPluginIE(InfoExtractor):
