@@ -13,7 +13,7 @@ from yt_dlp.utils import (
 )
 from ytdlp_plugins.utils import estimate_filesize
 
-__version__ = "2021.11.05"
+__version__ = "2021.11.07"
 
 
 class ParsedURL(object):
