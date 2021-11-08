@@ -37,7 +37,7 @@ class YoutubeDL(yt_dlp.YoutubeDL):
     def __init__(self, *args, **kwargs):
         self.to_stderr = self.to_screen
         self.processed_info_dicts = []
-        super(YoutubeDL, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def report_warning(self, message, _only_once=False):
         # Don't accept warnings during tests
@@ -45,12 +45,12 @@ class YoutubeDL(yt_dlp.YoutubeDL):
 
     def process_info(self, info_dict):
         self.processed_info_dicts.append(info_dict)
-        return super(YoutubeDL, self).process_info(info_dict)
+        return super().process_info(info_dict)
 
 
-def _file_md5(fn: Path) -> str:
-    with fn.open("rb") as f:
-        return hashlib.md5(f.read()).hexdigest()
+def _file_md5(filename: Path) -> str:
+    with filename.open("rb") as fd:
+        return hashlib.md5(fd.read()).hexdigest()
 
 
 defs = gettestcases()
@@ -80,12 +80,12 @@ class TestDownload(DownloadTestcase):
 
 
 # Dynamically generate tests
-def generator(test_case, tname):
+def generator(test_case, test_name):
     def test_template(self):
-        if self.COMPLETED_TESTS.get(tname):
+        if self.COMPLETED_TESTS.get(test_name):
             return
-        self.COMPLETED_TESTS[tname] = True
-        ie = yt_dlp.extractor.get_info_extractor(test_case["name"])()
+        self.COMPLETED_TESTS[test_name] = True
+        iext = yt_dlp.extractor.get_info_extractor(test_case["name"])()
         other_ies = [
             get_info_extractor(ie_key)() for ie_key in test_case.get("add_ie", [])
         ]
@@ -95,16 +95,17 @@ def generator(test_case, tname):
         def print_skipping(reason):
             print(f"Skipping {test_case['name']}: {reason}")
 
-        if not ie.working():
+        if not iext.working():
             print_skipping("IE marked as not _WORKING")
             return
 
-        for tc in test_cases:
-            info_dict = tc.get("info_dict", {})
-            params = tc.get("params", {})
+        for sub_test_case in test_cases:
+            info_dict = sub_test_case.get("info_dict", {})
+            params = sub_test_case.get("params", {})
             if not info_dict.get("id"):
                 raise Exception("Test definition incorrect. 'id' key is not present")
-            elif not info_dict.get("ext"):
+
+            if not info_dict.get("ext"):
                 if params.get("skip_download") and params.get(
                     "ignore_no_formats_error"
                 ):
@@ -125,7 +126,7 @@ def generator(test_case, tname):
                 return
 
         params = get_params(test_case.get("params", {}))
-        params["outtmpl"] = tname + "_" + params["outtmpl"]
+        params["outtmpl"] = test_name + "_" + params["outtmpl"]
         if is_playlist and "playlist" not in test_case:
             params.setdefault("extract_flat", "in_playlist")
             params.setdefault("playlistend", test_case.get("playlist_mincount"))
@@ -141,23 +142,30 @@ def generator(test_case, tname):
 
         ydl.add_progress_hook(_hook)
         expect_warnings(ydl, test_case.get("expected_warnings", []))
-
-        def get_tc_filename(tc) -> Path:
-            return Path(ydl.prepare_filename(dict(tc.get("info_dict", {}))))
-
         res_dict = None
+
+        def get_tc_filename(_tc) -> Path:
+            return Path(ydl.prepare_filename(dict(_tc.get("info_dict", {}))))
+
+        def get_info_dict(_tc):
+            _tc_filename = get_tc_filename(_tc).with_suffix(".info.json")
+            self.assertTrue(_tc_filename.exists(), f"Missing info file {_tc_filename}")
+            _info_dict = json.loads(_tc_filename.read_text(encoding="utf-8"))
+            # write formatted json back
+            _tc_filename.write_text(json.dumps(_info_dict, indent=4), encoding="utf-8")
+            return _info_dict
 
         def try_rm_tcs_files(tcs: Optional[Sequence] = None) -> None:
             if tcs is None:
                 tcs = test_cases
-            for tc in tcs:
-                tc_filename = get_tc_filename(tc)
-                self.assertFalse(tc_filename.is_dir())
-                tc_filename.unlink(missing_ok=True)
-                tc_filename.with_name(tc_filename.name + ".part").unlink(
+            for _tc in tcs:
+                _tc_filename = get_tc_filename(_tc)
+                self.assertFalse(_tc_filename.is_dir())
+                _tc_filename.unlink(missing_ok=True)
+                _tc_filename.with_name(_tc_filename.name + ".part").unlink(
                     missing_ok=True
                 )
-                tc_filename.with_suffix(".info.json").unlink(missing_ok=True)
+                _tc_filename.with_suffix(".info.json").unlink(missing_ok=True)
 
         try_rm_tcs_files()
         succeeded_testcases = []
@@ -189,7 +197,7 @@ def generator(test_case, tname):
 
                     if try_num == RETRIES:
                         report_warning(
-                            f"{tname} failed due to network errors, skipping..."
+                            f"{test_name} failed due to network errors, skipping..."
                         )
                         return
 
@@ -198,6 +206,8 @@ def generator(test_case, tname):
                     try_num += 1
                 else:
                     break
+
+            _ = get_info_dict(test_case)
 
             if is_playlist:
                 self.assertTrue(res_dict["_type"] in ["playlist", "multi_video"])
@@ -232,22 +242,15 @@ def generator(test_case, tname):
             if "entries" not in res_dict:
                 res_dict["entries"] = [res_dict]
 
-            for tc_num, tc in enumerate(test_cases):
+            for tc_num, sub_test_case in enumerate(test_cases):
                 tc_res_dict = res_dict["entries"][tc_num]
                 # First, check test cases' data against extracted data alone
                 DownloadTestcase.expect_info_dict(
-                    self, tc_res_dict, tc.get("info_dict", {})
+                    self, tc_res_dict, sub_test_case.get("info_dict", {})
                 )
-                # Now, check downloaded file consistency
-                tc_filename = get_tc_filename(tc)
+                info_dict = get_info_dict(sub_test_case)
+                tc_filename = get_tc_filename(sub_test_case)
 
-                info_json_fn = tc_filename.with_suffix(".info.json")
-                self.assertTrue(
-                    info_json_fn.exists(), f"Missing info file {info_json_fn}"
-                )
-                info_dict = json.loads(info_json_fn.read_text())
-                # write formatted json back
-                info_json_fn.write_text(json.dumps(info_dict, indent=4))
                 if not test_case.get("params", {}).get("skip_download", False):
                     self.assertTrue(
                         tc_filename.exists(), msg=f"Missing file {tc_filename}"
@@ -256,7 +259,7 @@ def generator(test_case, tname):
                         tc_filename in finished_hook_called,
                         (tc_filename, finished_hook_called),
                     )
-                    expected_minsize = tc.get("file_minsize", 10000)
+                    expected_minsize = sub_test_case.get("file_minsize", 10000)
                     if expected_minsize is not None:
                         if params.get("test"):
                             expected_minsize = max(expected_minsize, 10000)
@@ -269,15 +272,16 @@ def generator(test_case, tname):
                             f"{format_bytes(expected_minsize)}, "
                             f"but it's only {format_bytes(got_fsize)} ",
                         )
-                    if "md5" in tc:
+                    if "md5" in sub_test_case:
                         md5_for_file = _file_md5(tc_filename)
-                        self.assertEqual(tc["md5"], md5_for_file)
+                        self.assertEqual(sub_test_case["md5"], md5_for_file)
                 # Finally, check test cases' data again but this time against
                 # extracted data from info JSON file written during processing
                 DownloadTestcase.expect_info_dict(
-                    self, info_dict, tc.get("info_dict", {})
+                    self, info_dict, sub_test_case.get("info_dict", {})
                 )
-                succeeded_testcases.append(tc)
+                succeeded_testcases.append(sub_test_case)
+            succeeded_testcases.append(test_case)
         finally:
             try_rm_tcs_files(succeeded_testcases)
             if is_playlist and res_dict is not None and res_dict.get("entries"):
@@ -289,19 +293,21 @@ def generator(test_case, tname):
     return test_template
 
 
-# And add them to TestDownload
-tests_counter = {}
-for test_case in defs:
-    name = test_case["name"]
-    i = tests_counter.get(name, 0)
-    tests_counter[name] = i + 1
-    test_name = f"test_{name}_{i}" if i else f"test_{name}"
-    test_method = generator(test_case, test_name)
-    test_method.__name__ = str(test_name)
-    ie_list = test_case.get("add_ie")
-    test_method.add_ie = ie_list and ",".join(ie_list)
-    setattr(TestDownload, test_method.__name__, test_method)
-    del test_method
+def prepare():
+    # And add them to TestDownload
+    tests_counter = {}
+    for test_case in defs:
+        name = test_case["name"]
+        i = tests_counter.get(name, 0)
+        tests_counter[name] = i + 1
+        test_name = f"test_{name}_{i}" if i else f"test_{name}"
+        test_method = generator(test_case, test_name)
+        test_method.__name__ = str(test_name)
+        ie_list = test_case.get("add_ie")
+        test_method.add_ie = ie_list and ",".join(ie_list)
+        setattr(TestDownload, test_method.__name__, test_method)
+        del test_method
+    return tests_counter
 
 
 def batch_generator(name, num_tests):
@@ -312,9 +318,13 @@ def batch_generator(name, num_tests):
     return test_template
 
 
-for name, num_tests in tests_counter.items():
-    test_method = batch_generator(name, num_tests)
-    test_method.__name__ = f"test_{name}_all"
-    test_method.add_ie = ""
-    setattr(TestDownload, test_method.__name__, test_method)
-    del test_method
+def main(tests_counter):
+    for name, num_tests in tests_counter.items():
+        test_method = batch_generator(name, num_tests)
+        test_method.__name__ = f"test_{name}_all"
+        test_method.add_ie = ""
+        setattr(TestDownload, test_method.__name__, test_method)
+        del test_method
+
+
+main(prepare())
