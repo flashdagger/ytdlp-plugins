@@ -81,7 +81,7 @@ class FakeYDL(YoutubeDL):
         self.report_warning = types.MethodType(report_warning, self)
 
 
-def gettestcases(include_onlymatching=False):
+def gettestcases():
     from inspect import getfile
     from . import initialize, add_plugins, _FOUND
 
@@ -96,7 +96,7 @@ def gettestcases(include_onlymatching=False):
         if project_plugins.is_dir() and project_plugins != module_file.parents[1]:
             continue
         ie = klass()
-        for tc in ie.get_testcases(include_onlymatching):
+        for tc in ie.get_testcases(include_onlymatching=True):
             tc["cls"] = klass
             yield tc
 

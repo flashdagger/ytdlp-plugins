@@ -3,7 +3,9 @@
 
 import json
 import os
+import re
 import socket
+import sys
 from contextlib import suppress
 from itertools import groupby, count
 from operator import itemgetter
@@ -32,6 +34,7 @@ from ._helper import (
     md5,
     DownloadTestcase,
 )
+from .ast_utils import get_test_lineno
 
 RETRIES = 3
 
@@ -217,8 +220,11 @@ class TestDownload(DownloadTestcase):
 
 
 # Dynamically generate tests
-def generator(test_case, test_name: str) -> Callable:
+def generator(test_case, test_name: str, test_index: int) -> Callable:
     def skip_reason() -> Tuple[bool, str]:
+        if test_case.get("only_matching", False):
+            return True, "only_matching"
+
         if "skip" in test_case:
             return True, test_case["skip"]
 
@@ -237,17 +243,36 @@ def generator(test_case, test_name: str) -> Callable:
 
         return False, ""
 
+    def show_location(exc, playlist_idx: Optional[int] = None):
+        msg = str(exc).split(" : ", maxsplit=1)[-1]
+
+        info = get_test_lineno(test_case["cls"], index=test_index)
+        filename = info["file"]
+        with suppress(TypeError, IndexError, KeyError):
+            info = info["playlist"][playlist_idx]
+        line_no = info["lineno"]
+
+        field_info = info.get("info_dict", info)
+        if field_info:
+            match = re.match(r".*\bfield (\w+)", msg)
+            line_no = field_info.get(match.group(1)) if match else line_no
+        print(f"\n{filename}:{line_no}: {msg}", file=sys.stderr)
+
     def test_template(self):
-        self.precheck_testcase(test_case)
-        sub_test_cases = test_case.get("playlist", ())
-        self.try_rm_tcs_files(test_case, *sub_test_cases)
-        self.initialize(test_case, test_name)
-        res_dict = self.extract_info()
-        self.get_info_dict(test_case)
-        if self.is_playlist(test_case):
-            self.check_playlist(res_dict)
-        self.expect_info_dict(res_dict, test_case.get("info_dict", {}))
-        self.check_testcase(test_case)
+        try:
+            self.precheck_testcase(test_case)
+            sub_test_cases = test_case.get("playlist", ())
+            self.try_rm_tcs_files(test_case, *sub_test_cases)
+            self.initialize(test_case, test_name)
+            res_dict = self.extract_info()
+            self.get_info_dict(test_case)
+            if self.is_playlist(test_case):
+                self.check_playlist(res_dict)
+            self.expect_info_dict(res_dict, test_case.get("info_dict", {}))
+            self.check_testcase(test_case)
+        except Exception as exc:
+            show_location(exc)
+            raise
 
         entries = res_dict.get("entries", ())
         for idx, sub_test_case, tc_res_dict in zip(count(), sub_test_cases, entries):
@@ -255,12 +280,18 @@ def generator(test_case, test_name: str) -> Callable:
                 "playlist entry",
                 id=sub_test_case.get("info_dict", {}).get("id", f"<{idx}>"),
             ):
-                self.get_info_dict(sub_test_case)
-                self.precheck_testcase(sub_test_case)
-                # First, check test cases' data against extracted data alone
-                self.expect_info_dict(tc_res_dict, sub_test_case.get("info_dict", {}))
-                self.check_testcase(sub_test_case)
-                self.try_rm_tcs_files(sub_test_case)
+                try:
+                    self.get_info_dict(sub_test_case)
+                    self.precheck_testcase(sub_test_case)
+                    # First, check test cases' data against extracted data alone
+                    self.expect_info_dict(
+                        tc_res_dict, sub_test_case.get("info_dict", {})
+                    )
+                    self.check_testcase(sub_test_case)
+                    self.try_rm_tcs_files(sub_test_case)
+                except Exception as exc:
+                    show_location(exc, playlist_idx=idx)
+                    raise
         self.try_rm_tcs_files(test_case)
         test_ids = {
             _test_case.get("info_dict", {}).get("id") for _test_case in sub_test_cases
@@ -277,9 +308,9 @@ def main():
     for name, test_case_it in groupby(gettestcases(), itemgetter("name")):
         test_cases = tuple(test_case_it)
         num_tcs = len(test_cases)
-        for idx, test_case in enumerate(test_cases, 1):
-            test_name = f"{name}_{idx}" if num_tcs > 1 else name
-            test_method = generator(test_case, test_name)
+        for idx, test_case in enumerate(test_cases):
+            test_name = f"{name}_{idx+1}" if num_tcs > 1 else name
+            test_method = generator(test_case, test_name, idx)
             ie_list = test_case.get("add_ie")
             test_method.add_ie = ie_list and ",".join(ie_list)
 

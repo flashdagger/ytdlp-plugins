@@ -2,10 +2,10 @@ import ast
 from contextlib import suppress
 from importlib import import_module
 from inspect import getsourcelines, getsourcefile
-from typing import Dict, Any, List
-
+from typing import Dict, Any, List, Tuple
 
 # from yt_dlp.extractor.youtube import YoutubeIE
+_CACHE: Dict[type, Tuple[str, List[Dict[str, Any]]]] = {}
 
 
 def dict_info(node: ast.Dict) -> Dict[str, Any]:
@@ -68,7 +68,7 @@ def find_assignment(node, name_predicate):
     return None
 
 
-def get_test_lineno(cls: type, index: int, onlymatching=False) -> Dict[str, Any]:
+def get_line_infos(cls: type) -> Tuple[str, List[Dict[str, Any]]]:
     cls = unlazyify(cls)
     source_file = getsourcefile(cls)
     assert isinstance(source_file, str)
@@ -78,13 +78,23 @@ def get_test_lineno(cls: type, index: int, onlymatching=False) -> Dict[str, Any]
 
     test_node = find_assignment(ast_obj.body[0], lambda name: name.startswith("_TEST"))
     if not isinstance(test_node, ast.List):
-        return {"file": source_file, "lineno": line_number}
+        return source_file, [{"file": source_file, "lineno": line_number}]
 
     data = list_info(test_node, only_matching=False, playlist=None)
+    return source_file, data
 
-    data = [item for item in data if item.get("only_matching", False) is onlymatching]
-    if index >= len(data):
-        index = len(data) - 1
-    item = data[index]
-    item["file"] = source_file
-    return item
+
+def get_test_lineno(cls: type, index: int) -> Dict[str, Any]:
+    if cls in _CACHE:
+        source_filename, line_infos = _CACHE[cls]
+    else:
+        source_filename, line_infos = get_line_infos(cls)
+        _CACHE[cls] = source_filename, line_infos
+
+    if index >= len(line_infos):
+        index = len(line_infos) - 1
+
+    info = line_infos[index]
+    info["file"] = source_filename
+
+    return info
