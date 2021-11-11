@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Dict, Any, Callable, Optional, Tuple
 from unittest import skipIf
 
-import yt_dlp.YoutubeDL
 from yt_dlp.compat import (
     compat_http_client,
     compat_urllib_error,
@@ -37,15 +36,12 @@ from ._helper import (
 )
 from .ast_utils import get_test_lineno
 
-RETRIES = 3
-EXC_CODE_OBJ = compile(
-    "raise exc_cls(msg) from exc",
-    "",
-    "exec",
-)
-
 with patch_context():
-    YoutubeDLSuper = yt_dlp.YoutubeDL
+    from yt_dlp import YoutubeDL as YoutubeDLSuper
+
+RETRIES = 3
+EXC_CODE_STR = "raise exc_cls(msg) from exc"
+EXC_CODE_OBJ = compile(EXC_CODE_STR, "", "exec")
 
 
 class YoutubeDL(YoutubeDLSuper):
@@ -228,6 +224,14 @@ class TestDownload(DownloadTestcase):
         self.expect_info_dict(info_dict, test_case.get("info_dict", {}))
 
 
+def exc_code_obj(co_firstlineno, co_name, co_filename):
+    if hasattr(EXC_CODE_OBJ, "replace"):
+        return EXC_CODE_OBJ.replace(
+            co_name=co_name, co_filename=co_filename, co_firstlineno=co_firstlineno
+        )
+    return compile("\n" * (co_firstlineno - 1) + EXC_CODE_STR, co_filename, "exec")
+
+
 # Dynamically generate tests
 def generator(test_case, test_name: str, test_index: int) -> Callable:
     def skip_reason() -> Tuple[bool, str]:
@@ -259,13 +263,13 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
 
         match = re.match(r".*\bfield (\w+)", msg)
         with suppress(KeyError, AttributeError):
-            line_no = info["_lineno"][match.group(1)]
+            line_no = info["_lineno"][match and match.group(1)]
         with suppress(KeyError, AttributeError):
-            line_no = info["info_dict"]["_lineno"][match.group(1)]
+            line_no = info["info_dict"]["_lineno"][match and match.group(1)]
         exc_cls = type(test_name, (type(exc),), {})
         #  pylint: disable=exec-used
         exec(
-            EXC_CODE_OBJ.replace(
+            exc_code_obj(
                 co_firstlineno=line_no,
                 co_name=test_name,
                 co_filename=filename,

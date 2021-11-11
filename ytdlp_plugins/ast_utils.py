@@ -1,4 +1,5 @@
 import ast
+import builtins
 from contextlib import suppress
 from importlib import import_module
 from inspect import getsourcelines, getsourcefile, getmro
@@ -6,24 +7,35 @@ from typing import Dict, Any, List, Tuple
 
 _CACHE: Dict[type, Tuple[str, List[Dict[str, Any]]]] = {}
 
+AST_TYPE_MAP = {
+    ast.Constant: lambda obj: obj.value,
+    ast.NameConstant: lambda obj: obj.value,
+    ast.Str: lambda obj: obj.s,
+    ast.Num: lambda obj: obj.n,
+    type(None): lambda obj: obj,  # for type completion
+}
+
 
 def dict_info(node: ast.Dict, **defaults) -> Dict[str, Any]:
     line_info = {"_self": node.lineno}
     info = {"_lineno": line_info}
     for key, value in zip(node.keys, node.values):
-        if isinstance(value, ast.Constant):
-            actual_value = value.value
+        key_cls, value_cls = type(key), type(value)
+        key_value = AST_TYPE_MAP[key_cls](key) if key_cls in AST_TYPE_MAP else key
+
+        if value_cls in AST_TYPE_MAP:
+            actual_value = AST_TYPE_MAP[value_cls](value)
         elif isinstance(value, ast.Dict):
-            _defaults = defaults.get(key.value, {})
+            _defaults = defaults.get(key_value, {})
             actual_value = dict_info(value, **_defaults)
         elif isinstance(value, ast.List):
             actual_value = list_info(value, **defaults)
         elif isinstance(value, ast.Name):
-            actual_value = __builtins__.get(value.id, value.id)
+            actual_value = getattr(builtins, value.id, value.id)
         else:
             actual_value = value
-        line_info[key.value] = value.lineno
-        info[key.value] = actual_value
+        line_info[key_value] = value.lineno
+        info[key_value] = actual_value
 
     return info
 
