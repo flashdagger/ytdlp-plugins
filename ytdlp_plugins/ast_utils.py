@@ -1,7 +1,7 @@
 import ast
 from contextlib import suppress
 from importlib import import_module
-from inspect import getsourcelines, getsourcefile
+from inspect import getsourcelines, getsourcefile, getmro
 from typing import Dict, Any, List, Tuple
 
 _CACHE: Dict[type, Tuple[str, List[Dict[str, Any]]]] = {}
@@ -58,17 +58,27 @@ def find_assignment(node, name_predicate):
     return None
 
 
-def get_line_infos(cls: type) -> Tuple[str, List[Dict[str, Any]]]:
-    cls = unlazyify(cls)
-    source_file = getsourcefile(cls)
-    assert isinstance(source_file, str)
-    source_lines, line_number = getsourcelines(cls)
-    ast_obj = ast.parse("".join(source_lines))
-    ast.increment_lineno(ast_obj, n=line_number - 1)
+def get_line_infos(test_cls: type) -> Tuple[str, List[Dict[str, Any]]]:
+    test_attributes = {"_TESTS", "_TEST"}
+    cls = unlazyify(test_cls)
+    for cls in getmro(cls):
+        if not test_attributes & set(cls.__dict__.keys()):
+            continue
+        source_lines, line_number = getsourcelines(cls)
+        ast_obj = ast.parse("".join(source_lines))
+        ast.increment_lineno(ast_obj, n=line_number - 1)
+        test_node = find_assignment(
+            ast_obj.body[0], lambda name: name in test_attributes
+        )
+        break
+    else:
+        test_node = None
+        line_number = 0
 
-    test_node = find_assignment(ast_obj.body[0], lambda name: name.startswith("_TEST"))
+    source_file = str(getsourcefile(cls))
+
     if not isinstance(test_node, ast.List):
-        return source_file, [{"file": source_file, "lineno": line_number}]
+        return source_file, [{"_file": source_file, "_lineno": {"_self": line_number}}]
 
     data = list_info(test_node, playlist=None)
     return source_file, data
