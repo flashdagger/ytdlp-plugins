@@ -2,9 +2,10 @@
 # -*- coding: UTF-8 -*-
 
 import importlib
+import json
 import sys
 import traceback
-from contextlib import suppress, ExitStack, contextmanager
+from contextlib import suppress, ExitStack, contextmanager, ContextDecorator
 from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec, find_spec
@@ -16,7 +17,7 @@ from unittest.mock import patch
 from zipfile import ZipFile
 from zipimport import zipimporter
 
-from yt_dlp import YoutubeDL, utils as ytdlp_utils, main as ytdlp_main
+import yt_dlp
 
 __version__ = "2021.11.08"
 PACKAGE_NAME = __name__
@@ -213,7 +214,12 @@ def calling_plugin_class():
     return None
 
 
-@monkey_patch(YoutubeDL.print_debug_header)
+def write_json_file(obj, file):
+    with open(file, "w", encoding="utf-8") as fd:
+        json.dump(obj, fd, indent=4)
+
+
+@monkey_patch(yt_dlp.YoutubeDL.print_debug_header)
 def plugin_debug_header(self):
     plugin_list = []
     for name, cls in _FOUND.items():
@@ -245,7 +251,7 @@ def plugin_debug_header(self):
     return plugin_debug_header.__original__(self)
 
 
-@monkey_patch(ytdlp_utils.bug_reports_message)
+@monkey_patch(yt_dlp.utils.bug_reports_message)
 def bug_reports_message(*args, **kwargs):
     cls = calling_plugin_class()
     if cls is None:
@@ -255,9 +261,29 @@ def bug_reports_message(*args, **kwargs):
     return ""
 
 
+# pylint: disable=invalid-name
+class ydl_initialized(ContextDecorator):
+    def __init__(self):
+        self.orig = yt_dlp.YoutubeDL
+
+    def __enter__(self):
+        ydl_module_name = "yt_dlp.YoutubeDL"
+        if ydl_module_name in sys.modules:
+            del sys.modules[ydl_module_name]
+        ydl_module = importlib.import_module(ydl_module_name)
+        yt_dlp.YoutubeDL = getattr(ydl_module, "YoutubeDL")
+        return self
+
+    def __exit__(self, *exc):
+        yt_dlp.YoutubeDL = self.orig
+        return False
+
+
 _PATCHES = (
+    ydl_initialized(),
     patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header),
     patch("yt_dlp.utils.bug_reports_message", bug_reports_message),
+    patch("yt_dlp.utils.write_json_file", write_json_file),
 )
 
 
@@ -280,4 +306,4 @@ def patch_context():
 def main(argv=None):
     initialize()
     add_plugins()
-    ytdlp_main(argv=argv)
+    yt_dlp.main(argv=argv)
