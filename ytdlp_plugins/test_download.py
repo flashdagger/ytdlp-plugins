@@ -38,6 +38,12 @@ from ._helper import (
 from .ast_utils import get_test_lineno
 
 RETRIES = 3
+EXC_CODE_OBJ = compile(
+    "raise exc_cls(msg) from exc",
+    "",
+    "exec",
+)
+
 with patch_context():
     YoutubeDLSuper = yt_dlp.YoutubeDL
 
@@ -256,15 +262,10 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
             line_no = info["_lineno"][match.group(1)]
         with suppress(KeyError, AttributeError):
             line_no = info["info_dict"]["_lineno"][match.group(1)]
-        exc_cls = type(f"Test{test_name}", (type(exc),), {})
-        code_obj = compile(
-            "raise exc_cls(msg) from exc",
-            "",
-            "exec",
-        )
+        exc_cls = type(test_name, (type(exc),), {})
         #  pylint: disable=exec-used
         exec(
-            code_obj.replace(
+            EXC_CODE_OBJ.replace(
                 co_firstlineno=line_no,
                 co_name=test_name,
                 co_filename=filename,
@@ -327,7 +328,7 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
         test_url if test_case.get("only_matching", False) else test_download
     )
     cls = type(
-        f"Test{test_name}",
+        test_name,
         (TestDownload,),
         {"test_case": test_case, test_func.__name__: test_func},
     )

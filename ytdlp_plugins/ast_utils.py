@@ -18,8 +18,10 @@ def dict_info(node: ast.Dict, **defaults) -> Dict[str, Any]:
             actual_value = dict_info(value, **_defaults)
         elif isinstance(value, ast.List):
             actual_value = list_info(value, **defaults)
+        elif isinstance(value, ast.Name):
+            actual_value = __builtins__.get(value.id, value.id)
         else:
-            continue
+            actual_value = value
         line_info[key.value] = value.lineno
         info[key.value] = actual_value
 
