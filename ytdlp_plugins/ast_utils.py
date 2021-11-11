@@ -11,19 +11,17 @@ def dict_info(node: ast.Dict, **defaults) -> Dict[str, Any]:
     line_info = {"_self": node.lineno}
     info = {"_lineno": line_info}
     for key, value in zip(node.keys, node.values):
-        with suppress(AssertionError):
-            assert isinstance(key, ast.Constant)
-            if isinstance(value, ast.Constant):
-                actual_value = value.value
-            elif isinstance(value, ast.Dict):
-                _defaults = defaults.get(key.value, {})
-                actual_value = dict_info(value, **_defaults)
-            elif isinstance(value, ast.List):
-                actual_value = list_info(value, **defaults)
-            else:
-                continue
-            line_info[key.value] = value.lineno
-            info[key.value] = actual_value
+        if isinstance(value, ast.Constant):
+            actual_value = value.value
+        elif isinstance(value, ast.Dict):
+            _defaults = defaults.get(key.value, {})
+            actual_value = dict_info(value, **_defaults)
+        elif isinstance(value, ast.List):
+            actual_value = list_info(value, **defaults)
+        else:
+            continue
+        line_info[key.value] = value.lineno
+        info[key.value] = actual_value
 
     return info
 

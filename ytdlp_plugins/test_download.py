@@ -5,7 +5,6 @@ import json
 import os
 import re
 import socket
-import sys
 from contextlib import suppress
 from itertools import groupby, count
 from math import log10
@@ -28,6 +27,7 @@ from yt_dlp.utils import (
     UnavailableVideoError,
 )
 
+from . import patch_context
 from ._helper import (
     expect_warnings,
     get_params,
@@ -36,7 +36,6 @@ from ._helper import (
     DownloadTestcase,
 )
 from .ast_utils import get_test_lineno
-from . import patch_context
 
 RETRIES = 3
 with patch_context():
@@ -244,7 +243,7 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
 
         return False, ""
 
-    def show_location(exc, playlist_idx: Optional[int] = None):
+    def raise_with_test_location(exc, playlist_idx: Optional[int] = None):
         msg = str(exc).split(" : ", maxsplit=1)[-1]
         info = get_test_lineno(test_case["cls"], index=test_index)
         filename = info["_file"]
@@ -257,7 +256,20 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
             line_no = info["_lineno"][match.group(1)]
         with suppress(KeyError, AttributeError):
             line_no = info["info_dict"]["_lineno"][match.group(1)]
-        print(f"\n{filename}:{line_no}: {msg}", file=sys.stderr)
+        # print(f"\n{filename}:{line_no}: {msg}", file=sys.stderr)
+        code_obj = compile(
+            "raise type(exc)(msg) from exc",
+            "",
+            "exec",
+        )
+        #  pylint: disable=exec-used
+        exec(
+            code_obj.replace(
+                co_firstlineno=line_no,
+                co_name=test_name,
+                co_filename=filename,
+            )
+        )
 
     def test_url(self):
         try:
@@ -266,8 +278,7 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
                 _cls.suitable(test_case["url"]), "field url does not match extractor"
             )
         except AssertionError as exc:
-            show_location(exc)
-            raise
+            raise_with_test_location(exc)
 
     def test_download(self):
         try:
@@ -280,8 +291,8 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
             if self.is_playlist(test_case):
                 self.check_playlist(uut_dict)
             self.check_testcase(test_case)
-        except Exception as exc:
-            show_location(exc)
+        except AssertionError as exc:
+            raise_with_test_location(exc)
             raise
 
         entries = uut_dict.get("entries", ())
@@ -298,9 +309,10 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
                     )
                     self.check_testcase(sub_test_case)
                     self.try_rm_tcs_files(sub_test_case)
-                except Exception as exc:
-                    show_location(exc, playlist_idx=idx)
+                except AssertionError as exc:
+                    raise_with_test_location(exc, playlist_idx=idx)
                     raise
+
         self.try_rm_tcs_files(test_case)
         test_ids = {
             _test_case.get("info_dict", {}).get("id") for _test_case in sub_test_cases
