@@ -2,16 +2,12 @@
 # -*- coding: UTF-8 -*-
 
 import hashlib
-import io
-import json
 import re
 import sys
-import types
 from pathlib import Path
 from typing import Union
 from unittest import TestCase
 
-from yt_dlp import YoutubeDL
 from yt_dlp.compat import (
     compat_os_name,
     compat_str,
@@ -21,17 +17,59 @@ from yt_dlp.utils import (
     write_string,
 )
 
-SELF_PATH = Path(__file__)
-PARAMETERS_FILE = SELF_PATH.with_name("parameters.json")
-LOCAL_PARAMETERS_FILE = SELF_PATH.with_name("local_parameters.json")
+DEFAULT_PARAMS = {
+    "allsubtitles": False,
+    "check_formats": False,
+    "consoletitle": False,
+    "continuedl": True,
+    "fixup": "never",
+    "force_write_download_archive": False,
+    "forcedescription": False,
+    "forcefilename": False,
+    "forceformat": False,
+    "forcethumbnail": False,
+    "forcetitle": False,
+    "forceurl": False,
+    "format": "best",
+    "ignoreerrors": False,
+    "listformats": None,
+    "listsubtitles": False,
+    "logtostderr": False,
+    "matchtitle": None,
+    "max_downloads": None,
+    "nopart": False,
+    "noprogress": False,
+    "outtmpl": "%(id)s.%(ext)s",
+    "overwrites": None,
+    "password": None,
+    "playliststart": 1,
+    "prefer_free_formats": False,
+    "quiet": False,
+    "ratelimit": None,
+    "rejecttitle": None,
+    "retries": 10,
+    "simulate": False,
+    "socket_timeout": 20,
+    "subtitlesformat": "best",
+    "subtitleslang": None,
+    "test": True,
+    "updatetime": True,
+    "usenetrc": False,
+    "username": None,
+    "verbose": True,
+    "writeannotations": False,
+    "writedescription": False,
+    "writedesktoplink": False,
+    "writeinfojson": True,
+    "writelink": False,
+    "writesubtitles": False,
+    "writeurllink": False,
+    "writewebloclink": False,
+}
 
 
 def get_params(override=None):
-    with io.open(PARAMETERS_FILE, encoding="utf-8") as pf:
-        parameters = json.load(pf)
-    if LOCAL_PARAMETERS_FILE.exists():
-        with io.open(LOCAL_PARAMETERS_FILE, encoding="utf-8") as pf:
-            parameters.update(json.load(pf))
+    parameters = dict(DEFAULT_PARAMS)
     if override:
         parameters.update(override)
     return parameters
@@ -52,36 +90,7 @@ def report_warning(message):
     sys.stderr.write(output)
 
 
-class FakeYDL(YoutubeDL):
-    def __init__(self, override=None):
-        # Different instances of the downloader can't share the same dictionary
-        # some test set the "sublang" parameter, which would break the md5 checks.
-        params = get_params(override=override)
-        super(FakeYDL, self).__init__(params, auto_init=False)
-        self.result = []
-
-    def to_screen(self, s, skip_eol=None):
-        print(s)
-
-    def trouble(self, message=None, tb=None):
-        raise Exception(message)
-
-    def download(self, x):
-        self.result.append(x)
-
-    def expect_warning(self, regex):
-        # Silence an expected warning matching a regex
-        old_report_warning = self.report_warning
-
-        def report_warning(_self, message):
-            if re.match(regex, message):
-                return
-            old_report_warning(message)
-
-        self.report_warning = types.MethodType(report_warning, self)
-
-
-def gettestcases():
+def get_testcases():
     from inspect import getfile
     from . import initialize, add_plugins, _FOUND
 

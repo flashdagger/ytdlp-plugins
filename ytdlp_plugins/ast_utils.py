@@ -4,26 +4,26 @@ from importlib import import_module
 from inspect import getsourcelines, getsourcefile
 from typing import Dict, Any, List, Tuple
 
-# from yt_dlp.extractor.youtube import YoutubeIE
 _CACHE: Dict[type, Tuple[str, List[Dict[str, Any]]]] = {}
 
 
-def dict_info(node: ast.Dict) -> Dict[str, Any]:
-    info = {}
+def dict_info(node: ast.Dict, **defaults) -> Dict[str, Any]:
+    line_info = {"_self": node.lineno}
+    info = {"_lineno": line_info}
     for key, value in zip(node.keys, node.values):
         with suppress(AssertionError):
             assert isinstance(key, ast.Constant)
-            info[key.value] = value.value if isinstance(value, ast.Constant) else value
-
-    return info
-
-
-def dict_lines(node: ast.Dict) -> Dict[str, int]:
-    info = {}
-    for key, value in zip(node.keys, node.values):
-        with suppress(AssertionError):
-            assert isinstance(key, ast.Constant)
-            info[key.value] = value.lineno
+            if isinstance(value, ast.Constant):
+                actual_value = value.value
+            elif isinstance(value, ast.Dict):
+                _defaults = defaults.get(key.value, {})
+                actual_value = dict_info(value, **_defaults)
+            elif isinstance(value, ast.List):
+                actual_value = list_info(value, **defaults)
+            else:
+                continue
+            line_info[key.value] = value.lineno
+            info[key.value] = actual_value
 
     return info
 
@@ -31,20 +31,10 @@ def dict_lines(node: ast.Dict) -> Dict[str, int]:
 def list_info(node: ast.List, **defaults) -> List[Dict[str, Any]]:
     data = []
     for child in ast.iter_child_nodes(node):
-        info: Dict[str, Any] = {}
-        if isinstance(child, ast.Dict):
-            info["lineno"] = child.lineno
-            const_info = dict_info(child)
-            for key, default in defaults.items():
-                value = const_info.get(key, default)
-                if isinstance(value, ast.List):
-                    _defaults = default if isinstance(default, dict) else {}
-                    value = list_info(value, **_defaults)
-                info[key] = value
-            info_dict = const_info.get("info_dict")
-            if isinstance(info_dict, ast.Dict):
-                info["info_dict"] = dict_lines(info_dict)
-            data.append(info)
+        if not isinstance(child, ast.Dict):
+            continue
+        info = dict_info(child, **defaults)
+        data.append(info)
     return data
 
 
@@ -80,7 +70,7 @@ def get_line_infos(cls: type) -> Tuple[str, List[Dict[str, Any]]]:
     if not isinstance(test_node, ast.List):
         return source_file, [{"file": source_file, "lineno": line_number}]
 
-    data = list_info(test_node, only_matching=False, playlist=None)
+    data = list_info(test_node, playlist=None)
     return source_file, data
 
 
@@ -95,6 +85,6 @@ def get_test_lineno(cls: type, index: int) -> Dict[str, Any]:
         index = len(line_infos) - 1
 
     info = line_infos[index]
-    info["file"] = source_filename
+    info["_file"] = source_filename
 
     return info

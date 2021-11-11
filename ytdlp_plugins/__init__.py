@@ -272,6 +272,7 @@ class ydl_initialized(ContextDecorator):
             del sys.modules[ydl_module_name]
         ydl_module = importlib.import_module(ydl_module_name)
         yt_dlp.YoutubeDL = getattr(ydl_module, "YoutubeDL")
+        yt_dlp.YoutubeDL.print_debug_header = plugin_debug_header
         return self
 
     def __exit__(self, *exc):
@@ -280,15 +281,14 @@ class ydl_initialized(ContextDecorator):
 
 
 _PATCHES = (
-    ydl_initialized(),
-    patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header),
     patch("yt_dlp.utils.bug_reports_message", bug_reports_message),
     patch("yt_dlp.utils.write_json_file", write_json_file),
+    ydl_initialized(),
 )
 
 
 def patch_decorator(func):
-    for _patch in _PATCHES:
+    for _patch in reversed(_PATCHES):
         func = _patch(func)
     return func
 

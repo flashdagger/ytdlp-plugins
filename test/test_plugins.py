@@ -18,16 +18,17 @@ from ytdlp_plugins import (
     initialize,
     load_plugins,
     patch_context,
+    add_plugins,
 )
 
 ROOT_DIR = Path(__file__).parents[1].absolute()
 
+initialize()
+add_plugins()
+
 
 class TestPlugins(unittest.TestCase):
     SAMPLE_PLUGIN_DIR = ROOT_DIR / PACKAGE_NAME
-
-    def setUp(self):
-        initialize()
 
     def test_plugin_directory_structure(self):
         self.assertTrue(self.SAMPLE_PLUGIN_DIR.joinpath("__init__.py").exists())
