@@ -75,10 +75,13 @@ def get_line_infos(test_cls: type) -> Tuple[str, List[Dict[str, Any]]]:
 
     source_file = str(getsourcefile(cls))
 
-    if not isinstance(test_node, ast.List):
-        return source_file, [{"_file": source_file, "_lineno": {"_self": line_number}}]
+    if isinstance(test_node, ast.List):
+        data = list_info(test_node)
+    elif isinstance(test_node, ast.Dict):
+        data = [dict_info(test_node)]
+    else:
+        data = [{"_file": source_file, "_lineno": {"_self": line_number}}]
 
-    data = list_info(test_node, playlist=None)
     return source_file, data
 
 

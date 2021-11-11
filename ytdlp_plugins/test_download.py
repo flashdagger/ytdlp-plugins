@@ -244,7 +244,7 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
         return False, ""
 
     def raise_with_test_location(exc, playlist_idx: Optional[int] = None):
-        msg = str(exc).split(" : ", maxsplit=1)[-1]
+        msg = str(exc).split(": ", maxsplit=2)[-1]
         info = get_test_lineno(test_case["cls"], index=test_index)
         filename = info["_file"]
         with suppress(TypeError, IndexError, KeyError):
@@ -256,9 +256,9 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
             line_no = info["_lineno"][match.group(1)]
         with suppress(KeyError, AttributeError):
             line_no = info["info_dict"]["_lineno"][match.group(1)]
-        # print(f"\n{filename}:{line_no}: {msg}", file=sys.stderr)
+        exc_cls = type(f"Test{test_name}", (type(exc),), {})
         code_obj = compile(
-            "raise type(exc)(msg) from exc",
+            "raise exc_cls(msg) from exc",
             "",
             "exec",
         )
@@ -268,7 +268,8 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
                 co_firstlineno=line_no,
                 co_name=test_name,
                 co_filename=filename,
-            )
+            ),
+            {"exc": exc, "exc_cls": exc_cls, "msg": msg},
         )
 
     def test_url(self):
