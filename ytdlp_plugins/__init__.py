@@ -19,7 +19,7 @@ from zipimport import zipimporter
 
 import yt_dlp
 
-__version__ = "2021.11.08"
+__version__ = "2021.11.11"
 PACKAGE_NAME = __name__
 _INITIALIZED = False
 _FOUND = {}
