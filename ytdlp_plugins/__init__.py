@@ -20,10 +20,10 @@ from zipimport import zipimporter
 import yt_dlp
 
 __version__ = "2021.11.11"
-PACKAGE_NAME = __name__
 _INITIALIZED = False
-_FOUND = {}
-_OVERRIDDEN = []
+FOUND = {}
+OVERRIDDEN = []
+PACKAGE_NAME = __name__
 
 
 # pylint: disable=abstract-method
@@ -105,6 +105,12 @@ def initialize():
         _INITIALIZED = True
 
 
+def reset():
+    FOUND.clear()
+    OVERRIDDEN.clear()
+    importlib.invalidate_caches()  # reset the import caches
+
+
 def directories():
     spec = find_spec(PACKAGE_NAME)
     return spec.submodule_search_locations if spec else []
@@ -119,7 +125,7 @@ def iter_plugin_modules(subpackage):
 
 def detected_collisions(from_dict, to_dict):
     collisions = set(from_dict.keys()) & set(to_dict.keys())
-    return [to_dict[key] for key in collisions]
+    return [to_dict[key] for key in collisions if from_dict[key] is not to_dict[key]]
 
 
 # noinspection PyBroadException
@@ -153,10 +159,10 @@ def load_plugins(name, suffix, namespace=None):
         sys.modules[module_name] = module
         module_classes = dict(getmembers(module, gen_predicate(module_name)))
 
-        _OVERRIDDEN.extend(detected_collisions(module_classes, classes))
+        OVERRIDDEN.extend(detected_collisions(module_classes, classes))
         classes.update(module_classes)
 
-    _OVERRIDDEN.extend(detected_collisions(classes, namespace))
+    OVERRIDDEN.extend(detected_collisions(classes, namespace))
     namespace.update(classes)
 
     return classes
@@ -170,15 +176,15 @@ def add_plugins():
     )
 
     ie_plugins = load_plugins("extractor", "IE", extractor.__dict__)
-    _FOUND.update(ie_plugins)
+    FOUND.update(ie_plugins)
     all_classes = getattr(extractor, "_ALL_CLASSES", [])
-    for cls in _OVERRIDDEN:
+    for cls in OVERRIDDEN:
         with suppress(ValueError):
             all_classes.remove(cls)
     all_classes[:0] = ie_plugins.values()
 
     pp_plugins = load_plugins("postprocessor", "PP", postprocessor.__dict__)
-    _FOUND.update(pp_plugins)
+    FOUND.update(pp_plugins)
 
 
 def monkey_patch(orig):
@@ -203,7 +209,7 @@ def tabify(items, join_string=" ", alignment="<"):
 
 
 def calling_plugin_class():
-    plugins = set(_FOUND.values())
+    plugins = set(FOUND.values())
     for frame_info in stack():
         try:
             cls = frame_info[0].f_locals["self"].__class__
@@ -222,7 +228,7 @@ def write_json_file(obj, file):
 @monkey_patch(yt_dlp.YoutubeDL.print_debug_header)
 def plugin_debug_header(self):
     plugin_list = []
-    for name, cls in _FOUND.items():
+    for name, cls in FOUND.items():
         module = getmodule(cls)
         version = getattr(cls, "__version__", None) or getattr(
             module, "__version__", None
@@ -240,10 +246,10 @@ def plugin_debug_header(self):
         )
         for line in tabify(sorted(plugin_list), join_string=" "):
             self.write_debug(" " + line)
-    if _OVERRIDDEN:
+    if OVERRIDDEN:
         self.write_debug("Overridden classes due to name collisions:")
         items = [
-            (f"{cls.__name__!r}", f"from {cls.__module__!r}") for cls in _OVERRIDDEN
+            (f"{cls.__name__!r}", f"from {cls.__module__!r}") for cls in OVERRIDDEN
         ]
         for line in tabify(items):
             self.write_debug(" " + line)

@@ -4,7 +4,6 @@
 import importlib
 import sys
 import unittest
-from importlib import invalidate_caches
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
@@ -12,19 +11,19 @@ from zipfile import ZipFile
 import yt_dlp
 
 from ytdlp_plugins import (
-    _OVERRIDDEN,
+    OVERRIDDEN,
     PACKAGE_NAME,
     directories,
     initialize,
     load_plugins,
     patch_context,
+    reset,
     add_plugins,
 )
 
 ROOT_DIR = Path(__file__).parents[1].absolute()
 
 initialize()
-add_plugins()
 
 
 class TestPlugins(unittest.TestCase):
@@ -66,7 +65,8 @@ class TestPlugins(unittest.TestCase):
                     )
 
             sys.path.append(str(zipmodule_path))  # add zip to search paths
-            invalidate_caches()  # reset the import caches
+            reset()
+            add_plugins()
 
             for plugin_type in ("extractor", "postprocessor"):
                 package = importlib.import_module(f"{PACKAGE_NAME}.{plugin_type}")
@@ -76,15 +76,20 @@ class TestPlugins(unittest.TestCase):
                 )
 
     def test_overridden_classes(self):
-        overridden_names = {cls.__name__ for cls in _OVERRIDDEN}
+        reset()
+        add_plugins()
+
+        overridden_names = {cls.__name__ for cls in OVERRIDDEN}
         self.assertGreaterEqual(len(overridden_names), 2)
-        all_names = set(yt_dlp.extractor.__dict__.keys())
+        all_names = set(yt_dlp.extractor.__dict__.keys()) | set(
+            yt_dlp.postprocessor.__dict__.keys()
+        )
 
         not_in_names = ", ".join(overridden_names - all_names)
         self.assertFalse(not_in_names, f"missing {not_in_names} in extractor namespace")
 
         all_classes = getattr(yt_dlp.extractor, "_ALL_CLASSES", ())
-        for cls in _OVERRIDDEN:
+        for cls in OVERRIDDEN:
             self.assertFalse(
                 cls in all_classes,
                 f"Overridden class {cls.__name__!r} still found in _ALL_CLASSES",

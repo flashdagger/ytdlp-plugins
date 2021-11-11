@@ -92,13 +92,13 @@ def report_warning(message):
 
 def get_testcases():
     from inspect import getfile
-    from . import initialize, add_plugins, _FOUND
+    from . import initialize, add_plugins, FOUND
 
     initialize()
     add_plugins()
     project_plugins = Path.cwd() / "ytdlp_plugins"
 
-    for name, klass in _FOUND.items():
+    for name, klass in FOUND.items():
         if not name.endswith("IE"):
             continue
         module_file = Path(getfile(klass))
