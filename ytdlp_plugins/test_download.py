@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict, Any, Callable, Optional, Tuple
 from unittest import skipIf
 
+import yt_dlp
 from yt_dlp.compat import (
     compat_http_client,
     compat_urllib_error,
@@ -26,7 +27,7 @@ from yt_dlp.utils import (
     UnavailableVideoError,
 )
 
-from . import patch_context
+from . import patch_decorator
 from ._helper import (
     expect_warnings,
     get_params,
@@ -36,15 +37,12 @@ from ._helper import (
 )
 from .ast_utils import get_test_lineno
 
-with patch_context():
-    from yt_dlp import YoutubeDL as YoutubeDLSuper
-
 RETRIES = 3
 EXC_CODE_STR = "raise exc_cls(msg) from exc"
 EXC_CODE_OBJ = compile(EXC_CODE_STR, "", "exec")
 
 
-class YoutubeDL(YoutubeDLSuper):
+class YoutubeDL(yt_dlp.YoutubeDL):
     def __init__(self, *args, **kwargs):
         self.to_stderr = self.to_screen
         self.processed_info_dicts = []
@@ -279,13 +277,14 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
 
     def test_url(self):
         try:
-            _cls = test_case["cls"]
             self.assertTrue(
-                _cls.suitable(test_case["url"]), "field url does not match extractor"
+                test_case["cls"].suitable(test_case["url"]),
+                "field url does not match extractor",
             )
         except AssertionError as exc:
             raise_with_test_location(exc)
 
+    @patch_decorator
     def test_download(self):
         try:
             self.precheck_testcase(test_case)
@@ -319,14 +318,13 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
                     raise_with_test_location(exc, playlist_idx=idx)
                     raise
 
-        self.try_rm_tcs_files(test_case)
         test_ids = {
             _test_case.get("info_dict", {}).get("id") for _test_case in sub_test_cases
         }
         residue_testcases = [
             {"info_dict": entry} for entry in entries if entry.get("id") not in test_ids
         ]
-        self.try_rm_tcs_files(*residue_testcases)
+        self.try_rm_tcs_files(test_case, *residue_testcases)
 
     test_func = skipIf(*skip_reason())(
         test_url if test_case.get("only_matching", False) else test_download
