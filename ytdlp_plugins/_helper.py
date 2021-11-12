@@ -6,8 +6,10 @@ import re
 import sys
 from inspect import getfile
 from pathlib import Path
+from typing import Any, Dict
 from unittest import TestCase
 
+from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import preferredencoding, write_string
 
 from ytdlp_plugins import initialize, add_plugins, FOUND
@@ -110,8 +112,8 @@ def get_testcases():
     add_plugins()
     project_plugins = Path.cwd() / "ytdlp_plugins"
 
-    for name, cls in FOUND.items():
-        if not name.endswith("IE"):
+    for cls in FOUND.values():
+        if not issubclass(cls, InfoExtractor):
             continue
         module_file = Path(getfile(cls))
         if project_plugins.is_dir() and project_plugins != module_file.parents[1]:
@@ -120,110 +122,137 @@ def get_testcases():
 
 
 class DownloadTestcase(TestCase):
-    def expect_value(self, got, expected, field):
-        if isinstance(expected, str) and expected.startswith("re:"):
-            match_str = expected[len("re:") :]
-            match_rex = re.compile(match_str)
+    def assert_field_is_valid(self, expr: bool, field: str, msg: str) -> None:
+        if not expr:
+            msg = self._formatMessage(msg, f"Mismatch in field {field!r}")
+            raise self.failureException(msg)
 
-            self.assertTrue(
-                isinstance(got, str),
-                f"Expected a {str.__name__} object, "
-                f"but got {type(got).__name__} for field {field}",
-            )
-            self.assertTrue(
-                match_rex.match(got),
-                f"field {field} (value: {got!r}) should match {match_str!r}",
-            )
-        elif isinstance(expected, str) and expected.startswith("startswith:"):
-            start_str = expected[len("startswith:") :]
-            self.assertTrue(
-                isinstance(got, str),
-                f"Expected a {str.__name__} object, "
-                f"but got {type(got).__name__} for field {field}",
-            )
-            self.assertTrue(
-                got.startswith(start_str),
-                f"field {field} (value: {got!r}) should start with {start_str!r}",
-            )
-        elif isinstance(expected, str) and expected.startswith("contains:"):
-            contains_str = expected[len("contains:") :]
-            self.assertTrue(
-                isinstance(got, str),
-                f"Expected a {str.__name__} object, "
-                f"but got {type(got).__name__} for field {field}",
-            )
-            self.assertTrue(
-                contains_str in got,
-                f"field {field} (value: {got!r}) should contain {contains_str!r}",
-            )
+    def assert_field_is_present(self, expr: Any, *fields: str) -> None:
+        if isinstance(expr, dict):
+            fields = tuple(field for field in fields if not bool(expr.get(field)))
+            expr = not bool(fields)
+
+        if not expr:
+            fields_str = ", ".join((repr(field) for field in fields))
+            msg = f"Missing field {fields_str}"
+            raise self.failureException(msg)
+
+    def expect_value(self, got, expected, field):
+        if isinstance(expected, str):
+            self.expect_string(got, expected, field)
         elif isinstance(expected, type):
-            self.assertTrue(
+            self.assert_field_is_valid(
                 isinstance(got, expected),
-                f"Expected type {expected!r} for field {field}, "
+                field,
+                f"expected type {expected!r}, "
                 f"but got value {got!r} of type {type(got)!r}",
             )
         elif isinstance(expected, dict) and isinstance(got, dict):
             self.expect_dict(got, expected)
         elif isinstance(expected, list) and isinstance(got, list):
-            self.assertEqual(
-                len(expected),
-                len(got),
-                f"Expect a list of length {len(expected):d}, "
+            self.assert_field_is_valid(
+                len(expected) == len(got),
+                field,
+                f"expected a list of length {len(expected):d}, "
                 f"but got a list of length {len(got):d} for field {field}",
             )
             for index, (item_got, item_expected) in enumerate(zip(got, expected)):
                 type_got = type(item_got)
                 type_expected = type(item_expected)
-                self.assertEqual(
-                    type_expected,
-                    type_got,
-                    f"Type mismatch for list item at index {index:d} for field {field}, "
-                    f"expected {type_expected!r}, got {type_got!r}",
+                field_name = f"{field}[{index}]"
+                self.assert_field_is_valid(
+                    type_expected == type_got,
+                    field_name,
+                    f"expected type {type_expected!r}, got {type_got!r}",
                 )
-                self.expect_value(item_got, item_expected, field)
+                self.expect_value(item_got, item_expected, field_name)
         else:
-            if isinstance(expected, str) and expected.startswith("md5:"):
-                self.assertTrue(
-                    isinstance(got, str),
-                    f"Expected field {field} to be a unicode object, "
-                    f"but got value {got!r} of type {type(got)!r}",
-                )
-                got = "md5:" + md5(got)
-            elif isinstance(expected, str) and re.match(
-                r"^(?:min|max)?count:\d+", expected
-            ):
-                self.assertTrue(
-                    isinstance(got, (list, dict)),
-                    f"Expected field {field} to be a list or a dict, "
-                    f"but it is of type {type(got).__name__}",
-                )
-                operation, _, expected_num = expected.partition(":")
-                expected_num = int(expected_num)
-                if operation == "mincount":
-                    assert_func = self.assertGreaterEqual
-                    msg_tmpl = "Expected {} items in field {}, but only got {}"
-                elif operation == "maxcount":
-                    assert_func = self.assertLessEqual
-                    msg_tmpl = "Expected maximum {} items in field {}, but got {}"
-                elif operation == "count":
-                    assert_func = self.assertEqual
-                    msg_tmpl = "Expected exactly {} items in field {}, but got {}"
-                else:
-                    assert False
-                assert_func(
-                    len(got),
-                    expected_num,
-                    msg_tmpl.format(expected_num, field, len(got)),
-                )
-                return
-            self.assertEqual(
-                expected,
-                got,
-                f"Invalid value for field {field}, expected {expected!r}, got {got!r}",
-            )
+            self.expect_field(got, expected, field)
 
-    def expect_dict(self, got_dict, expected_dict):
-        self.assertTrue(isinstance(got_dict, dict))
+    def expect_field(self, got: Any, expected: Any, field: str):
+        self.assert_field_is_valid(
+            expected == got,
+            field,
+            f"expected {expected!r}, got {got!r}",
+        )
+
+    def expect_string(self, got: Any, expected: str, field: str):
+        if expected.startswith("re:"):
+            match_str = expected[len("re:") :]
+            match_rex = re.compile(match_str)
+
+            self.assert_field_is_valid(
+                isinstance(got, str),
+                field,
+                f"expected a {str.__name__} object, " f"but got {type(got).__name__}",
+            )
+            self.assert_field_is_valid(
+                bool(match_rex.match(got)),
+                field,
+                f"{got!r}) should match {match_str!r}",
+            )
+        elif expected.startswith("startswith:"):
+            start_str = expected[len("startswith:") :]
+            self.assert_field_is_valid(
+                isinstance(got, str),
+                field,
+                f"expected a {str.__name__} object, " f"but got {type(got).__name__}",
+            )
+            self.assert_field_is_valid(
+                got.startswith(start_str),
+                field,
+                f"{got!r} should start with {start_str!r}",
+            )
+        elif expected.startswith("contains:"):
+            contains_str = expected[len("contains:") :]
+            self.assert_field_is_valid(
+                isinstance(got, str),
+                field,
+                f"expected a {str.__name__} object, " f"but got {type(got).__name__}",
+            )
+            self.assert_field_is_valid(
+                contains_str in got,
+                field,
+                f"{got!r} should contain {contains_str!r}",
+            )
+        elif expected.startswith("md5:"):
+            self.assert_field_is_valid(
+                isinstance(got, str),
+                field,
+                f"expected a string object, "
+                f"but got value {got!r} of type {type(got)!r}",
+            )
+            self.expect_field("md5:" + md5(got), expected, field)
+        elif re.match(r"^(?:min|max)?count:\d+", expected):
+            self.assert_field_is_valid(
+                isinstance(got, (list, dict)),
+                field,
+                f"expected a list or a dict, "
+                f"but value is of type {type(got).__name__}",
+            )
+            operation, expected_num = expected.split(":")
+            expected_int = int(expected_num)
+            if operation == "mincount":
+                assert_func = lambda a, b: a >= b
+                msg_tmpl = "expected at least {} items, but only got {}"
+            elif operation == "maxcount":
+                assert_func = lambda a, b: a <= b
+                msg_tmpl = "expected not more than {} items, but got {}"
+            elif operation == "count":
+                assert_func = lambda a, b: a == b
+                msg_tmpl = "expected exactly {} items, but got {}"
+            else:
+                raise Exception("Should not happen")
+            self.assert_field_is_valid(
+                assert_func(len(got), expected_int),
+                field,
+                msg_tmpl.format(expected_int, len(got)),
+            )
+        else:
+            self.expect_field(got, expected, field)
+
+    def expect_dict(self, got_dict, expected_dict: Dict[str, Any]):
+        self.assertIsInstance(got_dict, dict)
         for info_field, expected in expected_dict.items():
             got = got_dict.get(info_field)
             self.expect_value(got, expected, info_field)
@@ -235,11 +264,11 @@ class DownloadTestcase(TestCase):
             mandatory_fields = ["id", "title"]
             if expected_dict.get("ext"):
                 mandatory_fields.extend(("url", "ext"))
-            for key in mandatory_fields:
-                self.assertTrue(got_dict.get(key), f"Missing mandatory field {key}")
+            self.assert_field_is_present(got_dict, *mandatory_fields)
         # Check for mandatory fields that are automatically set by YoutubeDL
-        for key in ["webpage_url", "extractor", "extractor_key"]:
-            self.assertTrue(got_dict.get(key), f"Missing field: {key}")
+        self.assert_field_is_present(
+            got_dict, *("webpage_url", "extractor", "extractor_key")
+        )
 
         # Are checkable fields missing from the test case definition?
         test_info_dict = dict(
@@ -281,28 +310,7 @@ class DownloadTestcase(TestCase):
             f"    {k!r}: {test_info_dict[k]!r},\n" for k in missing_keys
         )
         write_string("\n'info_dict': {\n" + info_dict_str + "},\n", out=sys.stderr)
-        self.assertFalse(
-            missing_keys,
-            f"Missing keys in test definition: {', '.join(sorted(missing_keys))}",
-        )
-
-    def assertGreaterEqual(self, a, b, msg=None):
-        if not a >= b:
-            if msg is None:
-                msg = f"{a!r} not greater than or equal to {b!r}"
-            self.assertTrue(a >= b, msg)
-
-    def assertLessEqual(self, a, b, msg=None):
-        if not a <= b:
-            if msg is None:
-                msg = f"{a!r} not less than or equal to {b!r}"
-            self.assertTrue(a <= b, msg)
-
-    def assertEqual(self, first, second, msg=None):
-        if not first == second:
-            if msg is None:
-                msg = f"{first!r} not equal to {second!r}"
-            self.assertTrue(first == second, msg)
+        self.assert_field_is_present(not missing_keys, *missing_keys)
 
 
 def expect_warnings(ydl, warnings_re):
