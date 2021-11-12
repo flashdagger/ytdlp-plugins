@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+import json
 from contextlib import suppress
 from importlib import import_module
+from itertools import cycle
 
 
 def estimate_filesize(formats, duration):
@@ -23,3 +25,18 @@ def unlazify(cls: type) -> type:
         module = import_module(actual_module)
         cls = getattr(module, cls.__name__)
     return cls
+
+
+def tabify(items, join_string=" ", alignment="<"):
+    tabs = tuple(map(lambda x: max(len(str(s)) for s in x), zip(*items)))
+    for item in items:
+        aligning = cycle(alignment)
+        yield join_string.join(
+            f"{part!s:{align}{width}}"
+            for part, width, align in zip(item, tabs, aligning)
+        )
+
+
+def write_json_file(obj, file):
+    with open(file, "w", encoding="utf-8") as fd:
+        json.dump(obj, fd, indent=4)

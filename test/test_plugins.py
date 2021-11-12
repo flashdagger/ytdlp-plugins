@@ -104,7 +104,7 @@ class TestPlugins(unittest.TestCase):
         return f"{_func.__module__}.{_func.__name__}"
 
     def test_patched_json_writer(self):
-        patched_func = ytdlp_plugins.write_json_file
+        patched_func = ytdlp_plugins.utils.write_json_file
         function_name = patched_func.__name__
         with patch_context():
             _nonlocals, _globals, _builtins, _unbound = getclosurevars(

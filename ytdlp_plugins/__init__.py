@@ -2,7 +2,6 @@
 # -*- coding: UTF-8 -*-
 
 import importlib
-import json
 import sys
 import traceback
 from contextlib import suppress, ExitStack, contextmanager, ContextDecorator
@@ -10,7 +9,7 @@ from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec, find_spec
 from inspect import getmembers, isclass, stack, getmodule
-from itertools import accumulate, cycle
+from itertools import accumulate
 from pathlib import Path
 from pkgutil import iter_modules
 from types import FunctionType
@@ -20,6 +19,8 @@ from zipfile import ZipFile
 from zipimport import zipimporter
 
 import yt_dlp
+
+from .utils import tabify, write_json_file
 
 __version__ = "2021.11.11"
 _INITIALIZED = False
@@ -200,16 +201,6 @@ def monkey_patch(orig):
     return decorator
 
 
-def tabify(items, join_string=" ", alignment="<"):
-    tabs = tuple(map(lambda x: max(len(str(s)) for s in x), zip(*items)))
-    for item in items:
-        aligning = cycle(alignment)
-        yield join_string.join(
-            f"{part!s:{align}{width}}"
-            for part, width, align in zip(item, tabs, aligning)
-        )
-
-
 def calling_plugin_class():
     plugins = set(FOUND.values())
     for frame_info in stack():
@@ -220,11 +211,6 @@ def calling_plugin_class():
         if cls in plugins:
             return cls
     return None
-
-
-def write_json_file(obj, file):
-    with open(file, "w", encoding="utf-8") as fd:
-        json.dump(obj, fd, indent=4)
 
 
 @monkey_patch(yt_dlp.YoutubeDL.print_debug_header)
