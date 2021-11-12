@@ -13,12 +13,13 @@ from inspect import getmembers, isclass, stack, getmodule
 from itertools import accumulate
 from pathlib import Path
 from pkgutil import iter_modules
-from typing import Any, Optional, Dict, List, Protocol, Callable
+from typing import Any, Optional, Dict, List, Callable
 from unittest.mock import patch
 from zipfile import ZipFile
 from zipimport import zipimporter
 
 import yt_dlp
+from typing_extensions import Protocol
 
 from .utils import tabify, write_json_file
 
