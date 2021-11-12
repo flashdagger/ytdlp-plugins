@@ -205,15 +205,15 @@ class DownloadTestcase(TestCase):
                     f"Expected field {field} to be a list or a dict, "
                     f"but it is of type {type(got).__name__}",
                 )
-                op, _, expected_num = expected.partition(":")
+                operation, _, expected_num = expected.partition(":")
                 expected_num = int(expected_num)
-                if op == "mincount":
+                if operation == "mincount":
                     assert_func = self.assertGreaterEqual
                     msg_tmpl = "Expected {} items in field {}, but only got {}"
-                elif op == "maxcount":
+                elif operation == "maxcount":
                     assert_func = self.assertLessEqual
                     msg_tmpl = "Expected maximum {} items in field {}, but got {}"
-                elif op == "count":
+                elif operation == "count":
                     assert_func = self.assertEqual
                     msg_tmpl = "Expected exactly {} items in field {}, but got {}"
                 else:
@@ -273,62 +273,51 @@ class DownloadTestcase(TestCase):
             )
         )
         missing_keys = set(test_info_dict.keys()) - set(expected_dict.keys())
-        if missing_keys:
-
-            def _repr(v):
-                if isinstance(v, compat_str):
-                    return "{!r}".format(
-                        v.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
-                    )
-                else:
-                    return repr(v)
-
-            info_dict_str = ""
-            if len(missing_keys) != len(expected_dict):
-                info_dict_str += "".join(
-                    "    {}: {},\n".format(_repr(k), _repr(v))
-                    for k, v in test_info_dict.items()
-                    if k not in missing_keys
-                )
-
-                if info_dict_str:
-                    info_dict_str += "\n"
+        if not missing_keys:
+            return
+        info_dict_str = ""
+        if len(missing_keys) != len(expected_dict):
             info_dict_str += "".join(
-                "    {}: {},\n".format(_repr(k), _repr(test_info_dict[k]))
-                for k in missing_keys
-            )
-            write_string("\n'info_dict': {\n" + info_dict_str + "},\n", out=sys.stderr)
-            self.assertFalse(
-                missing_keys,
-                "Missing keys in test definition: {}".format(
-                    ", ".join(sorted(missing_keys))
-                ),
+                f"    {k!r}: {v!r},\n"
+                for k, v in test_info_dict.items()
+                if k not in missing_keys
             )
 
-    def assertGreaterEqual(self, got, expected, msg=None):
-        if not (got >= expected):
-            if msg is None:
-                msg = f"{got!r} not greater than or equal to {expected!r}"
-            self.assertTrue(got >= expected, msg)
+            if info_dict_str:
+                info_dict_str += "\n"
+        info_dict_str += "".join(
+            f"    {k!r}: {test_info_dict[k]!r},\n" for k in missing_keys
+        )
+        write_string("\n'info_dict': {\n" + info_dict_str + "},\n", out=sys.stderr)
+        self.assertFalse(
+            missing_keys,
+            f"Missing keys in test definition: {', '.join(sorted(missing_keys))}",
+        )
 
-    def assertLessEqual(self, got, expected, msg=None):
-        if not (got <= expected):
+    def assertGreaterEqual(self, a, b, msg=None):
+        if not a >= b:
             if msg is None:
-                msg = f"{got!r} not less than or equal to {expected!r}"
-            self.assertTrue(got <= expected, msg)
+                msg = f"{a!r} not greater than or equal to {b!r}"
+            self.assertTrue(a >= b, msg)
 
-    def assertEqual(self, got, expected, msg=None):
-        if not (got == expected):
+    def assertLessEqual(self, a, b, msg=None):
+        if not a <= b:
             if msg is None:
-                msg = f"{got!r} not equal to {expected!r}"
-            self.assertTrue(got == expected, msg)
+                msg = f"{a!r} not less than or equal to {b!r}"
+            self.assertTrue(a <= b, msg)
+
+    def assertEqual(self, first, second, msg=None):
+        if not first == second:
+            if msg is None:
+                msg = f"{first!r} not equal to {second!r}"
+            self.assertTrue(first == second, msg)
 
 
 def expect_warnings(ydl, warnings_re):
     real_warning = ydl.report_warning
 
-    def _report_warning(w):
-        if not any(re.search(w_re, w) for w_re in warnings_re):
-            real_warning(w)
+    def _report_warning(msg):
+        if not any(re.search(w_re, msg) for w_re in warnings_re):
+            real_warning(msg)
 
     ydl.report_warning = _report_warning
