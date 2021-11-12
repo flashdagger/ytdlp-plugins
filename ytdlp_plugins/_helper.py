@@ -4,6 +4,7 @@
 import hashlib
 import re
 import sys
+from inspect import getfile
 from pathlib import Path
 from typing import Union
 from unittest import TestCase
@@ -16,6 +17,9 @@ from yt_dlp.utils import (
     preferredencoding,
     write_string,
 )
+
+from ytdlp_plugins import initialize, add_plugins, FOUND
+from .utils import unlazify
 
 DEFAULT_PARAMS = {
     "allsubtitles": False,
@@ -37,6 +41,7 @@ DEFAULT_PARAMS = {
     "logtostderr": False,
     "matchtitle": None,
     "max_downloads": None,
+    "nocheckcertificate": True,
     "nopart": False,
     "noprogress": False,
     "outtmpl": "%(id)s.%(ext)s",
@@ -90,24 +95,36 @@ def report_warning(message):
     sys.stderr.write(output)
 
 
-def get_testcases():
-    from inspect import getfile
-    from . import initialize, add_plugins, FOUND
+def get_class_testcases(cls):
+    cls = unlazify(cls)
 
+    for key in ("_TEST", "_TESTS"):
+        if key in cls.__dict__:
+            break
+    else:
+        return
+
+    test_cases = cls.__dict__[key]
+    if isinstance(test_cases, dict):
+        test_cases = [test_cases]
+    for test_case in test_cases:
+        test_case["name"] = cls.__name__[:-2]
+        test_case["cls"] = cls
+        yield test_case
+
+
+def get_testcases():
     initialize()
     add_plugins()
     project_plugins = Path.cwd() / "ytdlp_plugins"
 
-    for name, klass in FOUND.items():
+    for name, cls in FOUND.items():
         if not name.endswith("IE"):
             continue
-        module_file = Path(getfile(klass))
-        if project_plugins.is_dir() and project_plugins != module_file.parents[1]:
+        module_file = Path(getfile(cls))
+        if not (project_plugins.is_dir() and project_plugins != module_file.parents[1]):
             continue
-        ie = klass()
-        for tc in ie.get_testcases(include_onlymatching=True):
-            tc["cls"] = klass
-            yield tc
+        yield from get_class_testcases(cls)
 
 
 def md5(data: Union[Path, str]) -> str:
@@ -220,6 +237,7 @@ class DownloadTestcase(TestCase):
             )
 
     def expect_dict(self, got_dict, expected_dict):
+        self.assertTrue(isinstance(got_dict, dict))
         for info_field, expected in expected_dict.items():
             got = got_dict.get(info_field)
             self.expect_value(got, expected, info_field)
