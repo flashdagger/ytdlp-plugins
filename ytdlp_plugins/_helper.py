@@ -1,19 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-import hashlib
+import os
 import re
 import sys
 from inspect import getfile
 from pathlib import Path
-from typing import Union
 from unittest import TestCase
 
-from yt_dlp.compat import compat_os_name, compat_str
 from yt_dlp.utils import preferredencoding, write_string
 
 from ytdlp_plugins import initialize, add_plugins, FOUND
-from .utils import unlazify
+from .utils import md5, unlazify
 
 DEFAULT_PARAMS = {
     "allsubtitles": False,
@@ -79,7 +77,7 @@ def report_warning(message):
     Print the message to stderr, it will be prefixed with 'WARNING:'
     If stderr is a tty file the 'WARNING:' will be colored
     """
-    if sys.stderr.isatty() and compat_os_name != "nt":
+    if sys.stderr.isatty() and os.name != "nt":
         _msg_header = "\033[0;33mWARNING:\033[0m"
     else:
         _msg_header = "WARNING:"
@@ -121,43 +119,37 @@ def get_testcases():
         yield from get_class_testcases(cls)
 
 
-def md5(data: Union[Path, str]) -> str:
-    if isinstance(data, Path):
-        return hashlib.md5(data.read_bytes()).hexdigest()
-    return hashlib.md5(data.encode("utf-8")).hexdigest()
-
-
 class DownloadTestcase(TestCase):
     def expect_value(self, got, expected, field):
-        if isinstance(expected, compat_str) and expected.startswith("re:"):
+        if isinstance(expected, str) and expected.startswith("re:"):
             match_str = expected[len("re:") :]
             match_rex = re.compile(match_str)
 
             self.assertTrue(
-                isinstance(got, compat_str),
-                f"Expected a {compat_str.__name__} object, "
+                isinstance(got, str),
+                f"Expected a {str.__name__} object, "
                 f"but got {type(got).__name__} for field {field}",
             )
             self.assertTrue(
                 match_rex.match(got),
                 f"field {field} (value: {got!r}) should match {match_str!r}",
             )
-        elif isinstance(expected, compat_str) and expected.startswith("startswith:"):
+        elif isinstance(expected, str) and expected.startswith("startswith:"):
             start_str = expected[len("startswith:") :]
             self.assertTrue(
-                isinstance(got, compat_str),
-                f"Expected a {compat_str.__name__} object, "
+                isinstance(got, str),
+                f"Expected a {str.__name__} object, "
                 f"but got {type(got).__name__} for field {field}",
             )
             self.assertTrue(
                 got.startswith(start_str),
                 f"field {field} (value: {got!r}) should start with {start_str!r}",
             )
-        elif isinstance(expected, compat_str) and expected.startswith("contains:"):
+        elif isinstance(expected, str) and expected.startswith("contains:"):
             contains_str = expected[len("contains:") :]
             self.assertTrue(
-                isinstance(got, compat_str),
-                f"Expected a {compat_str.__name__} object, "
+                isinstance(got, str),
+                f"Expected a {str.__name__} object, "
                 f"but got {type(got).__name__} for field {field}",
             )
             self.assertTrue(
@@ -190,14 +182,14 @@ class DownloadTestcase(TestCase):
                 )
                 self.expect_value(item_got, item_expected, field)
         else:
-            if isinstance(expected, compat_str) and expected.startswith("md5:"):
+            if isinstance(expected, str) and expected.startswith("md5:"):
                 self.assertTrue(
-                    isinstance(got, compat_str),
+                    isinstance(got, str),
                     f"Expected field {field} to be a unicode object, "
                     f"but got value {got!r} of type {type(got)!r}",
                 )
                 got = "md5:" + md5(got)
-            elif isinstance(expected, compat_str) and re.match(
+            elif isinstance(expected, str) and re.match(
                 r"^(?:min|max)?count:\d+", expected
             ):
                 self.assertTrue(
@@ -254,7 +246,7 @@ class DownloadTestcase(TestCase):
             (
                 key,
                 value
-                if not isinstance(value, compat_str) or len(value) < 250
+                if not isinstance(value, str) or len(value) < 250
                 else "md5:" + md5(value),
             )
             for key, value in got_dict.items()

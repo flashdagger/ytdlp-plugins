@@ -10,7 +10,8 @@ from itertools import groupby, count
 from math import log10
 from operator import itemgetter
 from pathlib import Path
-from typing import Dict, Any, Callable, Optional, Tuple
+from types import CodeType
+from typing import Dict, Any, Callable, Optional, Tuple, Set
 from unittest import skipIf
 
 import yt_dlp
@@ -24,10 +25,11 @@ from yt_dlp.utils import (
 )
 
 from . import patch_decorator
-from ._helper import expect_warnings, get_params, get_testcases, md5, DownloadTestcase
+from ._helper import expect_warnings, get_params, get_testcases, DownloadTestcase
 from .ast_utils import get_test_lineno
+from .utils import md5
 
-RETRIES = 3
+InfoDict = Dict[str, Any]
 EXC_CODE_STR = "raise exc_cls(msg) from exc"
 EXC_CODE_OBJ = compile(EXC_CODE_STR, "", "exec")
 
@@ -35,24 +37,20 @@ EXC_CODE_OBJ = compile(EXC_CODE_STR, "", "exec")
 class YoutubeDL(yt_dlp.YoutubeDL):
     def __init__(self, *args, **kwargs):
         self.to_stderr = self.to_screen
-        self.processed_info_dicts = []
         super().__init__(*args, **kwargs)
 
-    def report_warning(self, message, _only_once=False):
+    def report_warning(self, message: str, _only_once=False):
         # Don't accept warnings during tests
         raise ExtractorError(message)
 
-    def process_info(self, info_dict):
-        self.processed_info_dicts.append(info_dict)
-        return super().process_info(info_dict)
-
 
 class TestDownload(DownloadTestcase):
-    # Parallel testing in nosetests. See
-    # http://nose.readthedocs.org/en/latest/doc_tests/test_multiprocess/multiprocess.html
-    _multiprocess_shared_ = True
     maxDiff = None
-    test_case: Dict[str, Any] = {}
+    test_case: InfoDict = {}
+    is_playlist = False
+    params: Dict[str, str] = {}
+    finished_hook_called: Set[Path] = set()
+    ydl = YoutubeDL(auto_init=False)
 
     def __str__(self):
         """Identify each test with the `add_ie` attribute, if available."""
@@ -64,15 +62,10 @@ class TestDownload(DownloadTestcase):
         add_ie_str = f" [{','.join(add_ie)}]" if add_ie else ""
         return f"{self._testMethodName} ({strclass(self.__class__)}){add_ie_str}:"
 
-    def setUp(self):
-        self.finished_hook_called = set()
-        self.ydl = YoutubeDL(auto_init=False)
-        self.params: Dict[str, Any] = {}
-
-    def get_tc_filename(self, test_case) -> Path:
+    def get_tc_filename(self, test_case: InfoDict) -> Path:
         return Path(self.ydl.prepare_filename(dict(test_case.get("info_dict", {}))))
 
-    def try_rm_tcs_files(self, *test_cases: Dict[str, Any]) -> None:
+    def try_rm_tcs_files(self, *test_cases: InfoDict) -> None:
         def unlink_if_exist(path: Path):
             with suppress(FileNotFoundError):
                 path.unlink()
@@ -84,21 +77,20 @@ class TestDownload(DownloadTestcase):
             unlink_if_exist(tc_filename.with_name(tc_filename.name + ".part"))
             unlink_if_exist(tc_filename.with_suffix(".info.json"))
 
-    def get_info_dict(self, test_case):
+    def get_info_dict(self, test_case: InfoDict) -> InfoDict:
         tc_filename = self.get_tc_filename(test_case).with_suffix(".info.json")
         self.assertTrue(tc_filename.exists(), f"Missing info file {tc_filename}")
         info_dict = json.loads(tc_filename.read_text(encoding="utf-8"))
         return info_dict
 
-    def _hook(self, status):
+    def _hook(self, status: InfoDict) -> None:
         if status["status"] == "finished":
             self.finished_hook_called.add(Path(status["filename"]))
 
-    @staticmethod
-    def is_playlist(test_case):
-        return any(k.startswith("playlist") for k in test_case)
+    def check_playlist(self, res_dict: InfoDict) -> None:
+        if not self.is_playlist:
+            return
 
-    def check_playlist(self, res_dict):
         self.assertTrue(res_dict["_type"] in {"playlist", "multi_video"})
         self.assertTrue("entries" in res_dict)
 
@@ -126,12 +118,12 @@ class TestDownload(DownloadTestcase):
                 "playlist_duration_sum",
             )
 
-    def precheck_testcase(self, test_case):
+    def precheck_testcase(self, test_case: InfoDict) -> None:
         info_dict = test_case.get("info_dict", {})
         if not info_dict.get("id"):
             raise Exception("Test definition incorrect. 'id' key is not present")
 
-        if not (self.is_playlist(test_case) or info_dict.get("ext")):
+        if not (self.is_playlist or info_dict.get("ext")):
             if self.params.get("skip_download") and self.params.get(
                 "ignore_no_formats_error"
             ):
@@ -142,21 +134,27 @@ class TestDownload(DownloadTestcase):
                 "The output file cannot be known. 'ext' key is not present"
             )
 
-    def initialize(self, test_case, test_name) -> None:
-        params = get_params(test_case.get("params", {}))
+    def initialize(self, test_case: InfoDict, test_name: str) -> None:
+        # initial values must be empty
+        self.assertDictEqual(self.params, {})
+        self.assertSetEqual(self.finished_hook_called, set())
+
+        params = get_params(override=test_case.get("params"))
         params["outtmpl"] = test_name + "_" + params["outtmpl"]
-        if self.is_playlist(test_case) and "playlist" not in test_case:
+        if self.is_playlist and "playlist" not in test_case:
             params.setdefault("extract_flat", "in_playlist")
             params.setdefault("playlistend", test_case.get("playlist_mincount"))
             params.setdefault("skip_download", True)
 
-        self.params.update(params)
+        self.params = params
+        self.finished_hook_called = set()
         self.ydl = YoutubeDL(params, auto_init=False)
+
         self.ydl.add_default_info_extractors()
         self.ydl.add_progress_hook(self._hook)
         expect_warnings(self.ydl, test_case.get("expected_warnings", []))
 
-    def extract_info(self) -> Optional[Dict[str, Any]]:
+    def extract_info(self) -> Optional[InfoDict]:
         try:
             # We're not using .download here since that is just a shim
             # for outside error handling, and returns the exit code
@@ -183,11 +181,11 @@ class TestDownload(DownloadTestcase):
 
         return None
 
-    def check_testcase(self, test_case):
+    def check_testcase(self, test_case: InfoDict) -> None:
         info_dict = self.get_info_dict(test_case)
         tc_filename = self.get_tc_filename(test_case)
 
-        if not (self.is_playlist(test_case) or self.params.get("skip_download", False)):
+        if not (self.is_playlist or self.params.get("skip_download", False)):
             self.assertTrue(tc_filename.exists(), msg=f"Missing file {tc_filename}")
             self.assertTrue(
                 tc_filename in self.finished_hook_called,
@@ -212,7 +210,7 @@ class TestDownload(DownloadTestcase):
         self.expect_info_dict(info_dict, test_case.get("info_dict", {}))
 
 
-def exc_code_obj(co_firstlineno, co_name, co_filename):
+def exc_code_obj(co_firstlineno: int, co_name: str, co_filename: str) -> CodeType:
     if hasattr(EXC_CODE_OBJ, "replace"):
         return EXC_CODE_OBJ.replace(
             co_name=co_name, co_filename=co_filename, co_firstlineno=co_firstlineno
@@ -229,15 +227,18 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
         if not test_case["cls"]().working():
             return True, "IE marked as not _WORKING"
 
-        other_ies = [
-            get_info_extractor(ie_key)() for ie_key in test_case.get("add_ie", [])
+        ie_status = {
+            ie_key: get_info_extractor(ie_key)().working()
+            for ie_key in test_case.get("add_ie", ())
+        }
+        ie_not_working = [
+            ie_key for ie_key, working in ie_status.items() if not working
         ]
-        for other_ie in other_ies:
-            if not other_ie.working():
-                return (
-                    True,
-                    f"test depends on {other_ie.ie_key()}IE, marked as not WORKING",
-                )
+        if ie_not_working:
+            return (
+                True,
+                f"depends on {', '.join(ie_not_working)} -  marked as not WORKING",
+            )
 
         return False, ""
 
@@ -263,7 +264,7 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
             {"exc": exc, "exc_cls": exc_cls, "msg": msg},
         )
 
-    def test_url(self):
+    def test_url(self: TestDownload) -> None:
         try:
             self.assertTrue(
                 test_case["cls"].suitable(test_case["url"]),
@@ -273,16 +274,15 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
             raise_with_test_location(exc)
 
     @patch_decorator
-    def test_download(self):
+    def test_download(self: TestDownload) -> None:
         try:
             self.precheck_testcase(test_case)
             sub_test_cases = test_case.get("playlist", ())
             self.try_rm_tcs_files(test_case, *sub_test_cases)
             self.initialize(test_case, test_name)
-            uut_dict = self.extract_info()
+            uut_dict = self.extract_info() or {}
             self.expect_info_dict(uut_dict, test_case.get("info_dict", {}))
-            if self.is_playlist(test_case):
-                self.check_playlist(uut_dict)
+            self.check_playlist(uut_dict)
             self.check_testcase(test_case)
         except (AssertionError, DownloadError) as exc:
             raise_with_test_location(exc)
@@ -320,7 +320,11 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
     cls = type(
         test_name,
         (TestDownload,),
-        {"test_case": test_case, test_func.__name__: test_func},
+        {
+            "test_case": test_case,
+            "is_playlist": any(k.startswith("playlist") for k in test_case),
+            test_func.__name__: test_func,
+        },
     )
     return cls
 
