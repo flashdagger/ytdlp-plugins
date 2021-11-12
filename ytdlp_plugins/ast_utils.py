@@ -17,7 +17,7 @@ AST_TYPE_MAP = {
 }
 
 
-def dict_info(node: ast.Dict, **defaults) -> Dict[str, Any]:
+def dict_info(node: ast.Dict) -> Dict[str, Any]:
     line_info = {"_self": node.lineno}
     info = {"_lineno": line_info}
     for key, value in zip(node.keys, node.values):
@@ -27,10 +27,9 @@ def dict_info(node: ast.Dict, **defaults) -> Dict[str, Any]:
         if value_cls in AST_TYPE_MAP:
             actual_value = AST_TYPE_MAP[value_cls](value)
         elif isinstance(value, ast.Dict):
-            _defaults = defaults.get(key_value, {})
-            actual_value = dict_info(value, **_defaults)
+            actual_value = dict_info(value)
         elif isinstance(value, ast.List):
-            actual_value = list_info(value, **defaults)
+            actual_value = list_info(value)
         elif isinstance(value, ast.Name):
             actual_value = getattr(builtins, value.id, value.id)
         else:
@@ -41,12 +40,12 @@ def dict_info(node: ast.Dict, **defaults) -> Dict[str, Any]:
     return info
 
 
-def list_info(node: ast.List, **defaults) -> List[Dict[str, Any]]:
+def list_info(node: ast.List) -> List[Dict[str, Any]]:
     data = []
     for child in ast.iter_child_nodes(node):
         if not isinstance(child, ast.Dict):
             continue
-        info = dict_info(child, **defaults)
+        info = dict_info(child)
         data.append(info)
     return data
 
