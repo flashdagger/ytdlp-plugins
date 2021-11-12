@@ -14,11 +14,7 @@ from typing import Dict, Any, Callable, Optional, Tuple
 from unittest import skipIf
 
 import yt_dlp
-from yt_dlp.compat import (
-    compat_http_client,
-    compat_urllib_error,
-    compat_HTTPError,
-)
+from yt_dlp.compat import compat_http_client, compat_urllib_error, compat_HTTPError
 from yt_dlp.extractor import get_info_extractor
 from yt_dlp.utils import (
     DownloadError,
@@ -28,13 +24,7 @@ from yt_dlp.utils import (
 )
 
 from . import patch_decorator
-from ._helper import (
-    expect_warnings,
-    get_params,
-    get_testcases,
-    md5,
-    DownloadTestcase,
-)
+from ._helper import expect_warnings, get_params, get_testcases, md5, DownloadTestcase
 from .ast_utils import get_test_lineno
 
 RETRIES = 3
@@ -268,9 +258,7 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
         #  pylint: disable=exec-used
         exec(
             exc_code_obj(
-                co_firstlineno=line_no,
-                co_name=test_name,
-                co_filename=filename,
+                co_firstlineno=line_no, co_name=test_name, co_filename=filename
             ),
             {"exc": exc, "exc_cls": exc_cls, "msg": msg},
         )

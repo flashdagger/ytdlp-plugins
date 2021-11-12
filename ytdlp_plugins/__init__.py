@@ -181,10 +181,7 @@ def load_plugins(name, suffix, namespace=None):
 
 def add_plugins():
     # pylint: disable=import-outside-toplevel
-    from yt_dlp import (
-        extractor,
-        postprocessor,
-    )
+    from yt_dlp import extractor, postprocessor
 
     ie_plugins = load_plugins("extractor", "IE", extractor.__dict__)
     FOUND.update(ie_plugins)
@@ -270,11 +267,7 @@ class patch_function_globals(ContextDecorator):
     """
 
     def __init__(
-        self,
-        func: Function,
-        global_object: Any,
-        *,
-        global_name: Optional[str] = None,
+        self, func: Function, global_object: Any, *, global_name: Optional[str] = None
     ):
         self.obj = global_object
         self.globals = func.__globals__

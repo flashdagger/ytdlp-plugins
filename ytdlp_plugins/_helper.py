@@ -9,14 +9,8 @@ from pathlib import Path
 from typing import Union
 from unittest import TestCase
 
-from yt_dlp.compat import (
-    compat_os_name,
-    compat_str,
-)
-from yt_dlp.utils import (
-    preferredencoding,
-    write_string,
-)
+from yt_dlp.compat import compat_os_name, compat_str
+from yt_dlp.utils import preferredencoding, write_string
 
 from ytdlp_plugins import initialize, add_plugins, FOUND
 from .utils import unlazify

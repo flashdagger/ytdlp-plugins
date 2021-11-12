@@ -149,9 +149,7 @@ class TestPlugins(unittest.TestCase):
         self.assertEqual(orig_bug_report, yt_dlp.utils.bug_reports_message())
         self.assertIs(exc, yt_dlp.utils.ExtractorError)
         self.assertNotIn(
-            orig_bug_report,
-            str(obj),
-            "Bug report message is not suppressed",
+            orig_bug_report, str(obj), "Bug report message is not suppressed"
         )
 
     def test_orig_bug_report_message(self):
@@ -167,11 +165,7 @@ class TestPlugins(unittest.TestCase):
         exc, obj, _ = context.exception.exc_info
         self.assertEqual(orig_bug_report, yt_dlp.utils.bug_reports_message())
         self.assertIs(exc, yt_dlp.utils.ExtractorError)
-        self.assertIn(
-            orig_bug_report,
-            str(obj),
-            "Bug report message is not suppressed",
-        )
+        self.assertIn(orig_bug_report, str(obj), "Bug report message is not suppressed")
 
     def test_patch_function_globals_warning(self):
         global_name = "_undefined"
