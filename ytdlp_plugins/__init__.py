@@ -13,8 +13,7 @@ from inspect import getmembers, isclass, stack, getmodule
 from itertools import accumulate
 from pathlib import Path
 from pkgutil import iter_modules
-from types import FunctionType
-from typing import Any, Optional, Dict, List
+from typing import Any, Optional, Dict, List, Protocol, Callable
 from unittest.mock import patch
 from zipfile import ZipFile
 from zipimport import zipimporter
@@ -28,6 +27,13 @@ _INITIALIZED = False
 FOUND: Dict[str, type] = {}
 OVERRIDDEN: List[type] = []
 PACKAGE_NAME = __name__
+
+
+# mypy typing stub
+# pylint: disable=no-method-argument,too-few-public-methods
+class Function(Protocol):
+    __globals__: Dict[str, Any]
+    __call__: Callable
 
 
 # pylint: disable=abstract-method
@@ -264,7 +270,7 @@ class patch_function_globals(ContextDecorator):
 
     def __init__(
         self,
-        func: FunctionType,
+        func: Function,
         global_object: Any,
         *,
         global_name: Optional[str] = None,

@@ -20,4 +20,6 @@ cache_dir = ".cache/pytest"
 [tool.mypy]
 python_version = "3.6"
 cache_dir = ".cache/mypy"
+namespace_packages = true
+exclude = "build|venv"
 ignore_missing_imports = true
