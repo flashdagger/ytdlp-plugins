@@ -122,7 +122,7 @@ def get_testcases():
         if not name.endswith("IE"):
             continue
         module_file = Path(getfile(cls))
-        if not (project_plugins.is_dir() and project_plugins != module_file.parents[1]):
+        if project_plugins.is_dir() and project_plugins != module_file.parents[1]:
             continue
         yield from get_class_testcases(cls)
 

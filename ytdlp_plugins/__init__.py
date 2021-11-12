@@ -22,7 +22,7 @@ import yt_dlp
 
 from .utils import tabify, write_json_file
 
-__version__ = "2021.11.11"
+__version__ = "2021.11.12"
 _INITIALIZED = False
 FOUND: Dict[str, type] = {}
 OVERRIDDEN: List[type] = []
