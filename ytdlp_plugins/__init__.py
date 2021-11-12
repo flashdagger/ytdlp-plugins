@@ -13,6 +13,8 @@ from inspect import getmembers, isclass, stack, getmodule
 from itertools import accumulate, cycle
 from pathlib import Path
 from pkgutil import iter_modules
+from types import FunctionType
+from typing import Any, Optional, Dict, List
 from unittest.mock import patch
 from zipfile import ZipFile
 from zipimport import zipimporter
@@ -21,8 +23,8 @@ import yt_dlp
 
 __version__ = "2021.11.11"
 _INITIALIZED = False
-FOUND = {}
-OVERRIDDEN = []
+FOUND: Dict[str, type] = {}
+OVERRIDDEN: List[type] = []
 PACKAGE_NAME = __name__
 
 
@@ -268,28 +270,41 @@ def bug_reports_message(*args, **kwargs):
 
 
 # pylint: disable=invalid-name
-class ydl_initialized(ContextDecorator):
-    def __init__(self):
-        self.orig = yt_dlp.YoutubeDL
+class patch_function_globals(ContextDecorator):
+    """
+    context manager which replaces an global capture object of given function
+    """
+
+    def __init__(
+        self,
+        func: FunctionType,
+        global_object: Any,
+        *,
+        global_name: Optional[str] = None,
+    ):
+        self.globals = func.__globals__
+        self.name = global_object.__name__ if global_name is None else global_name
+        self.obj = global_object
+        assert (
+            self.name in self.globals
+        ), f"Name {global_name!r} does not exist in {self.globals.keys()}"
+
+    def switch_object(self):
+        self.globals[self.name], self.obj = self.obj, self.globals[self.name]
 
     def __enter__(self):
-        ydl_module_name = "yt_dlp.YoutubeDL"
-        if ydl_module_name in sys.modules:
-            del sys.modules[ydl_module_name]
-        ydl_module = importlib.import_module(ydl_module_name)
-        yt_dlp.YoutubeDL = getattr(ydl_module, "YoutubeDL")
-        yt_dlp.YoutubeDL.print_debug_header = plugin_debug_header
+        self.switch_object()
         return self
 
     def __exit__(self, *exc):
-        yt_dlp.YoutubeDL = self.orig
+        self.switch_object()
         return False
 
 
 _PATCHES = (
     patch("yt_dlp.utils.bug_reports_message", bug_reports_message),
-    patch("yt_dlp.utils.write_json_file", write_json_file),
-    ydl_initialized(),
+    patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header),
+    patch_function_globals(yt_dlp.YoutubeDL._write_info_json, write_json_file),
 )
 
 

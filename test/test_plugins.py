@@ -1,15 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+# pylint: disable=protected-access,import-outside-toplevel
+
 import importlib
 import sys
 import unittest
+from inspect import getclosurevars
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
 import yt_dlp
 
+import ytdlp_plugins
 from ytdlp_plugins import (
     OVERRIDDEN,
     PACKAGE_NAME,
@@ -94,6 +98,41 @@ class TestPlugins(unittest.TestCase):
                 cls in all_classes,
                 f"Overridden class {cls.__name__!r} still found in _ALL_CLASSES",
             )
+
+    @staticmethod
+    def _path(_func):
+        return f"{_func.__module__}.{_func.__name__}"
+
+    def test_patched_json_writer(self):
+        patched_func = ytdlp_plugins.write_json_file
+        function_name = patched_func.__name__
+        with patch_context():
+            _nonlocals, _globals, _builtins, _unbound = getclosurevars(
+                yt_dlp.YoutubeDL._write_info_json
+            )
+            self.assertIn(function_name, _globals)
+            used_func = _globals[function_name]
+        self.assertIs(
+            used_func,
+            patched_func,
+            f"class {self._path(yt_dlp.YoutubeDL)!r} still uses function {self._path(used_func)!r}",
+        )
+
+    def test_unpatched_json_writer(self):
+        from yt_dlp.utils import write_json_file as orig_func
+
+        function_name = orig_func.__name__
+        _nonlocals, _globals, _builtins, _unbound = getclosurevars(
+            yt_dlp.YoutubeDL._write_info_json
+        )
+        self.assertIn(function_name, _globals)
+        used_func = _globals[function_name]
+        self.assertIs(
+            used_func,
+            orig_func,
+            f"class {self._path(yt_dlp.YoutubeDL._write_info_json)!r} "
+            f"uses unexpected function {self._path(used_func)!r}",
+        )
 
     def test_patched_bug_report_message(self):
         orig_bug_report = yt_dlp.utils.bug_reports_message()
