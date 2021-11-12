@@ -1,9 +1,10 @@
 import ast
 import builtins
 from contextlib import suppress
-from importlib import import_module
 from inspect import getsourcelines, getsourcefile, getmro
 from typing import Dict, Any, List, Tuple
+
+from .utils import unlazify
 
 _CACHE: Dict[type, Tuple[str, List[Dict[str, Any]]]] = {}
 
@@ -50,14 +51,6 @@ def list_info(node: ast.List, **defaults) -> List[Dict[str, Any]]:
     return data
 
 
-def unlazyify(cls: type) -> type:
-    with suppress(AttributeError, ImportError):
-        actual_module = getattr(cls, "_module")
-        module = import_module(actual_module)
-        cls = getattr(module, cls.__name__)
-    return cls
-
-
 def find_assignment(node, name_predicate):
     for child in ast.iter_child_nodes(node):
         with suppress(AssertionError):
@@ -72,7 +65,7 @@ def find_assignment(node, name_predicate):
 
 def get_line_infos(test_cls: type) -> Tuple[str, List[Dict[str, Any]]]:
     test_attributes = {"_TESTS", "_TEST"}
-    cls = unlazyify(test_cls)
+    cls = unlazify(test_cls)
     for cls in getmro(cls):
         if not test_attributes & set(cls.__dict__.keys()):
             continue
