@@ -4,6 +4,7 @@
 import importlib
 import sys
 import traceback
+import warnings
 from contextlib import suppress, ExitStack, contextmanager, ContextDecorator
 from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
@@ -268,14 +269,21 @@ class patch_function_globals(ContextDecorator):
         *,
         global_name: Optional[str] = None,
     ):
-        self.globals = func.__globals__
-        self.name = global_object.__name__ if global_name is None else global_name
         self.obj = global_object
-        assert (
-            self.name in self.globals
-        ), f"Name {global_name!r} does not exist in {self.globals.keys()}"
+        self.globals = func.__globals__
+        name = global_object.__name__ if global_name is None else global_name
+        self.name = name if name in self.globals else None
+        if self.name is None:
+            warnings.warn(
+                f"Unable to replace {name!r} in globals for {func}. "
+                f"Context manager will have no effect.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
     def switch_object(self):
+        if self.name is None:
+            return
         self.globals[self.name], self.obj = self.obj, self.globals[self.name]
 
     def __enter__(self):

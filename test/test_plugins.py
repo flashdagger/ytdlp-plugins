@@ -115,7 +115,8 @@ class TestPlugins(unittest.TestCase):
         self.assertIs(
             used_func,
             patched_func,
-            f"class {self._path(yt_dlp.YoutubeDL)!r} still uses function {self._path(used_func)!r}",
+            f"class {self._path(yt_dlp.YoutubeDL)!r} uses "
+            f"unpatched function {self._path(used_func)!r}",
         )
 
     def test_unpatched_json_writer(self):
@@ -171,6 +172,14 @@ class TestPlugins(unittest.TestCase):
             str(obj),
             "Bug report message is not suppressed",
         )
+
+    def test_patch_function_globals_warning(self):
+        global_name = "_undefined"
+        with self.assertWarnsRegex(RuntimeWarning, repr(global_name)):
+            with ytdlp_plugins.patch_function_globals(
+                self._path, None, global_name=global_name
+            ):
+                pass
 
 
 if __name__ == "__main__":
