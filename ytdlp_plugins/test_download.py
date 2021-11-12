@@ -254,7 +254,7 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
         return False, ""
 
     def raise_with_test_location(exc, playlist_idx: Optional[int] = None):
-        msg = str(exc).split(": ", maxsplit=2)[-1]
+        msg = str(exc).split(" : ", maxsplit=1)[-1]
         info = get_test_lineno(test_case["cls"], index=test_index)
         filename = info["_file"]
         with suppress(TypeError, IndexError, KeyError):
@@ -297,7 +297,7 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
             if self.is_playlist(test_case):
                 self.check_playlist(uut_dict)
             self.check_testcase(test_case)
-        except AssertionError as exc:
+        except (AssertionError, DownloadError) as exc:
             raise_with_test_location(exc)
             raise
 
