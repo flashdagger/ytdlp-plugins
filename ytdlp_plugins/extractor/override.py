@@ -9,7 +9,7 @@
 
 from yt_dlp.extractor.bitchute import BitChuteIE as _BitChuteIE
 
-from .example import ExamplePluginIE as _ExamplePluginIE
+from .example import DummyPluginIE as _DummyPluginIE
 
 
 # original BitChuteIE defined in yt_dlp.extractor.bitchute
@@ -19,5 +19,5 @@ class BitChuteIE(_BitChuteIE):
 
 
 # already defined in .example
-class ExamplePluginIE(_ExamplePluginIE):
+class DummyPluginIE(_DummyPluginIE):
     pass

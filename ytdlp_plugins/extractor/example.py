@@ -58,3 +58,7 @@ class FailingPluginIE(InfoExtractor):
 
     def _real_extract(self, url):
         raise ExtractorError("Should not happen")
+
+
+class DummyPluginIE(InfoExtractor):
+    _VALID_URL = r"^dummyplugin:(?P<id>\w+)"
