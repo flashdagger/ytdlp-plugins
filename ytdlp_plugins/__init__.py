@@ -14,12 +14,17 @@ from itertools import accumulate
 from pathlib import Path
 from pkgutil import iter_modules
 from typing import Any, Optional, Dict, List, Callable
+
+try:
+    from typing import Protocol
+except ImportError:
+    from typing_extensions import Protocol  # type: ignore
 from unittest.mock import patch
 from zipfile import ZipFile
 from zipimport import zipimporter
 
 import yt_dlp
-from typing_extensions import Protocol
+
 
 from .utils import tabify, write_json_file
 
