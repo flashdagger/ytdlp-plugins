@@ -13,16 +13,18 @@ from zipfile import ZipFile
 
 import yt_dlp
 
-import ytdlp_plugins
 from ytdlp_plugins import (
     OVERRIDDEN,
     PACKAGE_NAME,
+    add_plugins,
     directories,
     initialize,
     load_plugins,
     patch_context,
+    patch_function_globals,
     reset,
-    add_plugins,
+    utils,
+    SKIP_VT_MODE,
 )
 
 ROOT_DIR = Path(__file__).parents[1].absolute()
@@ -104,7 +106,7 @@ class TestPlugins(unittest.TestCase):
         return f"{_func.__module__}.{_func.__name__}"
 
     def test_patched_json_writer(self):
-        patched_func = ytdlp_plugins.utils.write_json_file
+        patched_func = utils.write_json_file
         function_name = patched_func.__name__
         with patch_context():
             _nonlocals, _globals, _builtins, _unbound = getclosurevars(
@@ -135,6 +137,7 @@ class TestPlugins(unittest.TestCase):
             f"uses unexpected function {self._path(used_func)!r}",
         )
 
+    @SKIP_VT_MODE
     def test_patched_bug_report_message(self):
         orig_bug_report = yt_dlp.utils.bug_reports_message()
         self.assertIn("yt-dlp", orig_bug_report)
@@ -152,6 +155,7 @@ class TestPlugins(unittest.TestCase):
             orig_bug_report, str(obj), "Bug report message is not suppressed"
         )
 
+    @SKIP_VT_MODE
     def test_orig_bug_report_message(self):
         orig_bug_report = yt_dlp.utils.bug_reports_message()
         self.assertIn("yt-dlp", orig_bug_report)
@@ -170,9 +174,7 @@ class TestPlugins(unittest.TestCase):
     def test_patch_function_globals_warning(self):
         global_name = "_undefined"
         with self.assertWarnsRegex(RuntimeWarning, repr(global_name)):
-            with ytdlp_plugins.patch_function_globals(
-                self._path, None, global_name=global_name
-            ):
+            with patch_function_globals(self._path, None, global_name=global_name):
                 pass
 
 

@@ -300,6 +300,13 @@ class patch_function_globals(ContextDecorator):
         return False
 
 
+def windows_enable_vt_mode():
+    """dummy stub to supress subprocess warnings"""
+
+
+SKIP_VT_MODE = patch_function_globals(yt_dlp.YoutubeDL.__init__, windows_enable_vt_mode)
+
+
 _PATCHES = (
     patch("yt_dlp.utils.bug_reports_message", bug_reports_message),
     patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header),

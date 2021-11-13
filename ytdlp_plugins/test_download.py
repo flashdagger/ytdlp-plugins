@@ -24,7 +24,7 @@ from yt_dlp.utils import (
     UnavailableVideoError,
 )
 
-from . import patch_decorator
+from . import patch_decorator, SKIP_VT_MODE
 from ._helper import expect_warnings, get_params, get_testcases, DownloadTestcase
 from .ast_utils import get_test_lineno
 from .utils import md5
@@ -35,6 +35,7 @@ EXC_CODE_OBJ = compile(EXC_CODE_STR, "", "exec")
 
 
 class YoutubeDL(yt_dlp.YoutubeDL):
+    @SKIP_VT_MODE
     def __init__(self, *args, **kwargs):
         self.to_stderr = self.to_screen
         super().__init__(*args, **kwargs)
@@ -86,8 +87,9 @@ class TestExtractor(DownloadTestcase):
 
     def __str__(self):
         """Identify each test with the `add_ie` attribute, if available."""
-        add_ie_str = ",".join(self.data.test_case.get("add_ie", ()))
-        add_ie_label = f" [{add_ie_str}]" if add_ie_str else ""
+        # add_ie_str = ",".join(self.data.test_case.get("add_ie", ()))
+        # add_ie_label = f" [{add_ie_str}]" if add_ie_str else ""
+        add_ie_label = ""
         return f"{self.__class__.__name__}::{self._testMethodName}{add_ie_label}"
 
     @property
