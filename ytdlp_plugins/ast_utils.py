@@ -2,10 +2,12 @@ import ast
 import builtins
 from contextlib import suppress
 from inspect import getsourcelines, getsourcefile, getmro
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Union
 
 from .utils import unlazify
 
+AstSequences = (ast.List, ast.Tuple)
+AstSequenceType = Union[ast.List, ast.Tuple]
 _CACHE: Dict[type, Tuple[str, List[Dict[str, Any]]]] = {}
 
 AST_TYPE_MAP = {
@@ -28,7 +30,7 @@ def dict_info(node: ast.Dict) -> Dict[str, Any]:
             actual_value = AST_TYPE_MAP[value_cls](value)
         elif isinstance(value, ast.Dict):
             actual_value = dict_info(value)
-        elif isinstance(value, ast.List):
+        elif isinstance(value, AstSequences):
             actual_value = list_info(value)
         elif isinstance(value, ast.Name):
             actual_value = getattr(builtins, value.id, value.id)
@@ -40,7 +42,7 @@ def dict_info(node: ast.Dict) -> Dict[str, Any]:
     return info
 
 
-def list_info(node: ast.List) -> List[Dict[str, Any]]:
+def list_info(node: AstSequenceType) -> List[Dict[str, Any]]:
     data = []
     for child in ast.iter_child_nodes(node):
         if not isinstance(child, ast.Dict):
@@ -81,7 +83,7 @@ def get_line_infos(test_cls: type) -> Tuple[str, List[Dict[str, Any]]]:
 
     source_file = str(getsourcefile(cls))
 
-    if isinstance(test_node, ast.List):
+    if isinstance(test_node, AstSequences):
         data = list_info(test_node)
     elif isinstance(test_node, ast.Dict):
         data = [dict_info(test_node)]

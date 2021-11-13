@@ -15,9 +15,8 @@ from types import CodeType
 from typing import Dict, Any, Callable, Optional, Tuple, Set
 from unittest import skipIf
 
-import yt_dlp
+import yt_dlp.extractor
 from yt_dlp.compat import compat_http_client, compat_urllib_error, compat_HTTPError
-from yt_dlp.extractor import get_info_extractor
 from yt_dlp.utils import (
     DownloadError,
     ExtractorError,
@@ -253,12 +252,21 @@ def generator(test_case, test_name: str, test_index: int) -> Callable:
         if not getattr(test_case["cls"], "_WORKING", False):
             return True, "_WORKING=False"
 
-        ie_status = {
-            ie_key: getattr(get_info_extractor(ie_key), "_WORKING", False)
+        ie_map = {
+            ie_key: getattr(yt_dlp.extractor, f"{ie_key}IE", None)
             for ie_key in test_case.get("add_ie", ())
         }
+        missing_ies = [ie_key for ie_key, ie_cls in ie_map.items() if ie_cls is None]
+        if missing_ies:
+            return (
+                True,
+                f"depends on {', '.join(missing_ies)} - which don't exist",
+            )
+
         ie_not_working = [
-            ie_key for ie_key, working in ie_status.items() if not working
+            ie_key
+            for ie_key, ie_cls in ie_map.items()
+            if ie_cls and not getattr(ie_cls, "_WORKING", False)
         ]
         if ie_not_working:
             return (

@@ -4,6 +4,7 @@
 import os
 import re
 import sys
+import warnings
 from inspect import getfile
 from pathlib import Path
 from typing import Any, Dict
@@ -91,6 +92,8 @@ def report_warning(message):
 
 def get_class_testcases(cls):
     cls = unlazify(cls)
+    if not issubclass(cls, InfoExtractor):
+        return
 
     for key in ("_TEST", "_TESTS"):
         if key in cls.__dict__:
@@ -101,6 +104,10 @@ def get_class_testcases(cls):
     test_cases = cls.__dict__[key]
     if isinstance(test_cases, dict):
         test_cases = [test_cases]
+    if not isinstance(test_cases, (list, tuple)):
+        if test_cases is not None:
+            warnings.warn(f"{cls}: _TEST is {type(test_cases)}", UserWarning)
+        return
     for test_case in test_cases:
         test_case["name"] = cls.__name__[:-2]
         test_case["cls"] = cls
@@ -113,8 +120,6 @@ def get_testcases():
     project_plugins = Path.cwd() / "ytdlp_plugins"
 
     for cls in FOUND.values():
-        if not issubclass(cls, InfoExtractor):
-            continue
         module_file = Path(getfile(cls))
         if project_plugins.is_dir() and project_plugins != module_file.parents[1]:
             continue
