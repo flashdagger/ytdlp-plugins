@@ -20,12 +20,10 @@ from ytdlp_plugins import (
     directories,
     initialize,
     load_plugins,
-    patch_context,
-    patch_function_globals,
     reset,
     utils,
-    SKIP_VT_MODE,
 )
+from ytdlp_plugins.patching import patch_function_globals, SKIP_VT_MODE, patch_context
 
 ROOT_DIR = Path(__file__).parents[1].absolute()
 

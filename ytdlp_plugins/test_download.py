@@ -24,14 +24,17 @@ from yt_dlp.utils import (
     UnavailableVideoError,
 )
 
-from . import patch_decorator, SKIP_VT_MODE
 from ._helper import expect_warnings, get_params, get_testcases, DownloadTestcase
+from .patching import SKIP_VT_MODE, patch_decorator
 from .ast_utils import get_test_lineno
 from .utils import md5
 
 InfoDict = Dict[str, Any]
 EXC_CODE_STR = "raise exc_cls(msg) from exc"
 EXC_CODE_OBJ = compile(EXC_CODE_STR, "", "exec")
+FILE_ERRORS = (
+    (FileNotFoundError, WindowsError) if os.name == "nt" else (FileNotFoundError,)
+)
 
 
 class YoutubeDL(yt_dlp.YoutubeDL):
@@ -109,7 +112,7 @@ class TestExtractor(DownloadTestcase):
             test_cases = tuple((self.data.test_case, *self.data.sub_test_cases))
 
         def unlink_if_exist(path: Path):
-            with suppress(FileNotFoundError, WindowsError):
+            with suppress(*FILE_ERRORS):
                 path.unlink()
 
         for test_case in test_cases:
