@@ -12,7 +12,7 @@ from unittest import TestCase
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import preferredencoding, write_string
-
+from yt_dlp.extractor import gen_extractor_classes
 from ytdlp_plugins import initialize, add_plugins, FOUND
 from .utils import md5, unlazify
 
@@ -118,10 +118,20 @@ def get_testcases():
     initialize()
     add_plugins()
     project_plugins = Path.cwd() / "ytdlp_plugins"
+    if "--all" in sys.argv:
+        test_classes = gen_extractor_classes()
+        filter_local = False
+    else:
+        test_classes = FOUND.values()
+        filter_local = True
 
-    for cls in FOUND.values():
+    for cls in test_classes:
         module_file = Path(getfile(cls))
-        if project_plugins.is_dir() and project_plugins != module_file.parents[1]:
+        if (
+            filter_local
+            and project_plugins.is_dir()
+            and project_plugins != module_file.parents[1]
+        ):
             continue
         yield from get_class_testcases(cls)
 
