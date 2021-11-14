@@ -118,7 +118,7 @@ def get_testcases():
     initialize()
     add_plugins()
     project_plugins = Path.cwd() / "ytdlp_plugins"
-    if "--all" in sys.argv:
+    if "--all" in sys.argv or "test_all" in os.environ:
         test_classes = gen_extractor_classes()
         filter_local = False
     else:
@@ -204,7 +204,7 @@ class DownloadTestcase(TestCase):
             self.assert_field_is_valid(
                 bool(match_rex.match(got)),
                 field,
-                f"{got!r}) should match {match_str!r}",
+                f"{got!r} does not match regex r'{match_str}'",
             )
         elif expected.startswith("startswith:"):
             start_str = expected[len("startswith:") :]
