@@ -24,9 +24,9 @@ class TestDownloadTestcase(DownloadTestcase):
     def test_string_fail(self):
         test_cases = (
             ("default", "foo", "bar", r" : expected"),
-            ("startswith", "startswith:foo", "bar", r" : .+ should start with"),
-            ("regex", r"re:\d+", "foo", r" : .+ should match"),
-            ("contains", "contains:foo", "bar", r" : .+ should contain"),
+            ("startswith", "startswith:foo", "bar", r" : .+ does not start with"),
+            ("regex", r"re:\d+", "foo", r" : .+ does not match"),
+            ("contains", "contains:foo", "bar", r" : .+ does not contain"),
             ("md5", "md5:badeaffe", "foo", r" : expected .+ got 'md5:"),
             ("count", "count:4", [1, 2, 3], r" : expected exactly 4"),
             ("count", "count:4", "aaaa", r" : expected a list or a dict"),

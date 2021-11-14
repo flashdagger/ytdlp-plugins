@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import operator
 import os
 import re
 import sys
@@ -10,9 +11,10 @@ from pathlib import Path
 from typing import Any, Dict
 from unittest import TestCase
 
+from yt_dlp.extractor import gen_extractor_classes
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import preferredencoding, write_string
-from yt_dlp.extractor import gen_extractor_classes
+
 from ytdlp_plugins import initialize, add_plugins, FOUND
 from .utils import md5, unlazify
 
@@ -155,7 +157,11 @@ class DownloadTestcase(TestCase):
     def expect_value(self, got, expected, field):
         if isinstance(expected, str):
             self.expect_string(got, expected, field)
-        elif isinstance(expected, type):
+        elif (
+            isinstance(expected, type)
+            or isinstance(expected, tuple)
+            and all(isinstance(obj, type) for obj in expected)
+        ):
             self.assert_field_is_valid(
                 isinstance(got, expected),
                 field,
@@ -216,7 +222,7 @@ class DownloadTestcase(TestCase):
             self.assert_field_is_valid(
                 got.startswith(start_str),
                 field,
-                f"{got!r} should start with {start_str!r}",
+                f"{got!r} does not start with {start_str!r}",
             )
         elif expected.startswith("contains:"):
             contains_str = expected[len("contains:") :]
@@ -228,7 +234,7 @@ class DownloadTestcase(TestCase):
             self.assert_field_is_valid(
                 contains_str in got,
                 field,
-                f"{got!r} should contain {contains_str!r}",
+                f"{got!r} does not contain {contains_str!r}",
             )
         elif expected.startswith("md5:"):
             self.assert_field_is_valid(
@@ -248,13 +254,13 @@ class DownloadTestcase(TestCase):
             operation, expected_num = expected.split(":")
             expected_int = int(expected_num)
             if operation == "mincount":
-                assert_func = lambda a, b: a >= b
+                assert_func = operator.ge
                 msg_tmpl = "expected at least {} items, but only got {}"
             elif operation == "maxcount":
-                assert_func = lambda a, b: a <= b
+                assert_func = operator.le
                 msg_tmpl = "expected not more than {} items, but got {}"
             elif operation == "count":
-                assert_func = lambda a, b: a == b
+                assert_func = operator.eq
                 msg_tmpl = "expected exactly {} items, but got {}"
             else:
                 raise Exception("Should not happen")
