@@ -45,18 +45,18 @@ class ServusTVIE(InfoExtractor):
     _TESTS = [
         {
             # new URL schema
-            "url": "https://www.servustv.com/aktuelles/v/aa-28jer1rfh1w11/",
+            "url": "https://www.servustv.com/wissen/v/aa-273cebhp12111/",
             "info_dict": {
-                "id": "aa-28jer1rfh1w11",
+                "id": "aa-273cebhp12111",
                 "ext": "mp4",
-                "title": "Die Top-Themen vom 05.11.",
-                "description": "md5:c913d5aba429acf4ade46a181d9532f0",
-                "duration": 587,
+                "title": "Was lebt im Steinbruch?",
+                "description": "md5:a905b6135469cf60a07d4d0ae1e8d49a",
+                "duration": 271,
                 "timestamp": int,
-                "upload_date": "20211105",
-                "is_live": False,
-                "categories": ["Servus Nachrichten 19:00"],
+                "categories": ["P.M. Wissen"],
                 "age_limit": 0,
+                "upload_date": "20211111",
+                "is_live": False,
                 "thumbnail": r"re:^https?://.*\.jpg",
             },
             "params": {
@@ -73,8 +73,49 @@ class ServusTVIE(InfoExtractor):
                 "title": "Ich, Bauer",
                 "description": "md5:04cd98226e5c07ca50d0dc90f4a27ea1",
             },
-            "params": {"geo_bypass_country": "AT", "nocheckcertificate": True},
+            "playlist": [
+                {
+                    "info_dict": {
+                        "id": "aa-22rankb9h2112",
+                        "title": "Der Engelswand-Bauer",
+                        "description": "Christian Falkner bewirtschaftet den extremst gelegensten Hof Tirols.",
+                        "timestamp": int,
+                        "upload_date": "20210501",
+                    },
+                },
+                {
+                    "info_dict": {
+                        "id": "aa-24hxt6ycw1w12",
+                        "title": "Ich, Bauer",
+                        "description": "md5:01335fd4f02d66d6ae9af2c5387d18a3",
+                        "timestamp": int,
+                        "upload_date": "20210501",
+                    },
+                },
+            ],
             "playlist_mincount": 10,
+            "params": {
+                "geo_bypass_country": "AT",
+                "nocheckcertificate": True,
+                "format": "bestvideo",
+                "skip_download": True,
+            },
+        },
+        {
+            # live stream
+            "url": "https://www.servustv.com/allgemein/p/jetzt-live/119753/",
+            "info_dict": {
+                "id": str,
+                "ext": "mp4",
+                "title": str,
+                "description": str,
+                "duration": None,
+                "timestamp": int,
+                "upload_date": str,
+                "is_live": True,
+                "thumbnail": r"re:^https?://.*\.jpg",
+            },
+            "params": {"skip_download": True, "outtmpl": "livestream.%(ext)s"},
         },
         {
             "url": "https://www.servustv.com/allgemein/v/aagevnv3syv5kuu8cpfq/",

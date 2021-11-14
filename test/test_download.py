@@ -1,5 +1,8 @@
-from ytdlp_plugins import test_download
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+
+from ytdlp_plugins.test_download import TestExtractor
 
 
-class TestDownload(test_download.TestDownload):
-    pass
+def _():
+    return TestExtractor
