@@ -4,7 +4,7 @@
 import warnings
 from contextlib import suppress, ContextDecorator, contextmanager, ExitStack
 from inspect import stack, getmodule
-from typing import Dict, Any, Callable, Optional
+from typing import Dict, Any, Callable, Optional, cast
 from unittest.mock import patch
 
 try:
@@ -25,13 +25,18 @@ class Function(Protocol):
     __call__: Callable
 
 
+class InverseDecorated(Protocol):
+    __original__: Callable
+    __call__: Callable
+
+
 def monkey_patch(orig):
-    def decorator(func):
+    def decorator(func: Callable) -> InverseDecorated:
         def decorated(*args, **kwargs):
             return func(*args, **kwargs)
 
-        decorated.__original__ = orig
-        return decorated
+        setattr(decorated, "__original__", orig)
+        return cast(InverseDecorated, decorated)
 
     return decorator
 
