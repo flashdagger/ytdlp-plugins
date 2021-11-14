@@ -17,7 +17,7 @@ from typing import Dict, List
 from zipfile import ZipFile
 from zipimport import zipimporter
 
-__version__ = "2021.11.12"
+__version__ = "2021.11.13"
 _INITIALIZED = False
 FOUND: Dict[str, type] = {}
 OVERRIDDEN: List[type] = []
