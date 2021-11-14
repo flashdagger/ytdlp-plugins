@@ -78,7 +78,7 @@ class ServusTVIE(InfoExtractor):
                     "info_dict": {
                         "id": "aa-22rankb9h2112",
                         "title": "Der Engelswand-Bauer",
-                        "description": "Christian Falkner bewirtschaftet den extremst gelegensten Hof Tirols.",
+                        "description": "md5:22149f1593cac13703dc31f87162badb",
                         "timestamp": int,
                         "upload_date": "20210501",
                     },
@@ -115,14 +115,14 @@ class ServusTVIE(InfoExtractor):
                 "is_live": True,
                 "thumbnail": r"re:^https?://.*\.jpg",
             },
-            "params": {"skip_download": True, "outtmpl": "livestream.%(ext)s"},
+            "params": {
+                "skip_download": True,
+                "outtmpl": "livestream.%(ext)s",
+                "format": "bestvideo/best",
+            },
         },
         {
             "url": "https://www.servustv.com/allgemein/v/aagevnv3syv5kuu8cpfq/",
-            "only_matching": True,
-        },
-        {
-            "url": "https://www.servustv.com/allgemein/p/jetzt-live/119753/",
             "only_matching": True,
         },
     ]

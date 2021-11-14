@@ -4,5 +4,5 @@
 from ytdlp_plugins.test_download import TestExtractor
 
 
-def _():
+def pass_through():
     return TestExtractor
