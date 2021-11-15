@@ -21,7 +21,7 @@ from yt_dlp.utils import (
 )
 from ytdlp_plugins.utils import estimate_filesize
 
-__version__ = "2021.11.07.post1"
+__version__ = "2021.11.15"
 
 # pylint: disable=abstract-method
 class BrighteonIE(InfoExtractor):
