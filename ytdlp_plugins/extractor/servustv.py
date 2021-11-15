@@ -304,11 +304,7 @@ class ServusTVIE(InfoExtractor):
             if query_id:
                 return query_type, query_id
 
-        raise ExtractorError(
-            "Website contains no supported playlists",
-            video_id=page_id,
-            expected=True,
-        )
+        raise ExtractorError("Unsupported URL", video_id=None, expected=True)
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
