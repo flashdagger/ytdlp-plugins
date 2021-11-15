@@ -5,10 +5,11 @@ from urllib.parse import urlparse, parse_qsl
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
-    parse_iso8601,
     ExtractorError,
-    try_get,
     OnDemandPagedList,
+    UnsupportedError,
+    parse_iso8601,
+    try_get,
     traverse_obj,
 )
 from ytdlp_plugins.utils import estimate_filesize
@@ -16,7 +17,7 @@ from ytdlp_plugins.utils import estimate_filesize
 __version__ = "2021.11.07"
 
 
-class ParsedURL(object):
+class ParsedURL:
     """
     This class provides a unified interface for urlparse(),
     parse_qsl() and regular expression groups
@@ -58,6 +59,7 @@ class ParsedURL(object):
         return self._match.group(key)
 
 
+# pylint: disable=abstract-method
 class YoumakerIE(InfoExtractor):
     _VALID_URL = r"""(?x)
                     https?://(?:[a-z][a-z0-9]+\.)?youmaker\.com/
@@ -81,13 +83,15 @@ class YoumakerIE(InfoExtractor):
                 "timestamp": 1633915895,
                 "channel": "Channel 17",
                 "channel_id": "e92d56c8-249f-4f61-b7d0-75c4e05ecb4f",
-                "channel_url": r"re:https?://(:?[a-z][a-z0-9]+\.)?youmaker.com/channel/e92d56c8-249f-4f61-b7d0-75c4e05ecb4f",
+                "channel_url": r"re:https?://(:?[a-z][a-z0-9]+\.)?youmaker.com/channel/"
+                r"e92d56c8-249f-4f61-b7d0-75c4e05ecb4f",
                 "tags": ["qanon", "trump", "usa", "maga"],
                 "categories": ["News"],
                 "subtitles": {
                     "en": [
                         {
-                            "url": r"re:https?://[a-z1-3]+.youmaker.com/assets/2021/1011/8edd428d-74be-4eb0-b3fd-7b277e508adb/subtitles_en.m3u8"
+                            "url": r"re:https?://[a-z1-3]+.youmaker.com/assets/2021/1011/"
+                            r"8edd428d-74be-4eb0-b3fd-7b277e508adb/subtitles_en.m3u8"
                         }
                     ]
                 },
@@ -109,7 +113,9 @@ class YoumakerIE(InfoExtractor):
                 "subtitles": {
                     "en": [
                         {
-                            "url": r"re:https?://[a-z1-3]+.youmaker.com/assets/2021/1001/b58f88fe-4ddb-4c11-bccf-46f579b7d978/subtitle_1633055993844.auto.en.vtt"
+                            "url": r"re:https?://[a-z1-3]+.youmaker.com/assets/2021/1001/"
+                            r"b58f88fe-4ddb-4c11-bccf-46f579b7d978/"
+                            r"subtitle_1633055993844\.auto\.en\.vtt"
                         }
                     ]
                 },
@@ -129,7 +135,8 @@ class YoumakerIE(InfoExtractor):
         },
         {
             # all videos from channel playlist
-            "url": "https://www.youmaker.com/channel/f8d585f8-2ff7-4c3c-b1ea-a78d77640d54/playlists/f99a120c-7a5e-47b2-9235-3817d1c12662",
+            "url": "https://www.youmaker.com/channel/f8d585f8-2ff7-4c3c-b1ea-a78d77640d54/"
+            "playlists/f99a120c-7a5e-47b2-9235-3817d1c12662",
             "playlist_mincount": 9,
             "info_dict": {
                 "id": "f99a120c-7a5e-47b2-9235-3817d1c12662",
@@ -157,7 +164,7 @@ class YoumakerIE(InfoExtractor):
 
     def __init__(self, downloader=None):
         """Constructor. Receives an optional downloader."""
-        super(YoumakerIE, self).__init__(downloader=downloader)
+        super().__init__(downloader=downloader)
         self._protocol = "https"
         self._category_map = None
         self._cache = {}
@@ -273,6 +280,7 @@ class YoumakerIE(InfoExtractor):
 
         return categories
 
+    # pylint: disable=arguments-differ
     def _get_subtitles(self, system_id):
         if system_id is None:
             return {}
@@ -295,37 +303,7 @@ class YoumakerIE(InfoExtractor):
 
         return subtitles
 
-    def _video_entry_by_metadata(self, info):
-        try:
-            video_uid, title = itemgetter("video_uid", "title")(info)
-        except KeyError as exc:
-            raise ExtractorError(f"{exc!s} not found in video metadata")
-
-        video_info = info.get("data", {})
-        tag_str = info.get("tag")
-        tags = (
-            [tag.strip() for tag in tag_str.strip("[]").split(",")] if tag_str else None
-        )
-        channel_url = (
-            f'{self._base_url}/channel/{info["channel_uid"]}'
-            if "channel_uid" in info
-            else None
-        )
-        duration = video_info.get("duration")
-
-        playlist_url = traverse_obj(
-            video_info, ["videoAssets", "Stream"], expected_type=str
-        )
-        if info.get("live") and playlist_url is None:
-            is_live = True
-            playlist_url = self._live_url(video_uid)
-            if info.get("live_status") != "start":
-                self.report_warning(
-                    "Live stream might not be ready yet.", video_id=video_uid
-                )
-        else:
-            is_live = False
-
+    def handle_formats(self, playlist_url, video_uid):
         formats = []
         playlist_subtitles = {}
         for count, candidate_url in enumerate(self._try_server_urls(playlist_url)):
@@ -337,7 +315,6 @@ class YoumakerIE(InfoExtractor):
                 self._fix_url(candidate_url),
                 video_uid,
                 ext="mp4",
-                entry_protocol="m3u8" if is_live else "m3u8_native",
                 errnote=False,
                 fatal=False,
             )
@@ -357,12 +334,47 @@ class YoumakerIE(InfoExtractor):
         format_mapping = {item["url"]: item for item in formats}
         formats = list(format_mapping.values())
 
-        estimate_filesize(formats, duration)
         self._sort_formats(formats)
         for item in formats:
             height = try_get(item, itemgetter("height"), int)
             if height:
                 item["format_id"] = f"{height}p"
+
+        return formats, playlist_subtitles
+
+    def _video_entry_by_metadata(self, info):
+        try:
+            video_uid, title = itemgetter("video_uid", "title")(info)
+        except KeyError as exc:
+            raise ExtractorError(f"{exc!s} not found in video metadata") from exc
+
+        video_info = info.get("data", {})
+        tag_str = info.get("tag")
+        tags = (
+            [tag.strip() for tag in tag_str.strip("[]").split(",")] if tag_str else None
+        )
+        channel_url = (
+            f'{self._base_url}/channel/{info["channel_uid"]}'
+            if "channel_uid" in info
+            else None
+        )
+
+        playlist_url = traverse_obj(
+            video_info, ["videoAssets", "Stream"], expected_type=str
+        )
+        if info.get("live") and playlist_url is None:
+            is_live = True
+            playlist_url = self._live_url(video_uid)
+            if info.get("live_status") != "start":
+                self.report_warning(
+                    "Live stream might not be ready yet.", video_id=video_uid
+                )
+        else:
+            is_live = False
+
+        formats, playlist_subtitles = self.handle_formats(playlist_url, video_uid)
+        duration = video_info.get("duration")
+        estimate_filesize(formats, duration)
 
         return {
             "id": video_uid,
@@ -480,5 +492,5 @@ class YoumakerIE(InfoExtractor):
             if not match:
                 continue
             return func(**match.groupdict())
-        else:
-            raise ExtractorError(f"unsupported {self.ie_key()} url", expected=True)
+
+        raise UnsupportedError(url)
