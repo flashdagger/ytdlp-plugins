@@ -9,20 +9,21 @@ from yt_dlp.compat import (
 )
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
+    ExtractorError,
+    OnDemandPagedList,
+    UnsupportedError,
     get_element_by_id,
     int_or_none,
     parse_duration,
     parse_iso8601,
     traverse_obj,
-    ExtractorError,
     update_url_query,
-    OnDemandPagedList,
 )
 from ytdlp_plugins.utils import estimate_filesize
 
 __version__ = "2021.11.07.post1"
 
-
+# pylint: disable=abstract-method
 class BrighteonIE(InfoExtractor):
     IE_NAME = "brighteon"
     _VALID_URL = r"""(?x)
@@ -39,7 +40,8 @@ class BrighteonIE(InfoExtractor):
             "url": "https://www.brighteon.com/9e12fa99-a6fb-41e9-9ed9-c2aa0a166a1a",
             "info_dict": {
                 "id": "9e12fa99-a6fb-41e9-9ed9-c2aa0a166a1a",
-                "title": 'Christopher James joins Mike Adams to discuss Common Law and corporate "personhood" global enslavement',
+                "title": "Christopher James joins Mike Adams to discuss Common Law and corporate "
+                '"personhood" global enslavement',
                 "ext": "mp4",
                 "description": "md5:a35cb44d7c50d673ce48e6cd661e74ac",
                 "timestamp": 1635894109,
@@ -231,11 +233,7 @@ class BrighteonIE(InfoExtractor):
         channel_info = data.get("channel", {})
         initial_video_list = data.get("videos")
         if initial_video_list is None:
-            raise ExtractorError(
-                "This page contains no supported playlists",
-                video_id=page_id,
-                expected=True,
-            )
+            raise UnsupportedError(url)
         page_cache = {1: initial_video_list}
         page_size = len(initial_video_list)
         max_pages = traverse_obj(
@@ -313,11 +311,7 @@ class BrighteonIE(InfoExtractor):
         if video_info:
             return self._entry_from_info(video_info, channel_info)
 
-        raise ExtractorError(
-            "This page contains no supported playlists",
-            video_id=video_id,
-            expected=True,
-        )
+        raise UnsupportedError(url)
 
 
 class BrighteontvIE(BrighteonIE):
