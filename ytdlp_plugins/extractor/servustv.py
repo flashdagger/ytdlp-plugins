@@ -14,6 +14,7 @@ from yt_dlp.utils import (
     ExtractorError,
     GeoRestrictedError,
     OnDemandPagedList,
+    UnsupportedError,
 )
 from ytdlp_plugins.utils import estimate_filesize
 
@@ -291,7 +292,7 @@ class ServusTVIE(InfoExtractor):
         return None
 
     @staticmethod
-    def taxonomy(json_obj, page_id):
+    def taxonomy(json_obj, page_id, url):
         asset_paths = (
             ("source", "media_asset", str(page_id), "categories"),
             # ('source', 'page', str(page_id), 'asset_content_color'),
@@ -304,7 +305,7 @@ class ServusTVIE(InfoExtractor):
             if query_id:
                 return query_type, query_id
 
-        raise ExtractorError("Unsupported URL", video_id=None, expected=True)
+        raise UnsupportedError(url)
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
@@ -348,7 +349,7 @@ class ServusTVIE(InfoExtractor):
 
         # create playlist
         page_id = self._page_id(json_obj)
-        query_type, query_id = self.taxonomy(json_obj, page_id)
+        query_type, query_id = self.taxonomy(json_obj, page_id, url)
 
         return self.playlist_result(
             self._paged_playlist_by_query(
