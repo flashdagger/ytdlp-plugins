@@ -1,4 +1,5 @@
-# coding: utf-8
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 import re
 from operator import itemgetter
 from urllib.parse import urlparse, parse_qsl
@@ -14,7 +15,7 @@ from yt_dlp.utils import (
 )
 from ytdlp_plugins.utils import estimate_filesize
 
-__version__ = "2021.11.07"
+__version__ = "2021.11.15"
 
 
 class ParsedURL:
@@ -97,7 +98,7 @@ class YoumakerIE(InfoExtractor):
                 },
             },
             "params": {"skip_download": True, "listsubtitles": True},
-            "expected_warnings": ["Missing m3u8 info\\. Trying alternative server"],
+            "expected_warnings": [r"Missing m3u8 info\. Trying alternative server"],
         },
         {
             # test video with JSON requested subtitles
@@ -121,7 +122,7 @@ class YoumakerIE(InfoExtractor):
                 },
             },
             "params": {"skip_download": True, "listsubtitles": True},
-            "expected_warnings": ["Missing m3u8 info\\. Trying alternative server"],
+            "expected_warnings": [r"Missing m3u8 info\. Trying alternative server"],
         },
         {
             # all videos from channel
