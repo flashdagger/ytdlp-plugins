@@ -13,13 +13,19 @@ from itertools import accumulate
 from pathlib import Path
 from pkgutil import iter_modules
 from typing import Dict, List
-
 from zipfile import ZipFile
 from zipimport import zipimporter
 
+from yt_dlp.extractor.common import InfoExtractor
+
+from .generic import GenericIE
+from .utils import unlazify
+
 __version__ = "2021.11.13"
+
+
 _INITIALIZED = False
-FOUND: Dict[str, type] = {}
+FOUND: Dict[str, InfoExtractor] = {}
 OVERRIDDEN: List[type] = []
 PACKAGE_NAME = __name__
 
@@ -177,6 +183,12 @@ def add_plugins():
         with suppress(ValueError):
             all_classes.remove(cls)
     all_classes[:0] = ie_plugins.values()
+
+    GenericIE.OTHER_EXTRACTORS.extend(FOUND.values())
+    last_extractor = unlazify(all_classes[-1])
+    if issubclass(GenericIE, last_extractor):
+        setattr(extractor, last_extractor.__name__, GenericIE)
+        all_classes[-1] = GenericIE
 
     pp_plugins = load_plugins("postprocessor", "PP", postprocessor.__dict__)
     FOUND.update(pp_plugins)
