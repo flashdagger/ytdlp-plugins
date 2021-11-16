@@ -7,9 +7,10 @@ import re
 import socket
 import sys
 from contextlib import suppress
+from functools import reduce
 from itertools import groupby, count
 from math import log10
-from operator import itemgetter
+from operator import itemgetter, getitem
 from pathlib import Path
 from types import CodeType
 from typing import Dict, Any, Callable, Optional, Tuple, Set, List
@@ -25,8 +26,8 @@ from yt_dlp.utils import (
 )
 
 from ._helper import expect_warnings, get_params, get_testcases, DownloadTestcase
-from .patching import SKIP_VT_MODE, patch_decorator
 from .ast_utils import get_test_lineno
+from .patching import SKIP_VT_MODE, patch_decorator
 from .utils import md5
 
 InfoDict = Dict[str, Any]
@@ -90,10 +91,7 @@ class TestExtractor(DownloadTestcase):
 
     def __str__(self):
         """Identify each test with the `add_ie` attribute, if available."""
-        # add_ie_str = ",".join(self.data.test_case.get("add_ie", ()))
-        # add_ie_label = f" [{add_ie_str}]" if add_ie_str else ""
-        add_ie_label = ""
-        return f"{self.__class__.__name__}::{self._testMethodName}{add_ie_label}"
+        return f"{self.__class__.__name__}::{self._testMethodName}"
 
     @property
     def data(self) -> ExtractorTestData:
@@ -198,11 +196,11 @@ class TestExtractor(DownloadTestcase):
 
         return None
 
-    def check_testcase(self, test_case: InfoDict) -> None:
+    def check_testcase(self, test_case: InfoDict, is_playlist=False) -> None:
         info_dict = self.get_info_dict(test_case)
         tc_filename = self.get_tc_filename(test_case)
 
-        if not (self.data.is_playlist or self.data.params.get("skip_download", False)):
+        if not (is_playlist or self.data.params.get("skip_download", False)):
             self.assertTrue(tc_filename.exists(), msg=f"Missing file {tc_filename}")
             self.assertTrue(
                 tc_filename in self.data.finished_hook_called,
@@ -213,9 +211,9 @@ class TestExtractor(DownloadTestcase):
                 if self.data.ydl.params.get("test"):
                     expected_minsize = max(expected_minsize, 10000)
                 got_fsize = os.path.getsize(tc_filename)
-                self.assertGreaterEqual(
-                    got_fsize,
-                    expected_minsize,
+                self.assert_field_is_valid(
+                    got_fsize >= expected_minsize,
+                    "file_minsize",
                     f"Expected {tc_filename} to be at least "
                     f"{format_bytes(expected_minsize)}, "
                     f"but it's only {format_bytes(got_fsize)} ",
@@ -238,15 +236,22 @@ class TestExtractor(DownloadTestcase):
         filename = info["_file"]
         with suppress(TypeError, IndexError, KeyError):
             info = info["playlist"][playlist_idx]
-        line_no = info["_lineno"].get("info_dict") or info["_lineno"]["_self"]
 
         match = re.match(r".*\bfield ['\"]?(\w+)", msg)
-        with suppress(KeyError, AttributeError):
-            line_no = info["_lineno"][match and match.group(1)]
-        with suppress(KeyError, AttributeError):
-            line_no = info["info_dict"]["_lineno"][match and match.group(1)]
+        for path in (
+            ("info_dict", "_lineno", match and match[1]),
+            ("_lineno", match and match[1]),
+            ("_lineno", "info_dict"),
+            ("_lineno", "_self"),
+        ):
+            with suppress(KeyError, IndexError):
+                line_no: int = reduce(getitem, path, info)  # type: ignore
+                break
+        else:
+            line_no = 1
+
         exc_cls = type(test_name, (type(exc),), {})
-        #  pylint: disable=exec-used
+        # pylint: disable=exec-used
         exec(
             exc_code_obj(
                 co_firstlineno=line_no, co_name=test_name, co_filename=filename
@@ -316,7 +321,7 @@ def generator(test_case, test_name: str, test_index: int) -> Tuple[str, Callable
             uut_dict = self.extract_info() or {}
             self.expect_info_dict(uut_dict, test_case.get("info_dict", {}))
             self.check_playlist(uut_dict)
-            self.check_testcase(test_case)
+            self.check_testcase(test_case, is_playlist=self.data.is_playlist)
         except (AssertionError, DownloadError):
             self.raise_with_test_location(test_name, test_index)
             raise
