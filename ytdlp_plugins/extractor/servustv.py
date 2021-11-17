@@ -1,22 +1,18 @@
 # coding: utf-8
 from operator import itemgetter
+from urllib.parse import unquote_plus
 
-from yt_dlp.compat import (
-    compat_parse_qs,
-    compat_urllib_parse_unquote_plus,
-    compat_urllib_parse_urlparse,
-)
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
-    get_element_by_id,
-    parse_iso8601,
-    traverse_obj,
     ExtractorError,
     GeoRestrictedError,
     OnDemandPagedList,
     UnsupportedError,
+    get_element_by_id,
+    parse_iso8601,
+    traverse_obj,
 )
-from ytdlp_plugins.utils import estimate_filesize
+from ytdlp_plugins.utils import estimate_filesize, ParsedURL
 
 __version__ = "2021.11.15"
 
@@ -309,11 +305,8 @@ class ServusTVIE(InfoExtractor):
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
-        parsed_url = compat_urllib_parse_urlparse(url)
-        url_query = {
-            key.lower(): value[0]
-            for key, value in compat_parse_qs(parsed_url.query).items()
-        }
+        parsed_url = ParsedURL(url)
+        url_query = {key.lower(): value for key, value in parsed_url.query().items()}
 
         # server accepts tz database names
         # see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
@@ -390,7 +383,7 @@ class ServusSearchIE(ServusTVIE):
 
     def _real_extract(self, url):
         search_id = self._match_id(url)
-        search_term = compat_urllib_parse_unquote_plus(search_id)
+        search_term = unquote_plus(search_id)
 
         return self.playlist_result(
             self._paged_playlist_by_query(
