@@ -55,6 +55,14 @@ class GenericIE(GenericExtractor):
 
         return urls
 
+    def _og_search_title(self, html, **kwargs):
+        site_name = self._og_search_property("site_name", html, default=None)
+        title = super()._og_search_title(html, **kwargs)
+        if site_name and title:
+            title = title.replace(f" - {site_name}", "", 1)
+
+        return title
+
     def _request_webpage(self, url_or_request, *args, **kwargs):
         if url_or_request not in self.REQUEST_CACHE:
             self.REQUEST_CACHE[url_or_request] = super()._request_webpage(
@@ -100,7 +108,12 @@ class GenericIE(GenericExtractor):
                 urls = orderedSet(self.call_url_extract(extractor, webpage, url))
                 if urls:
                     return self.playlist_from_matches(
-                        urls, video_id, self._generic_title(url), ie=extractor.ie_key()
+                        urls,
+                        video_id,
+                        playlist_title=self._og_search_title(
+                            webpage, default=self._generic_title(url)
+                        ),
+                        ie=extractor.ie_key(),
                     )
 
         return super()._real_extract(url)
