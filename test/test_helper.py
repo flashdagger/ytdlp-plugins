@@ -43,8 +43,10 @@ class TestDownloadTestcase(DownloadTestcase):
         test_cases = (
             ("dict", dict(foo="bar"), dict(foo="bar", bar="foo")),
             ("list", [1, 2, 3, 4], [1, 2, 3, 4]),
-            ("type", int, 777),
             ("type", bool, True),
+            ("type", int, 777),
+            ("type_tuple", (type(None), int), 777),
+            ("type_tuple", (type(None), int), None),
             ("other", repr, repr),
         )
 
