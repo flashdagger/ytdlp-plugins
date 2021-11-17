@@ -1,12 +1,9 @@
 # coding: utf-8
+import re
 from contextlib import suppress
 from operator import itemgetter
 from sys import maxsize
 
-from yt_dlp.compat import (
-    compat_urllib_parse_urlparse,
-    compat_parse_qs,
-)
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     ExtractorError,
@@ -19,7 +16,7 @@ from yt_dlp.utils import (
     traverse_obj,
     update_url_query,
 )
-from ytdlp_plugins.utils import estimate_filesize
+from ytdlp_plugins.utils import estimate_filesize, ParsedURL
 
 __version__ = "2021.11.15"
 
@@ -71,10 +68,7 @@ class BrighteonIE(InfoExtractor):
                 "view_count": int,
                 "like_count": int,
             },
-            "params": {
-                "skip_download": True,
-                "nocheckcertificate": True,
-            },
+            "params": {"skip_download": True, "nocheckcertificate": True},
         },
         {
             # playlist
@@ -107,7 +101,43 @@ class BrighteonIE(InfoExtractor):
             "params": {"skip_download": True, "playlistend": 3},
             "playlist_count": 3,
         },
+        {
+            # test embedded urls
+            "url": "https://healthfreedom.news/2020-05-20-plandemic-video-super-viral-brighteon-"
+            "facebook-banning-cleansing-content-wuhan-coronavirus.html",
+            "info_dict": {
+                "id": "2020-05-20-plandemic-video-super-viral-brighteon-facebook-banning-"
+                "cleansing-content-wuhan-coronavirus",
+                "title": str,
+            },
+            "playlist_mincount": 1,
+            "playlist": [
+                {
+                    "md5": "66c73716a5cf4299cb9c7ba9969b11ff",
+                    "info_dict": {
+                        "id": "45c1558c-4163-4961-9f92-11c7c4c1af21",
+                        "title": "PlanDEMIC - Jesus Social Edition",
+                        "ext": "mp4",
+                        "description": str,
+                        "timestamp": int,
+                        "upload_date": str,
+                    },
+                }
+            ],
+        },
     ]
+
+    @staticmethod
+    def _extract_urls(webpage):
+        return re.findall(
+            r"""(?x)
+                <iframe[^>]+src="
+                (?P<url>https?://(?:[a-z][a-z0-9]+\.)?
+                brighteon\.com/embed/[0-9a-zA-Z-]+)
+                [^"]*"
+                """,
+            webpage,
+        )
 
     @staticmethod
     def page_props_path(suffix=None):
@@ -287,23 +317,19 @@ class BrighteonIE(InfoExtractor):
     def _real_extract(self, url):
         match = self._match_valid_url(url)
         taxonomy, video_id = match.groups()
-        parsed_url = compat_urllib_parse_urlparse(url)
-        url_query = {
-            key.lower(): value[0]
-            for key, value in compat_parse_qs(parsed_url.query).items()
-        }
+        parsed_url = ParsedURL(url)
         self._set_cookie("brighteon.com", "adBlockClosed", "1")
 
         if taxonomy in {"channels", "categories", "browse"}:
             return self._paged_url_entries(
-                video_id, url, start_page=url_query.get("page")
+                video_id, url, start_page=parsed_url.query("page")
             )
 
         json_obj = self._json_extract(url, video_id=video_id)
         page_props = traverse_obj(json_obj, self.page_props_path(), default={})
 
         playlist_info = page_props.get("playlist", {})
-        if playlist_info and "index" not in url_query:
+        if playlist_info and parsed_url.query("index") is None:
             return self._playlist_entries(playlist_info, url)
 
         video_info = page_props.get("video", {})
@@ -333,10 +359,7 @@ class BrighteontvIE(BrighteonIE):
                 "channel_id": "8c536b2f-e9a1-4e4c-a422-3867d0e472e4",
                 "tags": ["Brighteon", "TV", "News", "Video", "Stream"],
             },
-            "params": {
-                "skip_download": True,
-                "nocheckcertificate": True,
-            },
+            "params": {"skip_download": True, "nocheckcertificate": True},
         }
     ]
 
