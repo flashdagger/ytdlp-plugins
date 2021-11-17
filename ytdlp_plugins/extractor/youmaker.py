@@ -2,7 +2,6 @@
 # -*- coding: UTF-8 -*-
 import re
 from operator import itemgetter
-from urllib.parse import urlparse, parse_qsl
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
@@ -13,51 +12,9 @@ from yt_dlp.utils import (
     try_get,
     traverse_obj,
 )
-from ytdlp_plugins.utils import estimate_filesize
+from ytdlp_plugins.utils import estimate_filesize, ParsedURL
 
 __version__ = "2021.11.15"
-
-
-class ParsedURL:
-    """
-    This class provides a unified interface for urlparse(),
-    parse_qsl() and regular expression groups
-    """
-
-    def __init__(self, url, regex=None):
-        self._match = None
-        self._groups = {}
-        self._query = query = {}
-        self._parts = parts = urlparse(url)
-
-        for key, value in parse_qsl(parts.query):
-            query[key] = int(value) if value.isdigit() else value
-
-        if regex:
-            self._match = re.match(regex, url)
-            assert self._match, "regex does not match url"
-
-    def __getattr__(self, item):
-        """
-        forward the attributes from urlparse.ParsedResult
-        thus providing scheme, netloc, url, params, fragment
-
-        note that .query is shadowed by a different method
-        """
-        return getattr(self._parts, item)
-
-    def query(self, key=None, default=None):
-        if key is None:
-            return dict(self._query)
-
-        return self._query.get(key, default)
-
-    def regex_group(self, key=None):
-        assert self._match, "no regex provided"
-        if key is None:
-            return self._match.groupdict()
-
-        return self._match.group(key)
 
 
 # pylint: disable=abstract-method
@@ -145,21 +102,34 @@ class YoumakerIE(InfoExtractor):
             },
         },
         {
-            "url": "https://www.youmaker.com/embed/Dnnrq0lw8062/",
-            "only_matching": True,
+            # test embedded videos from another site
+            "url": "https://www.epochtimes.de/feuilleton/buecher/"
+            "corona-impfung-was-aerzte-und-patienten-unbedingt-wissen-sollten-a3619532.html",
+            "playlist_mincount": 1,
+            "info_dict": {
+                "id": "corona-impfung-was-aerzte-und-patienten-unbedingt-wissen-sollten-a3619532",
+                "title": "corona-impfung-"
+                "was-aerzte-und-patienten-unbedingt-wissen-sollten-a3619532",
+            },
+            "playlist": [
+                {
+                    "md5": "fd1f0a675332c58d18202e45e89a2d3a",
+                    "info_dict": {
+                        "id": "203108a4-b4c9-4a65-ac2e-dceac7e4e462",
+                        "ext": "mp4",
+                        "title": "contains:Corona-Impfung",
+                        "description": "contains:Epoch Times",
+                        "uploader": str,
+                        "upload_date": str,
+                        "timestamp": int,
+                    },
+                }
+            ],
         },
-        {
-            "url": "https://vs.youmaker.com/v/Dnnrq0lw8062/",
-            "only_matching": True,
-        },
-        {
-            "url": "https://youmaker.com/playlist/v6aLJnrqkoXO/",
-            "only_matching": True,
-        },
-        {
-            "url": "http://youmaker.com/channel/ntd/",
-            "only_matching": True,
-        },
+        {"url": "https://www.youmaker.com/embed/Dnnrq0lw8062/", "only_matching": True},
+        {"url": "https://vs.youmaker.com/v/Dnnrq0lw8062/", "only_matching": True},
+        {"url": "https://youmaker.com/playlist/v6aLJnrqkoXO/", "only_matching": True},
+        {"url": "http://youmaker.com/channel/ntd/", "only_matching": True},
     ]
     REQUEST_LIMIT = 50
 
@@ -171,19 +141,17 @@ class YoumakerIE(InfoExtractor):
         self._cache = {}
 
     @staticmethod
-    def _extract_url(webpage):
-        match = re.search(
+    def _extract_urls(webpage):
+        uids = re.findall(
             r"""(?x)
-                <iframe[^>]+src="
-                (?P<url>
-                    https?://(?:[a-z][a-z0-9]+\.)?
-                    youmaker\.com/embed/[0-9a-zA-Z-]+
-                )
+                <(?:iframe|script)[^>]+src="
+                (?:https?:)?//(?:[a-z][a-z0-9]+\.)?
+                youmaker\.com/(?:embed|assets/player)/(?P<uid>[0-9a-zA-Z-]+)
                 [^"]*"
                 """,
             webpage,
         )
-        return match.group("url") if match else None
+        return [f"https://youmaker.com/v/{uid}" for uid in uids]
 
     def _fix_url(self, url):
         if url.startswith("//"):

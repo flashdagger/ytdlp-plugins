@@ -14,7 +14,7 @@ You can install ytdlp-youmaker via pip:
 Note that on some systems, you may need to use `py` or `python` instead of `python3`
 
 ## example: show the 20 recent titles from channel
-`python3 -m ytdlp-plugins -e --playlist-items 1-20 https://youmaker.com/channel/ntd`
+`python3 -m ytdlp_plugins -e --playlist-items 1-20 https://youmaker.com/channel/ntd`
 
 
 ## yt-dlp
