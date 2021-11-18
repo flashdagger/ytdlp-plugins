@@ -220,12 +220,15 @@ class BrighteonIE(InfoExtractor):
         url = f"{self._BASE_URL}/{video_id}"
         duration = parse_duration(video_info.get("duration"))
 
-        exceptions = (
-            self.get_param("listformats")
-            or self.get_param("dump_single_json")
-            or self.get_param("forcejson")
-            or self.get_param("forceformat")
-            or self.get_param("forceurl")
+        exceptions = any(
+            self.get_param(name)
+            for name in (
+                "forceurl",
+                "forcejson",
+                "forceformat",
+                "listformats",
+                "dump_single_json",
+            )
         )
         if self.get_param("quiet") and self.get_param("simulate") and not exceptions:
             # we are not interested in the formats which saves us some requests
@@ -250,7 +253,7 @@ class BrighteonIE(InfoExtractor):
                 ci_name = f"channel{item[0].upper()}{item[1:]}"
                 video_info[ci_name] = channel_item
 
-        return {
+        entry_info = {
             "_type": _type,
             "url": url,
             "id": video_id,
@@ -268,8 +271,11 @@ class BrighteonIE(InfoExtractor):
                 video_info, ("analytics", "videoView"), default=None
             ),
             "like_count": int_or_none(video_info.get("likes")),
-            "formats": formats,
         }
+        if formats is not None:
+            entry_info["formats"] = formats
+
+        return entry_info
 
     def _paged_url_entries(self, page_id, url, start_page=None):
         def load_page(page_number):
