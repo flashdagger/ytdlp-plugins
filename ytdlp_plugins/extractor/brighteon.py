@@ -20,6 +20,7 @@ from ytdlp_plugins.utils import estimate_filesize, ParsedURL
 
 __version__ = "2021.11.17"
 
+
 # pylint: disable=abstract-method
 class BrighteonIE(InfoExtractor):
     IE_NAME = "brighteon"
@@ -92,7 +93,8 @@ class BrighteonIE(InfoExtractor):
         },
         {
             # categories
-            "url": "https://www.brighteon.com/categories/4ad59df9-25ce-424d-8ac4-4f92d58322b9/videos",
+            "url": "https://www.brighteon.com/categories/"
+            "4ad59df9-25ce-424d-8ac4-4f92d58322b9/videos",
             "info_dict": {
                 "id": "4ad59df9-25ce-424d-8ac4-4f92d58322b9",
                 "title": "Health & Medicine",
@@ -169,6 +171,24 @@ class BrighteonIE(InfoExtractor):
                 )
             item["format_id"] = f"{prefix}-{suffix}"
 
+    def _auto_merge_formats(self, formats):
+        requested_format = self.get_param("format")
+        audio_only = [
+            fmt["format_id"] for fmt in formats if fmt.get("vcodec") == "none"
+        ]
+        video_only = {
+            fmt["format_id"] for fmt in formats if fmt.get("acodec") == "none"
+        }
+
+        if self._downloader and len(audio_only) == 1 and requested_format in video_only:
+            requested_format = f"{requested_format}+{audio_only[0]}"
+            self.to_screen(
+                f"Adding audio stream {audio_only[0]!r} to video only format"
+            )
+            self._downloader.format_selector = self._downloader.build_format_selector(
+                requested_format
+            )
+
     def _download_formats(self, sources, video_id):
         formats = []
         if not sources:
@@ -221,6 +241,7 @@ class BrighteonIE(InfoExtractor):
             )
             estimate_filesize(formats, duration)
             self._sort_formats(formats)
+            self._auto_merge_formats(formats)
 
         # merge channel_info items into video_info
         for item in ("name", "id", "shortUrl"):
