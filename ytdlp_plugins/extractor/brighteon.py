@@ -18,7 +18,7 @@ from yt_dlp.utils import (
 )
 from ytdlp_plugins.utils import estimate_filesize, ParsedURL
 
-__version__ = "2021.11.17"
+__version__ = "2021.11.18"
 
 
 # pylint: disable=abstract-method
