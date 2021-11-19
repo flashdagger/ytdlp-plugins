@@ -24,12 +24,12 @@ class GenericIE(GenericExtractor):
     REQUEST_CACHE: Dict[str, Any] = {}
     OTHER_EXTRACTORS: List[InfoExtractor] = []
 
-    def call_url_extract(self, cls: InfoExtractor, webpage: str, url: str) -> List[str]:
-        func: Optional[Callable] = getattr(cls, "_extract_urls", None)
-        if func is None:
-            func = getattr(cls, "_extract_url", None)
-        if func is None:
+    def call_extract_urls(
+        self, cls: InfoExtractor, webpage: str, url: str
+    ) -> List[str]:
+        if "_extract_urls" not in cls.__dict__:
             return []
+        func: Optional[Callable] = getattr(cls, "_extract_urls")
         args = getfullargspec(func).args
         if args[0] == "cls":
             args = args[1:]
@@ -105,7 +105,7 @@ class GenericIE(GenericExtractor):
             )
             for extractor in self.OTHER_EXTRACTORS:
                 extractor = unlazify(extractor)
-                urls = orderedSet(self.call_url_extract(extractor, webpage, url))
+                urls = orderedSet(self.call_extract_urls(extractor, webpage, url))
                 if urls:
                     return self.playlist_from_matches(
                         urls,
