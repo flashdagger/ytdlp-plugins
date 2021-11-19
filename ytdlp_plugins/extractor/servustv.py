@@ -1,4 +1,5 @@
 # coding: utf-8
+import re
 from operator import itemgetter
 from urllib.parse import unquote_plus
 
@@ -17,7 +18,7 @@ from ytdlp_plugins.utils import estimate_filesize, ParsedURL
 __version__ = "2021.11.17"
 
 
-class ServusTVIE(InfoExtractor):
+class ServusIE(InfoExtractor):
     IE_NAME = "servustv"
     _VALID_URL = r"""(?x)
                     https?://
@@ -119,6 +120,35 @@ class ServusTVIE(InfoExtractor):
             },
         },
         {
+            # test embedded links from 3rd party sites
+            "url": "https://www.pm-wissen.com/videos/aa-24mus4g2w2112/",
+            "info_dict": {
+                "id": "aa-24mus4g2w2112",
+                "title": "aa-24mus4g2w2112",
+            },
+            "params": {
+                "skip_download": True,
+                "outtmpl": "%(title)s.%(id)s.%(ext)s",
+                "format": "bestvideo/best",
+            },
+            "playlist_count": 1,
+            "playlist": [
+                {
+                    "info_dict": {
+                        "id": "aa-24mus4g2w2112",
+                        "ext": "mp4",
+                        "title": "Meer ohne Plastik?",
+                        "description": str,
+                        "duration": 418,
+                        "timestamp": int,
+                        "upload_date": str,
+                        "is_live": False,
+                        "thumbnail": r"re:^https?://.*\.jpg",
+                    },
+                },
+            ],
+        },
+        {
             "url": "https://www.servustv.com/allgemein/v/aagevnv3syv5kuu8cpfq/",
             "only_matching": True,
         },
@@ -128,6 +158,17 @@ class ServusTVIE(InfoExtractor):
         super().__init__(downloader=downloader)
         self.country_override = None
         self.timezone = "Europe/Vienna"
+
+    @classmethod
+    def _extract_urls(cls, webpage):
+        return re.findall(
+            r"""(?x)
+                <link[^>]+href="
+                (?P<url>https?://(?:www\.)?servustv.com/[\w-]+/(?:v|[bp]/[\w-]+)/[A-Za-z0-9-]+)
+                [^"]*"
+                """,
+            webpage,
+        )
 
     @property
     def country_code(self):
@@ -139,11 +180,25 @@ class ServusTVIE(InfoExtractor):
             self.country_override = geo_bypass_country.upper()
             self.to_screen(f"Set countrycode to {self.country_code!r}")
 
-    def download_formats(self, info, video_id):
-        audio_ids = set()
-        video_ids = set()
+    def _auto_merge_formats(self, formats):
         requested_format = self.get_param("format")
+        audio_only = [
+            fmt["format_id"] for fmt in formats if fmt.get("vcodec") == "none"
+        ]
+        video_only = {
+            fmt["format_id"] for fmt in formats if fmt.get("acodec") == "none"
+        }
 
+        if self._downloader and len(audio_only) == 1 and requested_format in video_only:
+            requested_format = f"{requested_format}+{audio_only[0]}"
+            self.to_screen(
+                f"Adding audio stream {audio_only[0]!r} to video only format"
+            )
+            self._downloader.format_selector = self._downloader.build_format_selector(
+                requested_format
+            )
+
+    def _download_formats(self, info, video_id):
         try:
             formats, subtitles = self._extract_m3u8_formats_and_subtitles(
                 info["videoUrl"],
@@ -158,17 +213,6 @@ class ServusTVIE(InfoExtractor):
         for fmt in formats:
             if "height" in fmt:
                 fmt["format_id"] = f"{fmt['height']}p"
-            (audio_ids if fmt.get("vcodec") == "none" else video_ids).add(
-                fmt["format_id"]
-            )
-
-        if self._downloader and len(audio_ids) == 1 and requested_format in video_ids:
-            audio_id = audio_ids.pop()
-            requested_format = f"{requested_format}+{audio_id}"
-            self.to_screen(f"Adding audio stream {audio_id!r} to format")
-            self._downloader.format_selector = self._downloader.build_format_selector(
-                requested_format
-            )
 
         return formats, subtitles
 
@@ -196,9 +240,10 @@ class ServusTVIE(InfoExtractor):
         if errors and info.get("videoUrl") is None:
             raise ExtractorError(errormsg, video_id=video_id, expected=True)
 
-        formats, subtitles = self.download_formats(info, video_id)
+        formats, subtitles = self._download_formats(info, video_id)
         duration = None if is_live else info.get("duration")
         estimate_filesize(formats, duration)
+        self._auto_merge_formats(formats)
 
         return {
             "id": video_id,
@@ -356,7 +401,7 @@ class ServusTVIE(InfoExtractor):
         )
 
 
-class ServusSearchIE(ServusTVIE):
+class ServusSearchIE(ServusIE):
     IE_NAME = "servustv:search"
     _VALID_URL = r"""(?x)
                     https?://
@@ -381,6 +426,10 @@ class ServusSearchIE(ServusTVIE):
         }
     ]
 
+    @classmethod
+    def _extract_urls(cls, webpage):
+        return []
+
     def _real_extract(self, url):
         search_id = self._match_id(url)
         search_term = unquote_plus(search_id)
@@ -393,29 +442,8 @@ class ServusSearchIE(ServusTVIE):
                     "f[primary_type_group]": "all-videos",
                     "orderby": "rbmh_score_search",
                 },
-                extractor=ServusTVIE.ie_key(),
+                extractor=ServusIE.ie_key(),
             ),
             playlist_id=search_id,
             playlist_title=f"search: '{search_term}'",
         )
-
-
-class PmWissenIE(ServusTVIE):
-    IE_NAME = "pm-wissen"
-    _VALID_URL = r"""(?x)
-                    https?://
-                        (?:www\.)?pm-wissen.com
-                        /videos
-                        /(?P<id>[aA]{2}-\w+)
-                    """
-
-    _TESTS = [
-        {
-            "url": "https://www.pm-wissen.com/videos/aa-24mus4g2w2112/",
-            "only_matching": True,
-        }
-    ]
-
-    def _real_extract(self, url):
-        video_id = self._match_id(url)
-        return self._entry_by_id(video_id)
