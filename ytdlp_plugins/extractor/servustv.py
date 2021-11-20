@@ -202,7 +202,7 @@ class ServusIE(InfoExtractor):
         try:
             formats, subtitles = self._extract_m3u8_formats_and_subtitles(
                 info["videoUrl"],
-                video_id=video_id,
+                video_id=None,
                 entry_protocol="m3u8",
                 errnote="Stream not available",
             )
@@ -229,7 +229,7 @@ class ServusIE(InfoExtractor):
         )
 
         if "message" in info:
-            raise ExtractorError(info["message"], video_id=video_id, expected=True)
+            raise ExtractorError(info["message"], expected=True)
 
         info.setdefault("videoUrl", video_url)
         errors = ", ".join(info.get("playabilityErrors", ()))
@@ -238,7 +238,7 @@ class ServusIE(InfoExtractor):
             countries = set(self._GEO_COUNTRIES) - set(info.get("blockedCountries", ()))
             raise GeoRestrictedError(errormsg, countries=countries)
         if errors and info.get("videoUrl") is None:
-            raise ExtractorError(errormsg, video_id=video_id, expected=True)
+            raise ExtractorError(errormsg, expected=True)
 
         formats, subtitles = self._download_formats(info, video_id)
         duration = None if is_live else info.get("duration")
@@ -336,7 +336,7 @@ class ServusIE(InfoExtractor):
     def taxonomy(json_obj, page_id, url):
         asset_paths = (
             ("source", "media_asset", str(page_id), "categories"),
-            # ('source', 'page', str(page_id), 'asset_content_color'),
+            # ("source", "page", str(page_id), "asset_content_color"),
         )
 
         for path in asset_paths:
