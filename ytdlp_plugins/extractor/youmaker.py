@@ -108,8 +108,7 @@ class YoumakerIE(InfoExtractor):
             "playlist_mincount": 1,
             "info_dict": {
                 "id": "corona-impfung-was-aerzte-und-patienten-unbedingt-wissen-sollten-a3619532",
-                "title": "corona-impfung-"
-                "was-aerzte-und-patienten-unbedingt-wissen-sollten-a3619532",
+                "title": "„Corona-Impfung – Was Ärzte und Patienten unbedingt wissen sollten“",
             },
             "playlist": [
                 {
