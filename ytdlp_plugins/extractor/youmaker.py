@@ -124,6 +124,32 @@ class YoumakerIE(InfoExtractor):
                     },
                 }
             ],
+            "params": {"skip_download": True},
+        },
+        {
+            # test embedded videos from another site
+            "url": "https://epochtimes.pl/metoda-kpch-ogolnoswiatowa-agenda-"
+            "komunistycznej-partii-chin-film/",
+            "playlist_mincount": 1,
+            "info_dict": {
+                "id": "metoda-kpch-ogolnoswiatowa-agenda-komunistycznej-partii-chin-film",
+                "title": "startswith:Metoda KPCh",
+            },
+            "playlist": [
+                {
+                    "md5": "4ad0f3bdc64a393e8907967636f9f439",
+                    "info_dict": {
+                        "id": "1c99bd32-6092-4bc5-5878-cc5fd6724d04",
+                        "ext": "mp4",
+                        "title": "Metoda KPCh",
+                        "description": "startswith:Czy mo\u017cemy cierpie\u0107 bardziej",
+                        "uploader": str,
+                        "upload_date": str,
+                        "timestamp": int,
+                    },
+                }
+            ],
+            "params": {"skip_download": True},
         },
         {"url": "https://www.youmaker.com/embed/Dnnrq0lw8062/", "only_matching": True},
         {"url": "https://vs.youmaker.com/v/Dnnrq0lw8062/", "only_matching": True},
@@ -143,9 +169,9 @@ class YoumakerIE(InfoExtractor):
     def _extract_urls(webpage):
         uids = re.findall(
             r"""(?x)
-                <(?:iframe|script)[^>]+src="
+                <(?:iframe|script|video)[^>]+src="
                 (?:https?:)?//(?:[a-z][a-z0-9]+\.)?
-                youmaker\.com/(?:embed|assets/player)/(?P<uid>[0-9a-zA-Z-]+)
+                youmaker\.com/(?:embed/|assets/|player/)+(?P<uid>[0-9a-zA-Z-]+)
                 [^"]*"
                 """,
             webpage,
