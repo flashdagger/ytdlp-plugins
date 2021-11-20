@@ -124,7 +124,7 @@ class ServusIE(InfoExtractor):
             "url": "https://www.pm-wissen.com/videos/aa-24mus4g2w2112/",
             "info_dict": {
                 "id": "aa-24mus4g2w2112",
-                "title": "aa-24mus4g2w2112",
+                "title": "Wie kommt das Plastik aus dem Meer?",
             },
             "params": {
                 "skip_download": True,
@@ -425,10 +425,6 @@ class ServusSearchIE(ServusIE):
             "playlist_maxcount": 10,
         }
     ]
-
-    @classmethod
-    def _extract_urls(cls, webpage):
-        return []
 
     def _real_extract(self, url):
         search_id = self._match_id(url)
