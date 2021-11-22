@@ -209,6 +209,8 @@ class BrighteonIE(InfoExtractor):
                     url, video_id=video_id, fatal=False
                 )
                 self._rename_formats(media_formats, "dash")
+                for fmt in media_formats:
+                    fmt["manifest_stream_number"] = 0
             else:
                 media_formats = ()
                 self.report_warning(f"unknown video format {typ!r}")
