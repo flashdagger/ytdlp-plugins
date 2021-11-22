@@ -7,6 +7,7 @@ from sys import maxsize
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     ExtractorError,
+    HEADRequest,
     OnDemandPagedList,
     UnsupportedError,
     get_element_by_id,
@@ -217,6 +218,26 @@ class BrighteonIE(InfoExtractor):
             formats.extend(media_formats)
         return formats
 
+    def _estimate_filesize(self, formats, duration):
+        estimate_filesize(formats, duration)
+        for fmt in formats:
+            if not fmt.get("format_note", "").startswith("DASH video"):
+                continue
+            if fmt.get("height"):
+                fmt["fps"] = 29 if fmt["height"] >= 540 else 14
+            del fmt["filesize_approx"]
+            if not self.get_param("listformats"):
+                continue
+            response = self._request_webpage(
+                HEADRequest(fmt["url"]),
+                note="Getting file size",
+                video_id=None,
+                fatal=False,
+            )
+            if not response:
+                continue
+            fmt["filesize"] = int_or_none(response.headers.get("Content-Length"))
+
     def _entry_from_info(self, video_info, channel_info, from_playlist=False):
         video_id = video_info["id"]
         url = f"{self._BASE_URL}/{video_id}"
@@ -244,7 +265,7 @@ class BrighteonIE(InfoExtractor):
             formats = self._download_formats(
                 video_info.get("source"), video_id=video_id
             )
-            estimate_filesize(formats, duration)
+            self._estimate_filesize(formats, duration)
             self._sort_formats(formats)
             self._auto_merge_formats(formats)
 
