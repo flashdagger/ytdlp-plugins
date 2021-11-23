@@ -1,5 +1,4 @@
 # coding: utf-8
-import re
 from operator import itemgetter
 from urllib.parse import unquote_plus
 
@@ -18,11 +17,11 @@ from ytdlp_plugins.utils import estimate_filesize, ParsedURL
 __version__ = "2021.11.22"
 
 
-class ServusIE(InfoExtractor):
+class ServusTVIE(InfoExtractor):
     IE_NAME = "servustv"
     _VALID_URL = r"""(?x)
                     https?://
-                        (?:www\.)?servustv.com
+                        (?:www\.)?(?:servustv|pm-wissen).com
                         /[\w-]+/(?:v|[abp]/[\w-]+)
                         /(?P<id>[A-Za-z0-9-]+)
                     """
@@ -124,29 +123,19 @@ class ServusIE(InfoExtractor):
             "url": "https://www.pm-wissen.com/videos/aa-24mus4g2w2112/",
             "info_dict": {
                 "id": "aa-24mus4g2w2112",
-                "title": "Wie kommt das Plastik aus dem Meer?",
+                "ext": "mp4",
+                "title": "Meer ohne Plastik?",
+                "description": str,
+                "duration": 418,
+                "timestamp": int,
+                "upload_date": str,
+                "is_live": False,
+                "thumbnail": r"re:^https?://.*\.jpg",
             },
             "params": {
                 "skip_download": True,
-                "outtmpl": "%(title)s.%(id)s.%(ext)s",
                 "format": "bestvideo/best",
             },
-            "playlist_count": 1,
-            "playlist": [
-                {
-                    "info_dict": {
-                        "id": "aa-24mus4g2w2112",
-                        "ext": "mp4",
-                        "title": "Meer ohne Plastik?",
-                        "description": str,
-                        "duration": 418,
-                        "timestamp": int,
-                        "upload_date": str,
-                        "is_live": False,
-                        "thumbnail": r"re:^https?://.*\.jpg",
-                    },
-                },
-            ],
         },
         {
             "url": "https://www.servustv.com/allgemein/v/aagevnv3syv5kuu8cpfq/",
@@ -158,17 +147,6 @@ class ServusIE(InfoExtractor):
         super().__init__(downloader=downloader)
         self.country_override = None
         self.timezone = "Europe/Vienna"
-
-    @classmethod
-    def _extract_urls(cls, webpage):
-        return re.findall(
-            r"""(?x)
-                <link[^>]+href="
-                (?P<url>https?://(?:www\.)?servustv.com/[\w-]+/(?:v|[bp]/[\w-]+)/[A-Za-z0-9-]+)
-                [^"]*"
-                """,
-            webpage,
-        )
 
     @property
     def country_code(self):
@@ -426,7 +404,7 @@ class ServusIE(InfoExtractor):
         )
 
 
-class ServusSearchIE(ServusIE):
+class ServusSearchIE(ServusTVIE):
     IE_NAME = "servustv:search"
     _VALID_URL = r"""(?x)
                     https?://
@@ -463,7 +441,7 @@ class ServusSearchIE(ServusIE):
                     "f[primary_type_group]": "all-videos",
                     "orderby": "rbmh_score_search",
                 },
-                extractor=ServusIE.ie_key(),
+                extractor=ServusTVIE.ie_key(),
             ),
             playlist_id=search_id,
             playlist_title=f"search: '{search_term}'",
