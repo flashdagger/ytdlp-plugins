@@ -23,7 +23,7 @@ class ServusIE(InfoExtractor):
     _VALID_URL = r"""(?x)
                     https?://
                         (?:www\.)?servustv.com
-                        /[\w-]+/(?:v|[bp]/[\w-]+)
+                        /[\w-]+/(?:v|[abp]/[\w-]+)
                         /(?P<id>[A-Za-z0-9-]+)
                     """
 
@@ -179,6 +179,7 @@ class ServusIE(InfoExtractor):
         if geo_bypass_country:
             self.country_override = geo_bypass_country.upper()
             self.to_screen(f"Set countrycode to {self.country_code!r}")
+        super().initialize()
 
     def _auto_merge_formats(self, formats):
         requested_format = self.get_param("format")
@@ -348,6 +349,18 @@ class ServusIE(InfoExtractor):
 
         raise UnsupportedError(url)
 
+    @staticmethod
+    def _urls_from_blocks(blocks):
+        flat_blocks = []
+        for block in blocks:
+            inner_blocks = block.get("innerBlocks")
+            if isinstance(inner_blocks, list):
+                flat_blocks.extend(inner_blocks)
+            else:
+                flat_blocks.append(block)
+        links = (traverse_obj(block, ("post", "link")) for block in flat_blocks)
+        return [url for url in links if url]
+
     def _real_extract(self, url):
         video_id = self._match_id(url)
         parsed_url = ParsedURL(url)
@@ -385,10 +398,22 @@ class ServusIE(InfoExtractor):
         if live_schedule:
             return self._live_stream_from_schedule(live_schedule)
 
-        # create playlist
+        # create playlist from blocks
         page_id = self._page_id(json_obj)
-        query_type, query_id = self.taxonomy(json_obj, page_id, url)
+        page_post = traverse_obj(json_obj, ("source", "post", str(page_id)), default={})
+        urls = self._urls_from_blocks(page_post.get("blocks", ()))
+        if urls:
+            return self.playlist_from_matches(
+                urls,
+                playlist_id=page_post.get("slug"),
+                playlist_title=traverse_obj(
+                    page_post, ("title", "rendered"), default=page_post.get("slug")
+                ),
+                ie=self.ie_key(),
+            )
 
+        # finally create playlist from query
+        query_type, query_id = self.taxonomy(json_obj, page_id, url)
         return self.playlist_result(
             self._paged_playlist_by_query(
                 query_type=query_type,
