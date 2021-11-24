@@ -107,10 +107,10 @@ class ServusTVIE(InfoExtractor):
                 "title": str,
                 "description": str,
                 "duration": None,
-                "timestamp": int,
-                "upload_date": str,
+                "timestamp": (type(None), int),
+                "upload_date": (type(None), str),
                 "is_live": True,
-                "thumbnail": r"re:^https?://.*\.jpg",
+                "thumbnail": (type(None), str),
             },
             "params": {
                 "skip_download": True,
@@ -120,7 +120,7 @@ class ServusTVIE(InfoExtractor):
         },
         {
             # test embedded links from 3rd party sites
-            "url": "https://www.pm-wissen.com/videos/aa-24mus4g2w2112/",
+            "url": "https://www.pm-wissen.com/umwelt/v/aa-24mus4g2w2112/",
             "info_dict": {
                 "id": "aa-24mus4g2w2112",
                 "ext": "mp4",
