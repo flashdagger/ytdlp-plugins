@@ -400,7 +400,7 @@ class BrighteontvIE(BrighteonIE):
 
     _TESTS = [
         {
-            "url": "https://www.brighteon.tv/",
+            "url": "https://www.brighteon.tv/LiveStream01.html",
             "info_dict": {
                 "id": "brighteontv-daily-show",
                 "ext": "mp4",
