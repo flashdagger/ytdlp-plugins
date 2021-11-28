@@ -1,0 +1,14 @@
+repos:
+-   repo: local
+    hooks:
+    - id: black
+      name: black
+      language: script
+      entry: ./use_venv.py black
+      types: [python]
+    - id: pyflakes
+      name: pyflakes
+      language: script
+      entry: ./use_venv.py pyflakes
+      types: [python]
+      exclude: ^tests/
