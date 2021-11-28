@@ -110,6 +110,7 @@ class ServusTVIE(InfoExtractor):
                 "timestamp": (type(None), int),
                 "upload_date": (type(None), str),
                 "is_live": True,
+                "age_limit": (type(None), int),
                 "thumbnail": (type(None), str),
             },
             "params": {
