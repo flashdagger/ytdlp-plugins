@@ -9,7 +9,7 @@ You can install ytdlp-youmaker via pip:
   `python3 -m pip install --upgrade ytdlp-youmaker`
 * Install from Github branch:
 
-  `python3 -m pip3 install -U https://github.com/flashdagger/ytdlp-plugins/archive/refs/heads/youmaker.zip`
+  `python3 -m pip install -U https://github.com/flashdagger/ytdlp-plugins/archive/refs/heads/youmaker.zip`
 
 Note that on some systems, you may need to use `py` or `python` instead of `python3`
 
