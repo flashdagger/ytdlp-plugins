@@ -6,7 +6,7 @@ from yt_dlp.extractor.peertube import PeerTubeIE
 from yt_dlp.utils import UnsupportedError
 from ytdlp_plugins.utils import ParsedURL
 
-__version__ = "2021.11.24"
+__version__ = "2021.11.27"
 
 
 # pylint: disable=abstract-method
