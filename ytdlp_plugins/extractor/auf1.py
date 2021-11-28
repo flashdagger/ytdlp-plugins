@@ -54,38 +54,39 @@ class Auf1IE(InfoExtractor):
     ]
 
     def _real_extract(self, url):
-        video_id = self._match_id(url)
+        page_id = self._match_id(url)
         parsed_url = ParsedURL(url)
-        webpage = self._download_webpage(url, video_id=video_id)
+        webpage = self._download_webpage(url, video_id=page_id)
+
         match = self._html_search_regex(
-            r"<link\s+[^>]*href=\"([^\"]+/payload.js)", webpage, "payload"
+            r"<link\s+[^>]*href=\"([^\"]+/payload.js)", webpage, "payload.js url"
         )
-        payload_url = f"{parsed_url.scheme}://{parsed_url.netloc}{match}"
-        payload = self._download_webpage(
-            payload_url,
-            video_id=video_id,
+        payloadjs_url = f"{parsed_url.scheme}://{parsed_url.netloc}{match}"
+        payloadjs_string = self._download_webpage(
+            payloadjs_url,
+            video_id=page_id,
             encoding="unicode_escape",
             note="Downloading payload.js",
         )
 
         peertube_urls = []
-        for _url in re.findall(
-            r'"(https://auf1(?:\.\w+)+/videos/embed/[^"]+)"', payload
+        for embed_url in re.findall(
+            r'"(https?://(?:[^/]+)/videos/embed/[^"]+)"', payloadjs_string
         ):
-            parsed_url = ParsedURL(_url)
+            parsed_url = ParsedURL(embed_url)
             peertube_urls.append(
                 f"peertube:{parsed_url.netloc}:{parsed_url.path.split('/')[-1]}"
             )
 
         if not peertube_urls:
-            return UnsupportedError(url)
+            raise UnsupportedError(url)
 
         if len(peertube_urls) == 1:
             return self.url_result(peertube_urls[0], ie=PeerTubeIE.ie_key())
 
         return self.playlist_from_matches(
             peertube_urls,
-            playlist_id=video_id,
+            playlist_id=page_id,
             playlist_title=self._og_search_title(webpage),
             ie=PeerTubeIE.ie_key(),
         )
