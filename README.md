@@ -9,7 +9,7 @@ You can install ytdlp-auf1 via pip:
   `python3 -m pip install --upgrade ytdlp-auf1`
 * Install from Github branch:
 
-  `python3 -m pip3 install -U https://github.com/flashdagger/ytdlp-plugins/archive/refs/heads/auf1.zip`
+  `python3 -m pip install -U https://github.com/flashdagger/ytdlp-plugins/archive/refs/heads/auf1.zip`
 
 Note that on some systems, you may need to use `py` or `python` instead of `python3`
 
