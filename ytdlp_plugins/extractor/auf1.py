@@ -6,7 +6,7 @@ from yt_dlp.extractor.peertube import PeerTubeIE
 from yt_dlp.utils import UnsupportedError
 from ytdlp_plugins.utils import ParsedURL
 
-__version__ = "2021.11.27"
+__version__ = "2021.11.28"
 
 
 # pylint: disable=abstract-method
@@ -71,7 +71,7 @@ class Auf1IE(InfoExtractor):
 
         peertube_urls = []
         for embed_url in re.findall(
-            r'"(https?://(?:[^/]+)/videos/embed/[^"]+)"', payloadjs_string
+            r'"(https?://[^/]+/videos/embed/[^"]+)"', payloadjs_string
         ):
             parsed_url = ParsedURL(embed_url)
             peertube_urls.append(
