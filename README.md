@@ -11,7 +11,7 @@ You can install ytdlp-servustv via pip:
   `python3 -m pip install --upgrade ytdlp-servustv`
 * Install from Github branch:
 
-  `python3 -m pip3 install -U https://github.com/flashdagger/ytdlp-plugins/archive/refs/heads/servustv.zip`
+  `python3 -m pip install -U https://github.com/flashdagger/ytdlp-plugins/archive/refs/heads/servustv.zip`
 
 Note that on some systems, you may need to use `py` or `python` instead of `python3`
 
