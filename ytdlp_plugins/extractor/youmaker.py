@@ -83,7 +83,7 @@ class YoumakerIE(InfoExtractor):
         },
         {
             # all videos from channel
-            "url": "http://www.youmaker.com/channel/f06b2e8d-219e-4069-9003-df343ac5fcf3",
+            "url": "https://youmaker.com/channel/f06b2e8d-219e-4069-9003-df343ac5fcf3",
             "playlist_mincount": 30,
             "info_dict": {
                 "id": "f06b2e8d-219e-4069-9003-df343ac5fcf3",
