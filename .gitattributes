@@ -1,0 +1,29 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+*   text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.c     text
+*.cpp   text
+*.h     text
+*.hpp   text
+*.cmake text
+*.txt   text
+*.py    text
+
+# Declare files that will explicitly have specific line endings on checkout.
+*.bat   text eol=crlf
+*.sh    text eol=lf
+
+# Denote all files that are truly binary and should not be modified.
+*.xls   binary
+*.docx  binary
+
+# track files with git lfs
+*.pdf filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.7z filter=lfs diff=lfs merge=lfs -text
+*.gz filter=lfs diff=lfs merge=lfs -text
+*.rar filter=lfs diff=lfs merge=lfs -text
+*.tar filter=lfs diff=lfs merge=lfs -text
+*.docx filter=lfs diff=lfs merge=lfs -text
