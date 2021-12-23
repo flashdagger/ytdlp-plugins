@@ -109,6 +109,15 @@ class ServusTVIE(InfoExtractor):
             "playlist": [
                 {
                     "info_dict": {
+                        "id": "aa-28zh3u3dn2111",
+                        "title": "Corona-Doku - Teil 3",
+                        "description": "md5:5e020c2618a6d6d2b8a316891c8b8195",
+                        "timestamp": int,
+                        "upload_date": "20211222",
+                    },
+                },
+                {
+                    "info_dict": {
                         "id": "aa-27juub3a91w11",
                         "title": "Corona - auf der Suche nach der Wahrheit",
                         "description": "md5:b8de3e9d911bb2cdc0422cf720d795b5",
@@ -416,7 +425,9 @@ class ServusTVIE(InfoExtractor):
         # create playlist from blocks
         page_id = self._page_id(json_obj)
         page_post = traverse_obj(json_obj, ("source", "post", str(page_id)), default={})
-        urls = self._urls_from_blocks(page_post.get("blocks", ()))
+        url = traverse_obj(page_post, ("stv_embedded_video", "link"), default=None)
+        urls = [url] if url else []
+        urls.extend(self._urls_from_blocks(page_post.get("blocks", ())))
         if urls:
             return self.playlist_from_matches(
                 urls,
