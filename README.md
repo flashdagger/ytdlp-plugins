@@ -7,6 +7,7 @@ The following plugin packages are currently available:
 * [ytdlp-brighteon](https://pypi.org/project/ytdlp-brighteon/)
 * [ytdlp-youmaker](https://pypi.org/project/ytdlp-youmaker/)
 * [ytdlp-servustv](https://pypi.org/project/ytdlp-servustv/)
+* [ytdlp-auf1](https://pypi.org/project/ytdlp-auf1/)
 
 
 ## installation
@@ -36,6 +37,14 @@ You can run the extractor unittests on all installed plugins:
 or with pytest
 
 `pytest --pyargs ytdlp_plugins.test_download`
+
+
+## creating packages
+Want to create your own extractor package or simply apply 
+a patch to an existing (internal) yt-dlp extractor? Awesome.
+Just check out the [minimal branch](https://github.com/flashdagger/ytdlp-plugins/tree/minimal):
+
+`git clone https://github.com/flashdagger/ytdlp-plugins.git --branch minimal`
 
 
 ## about yt-dlp
