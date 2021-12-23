@@ -99,6 +99,42 @@ class ServusTVIE(InfoExtractor):
             },
         },
         {
+            # block playlist
+            "url": "https://www.servustv.com/aktuelles/a/"
+            "corona-auf-der-suche-nach-der-wahrheit-teil-3-die-themen/193214/",
+            "info_dict": {
+                "id": "corona-auf-der-suche-nach-der-wahrheit-teil-3-die-themen",
+                "title": "Corona – auf der Suche nach der Wahrheit, Teil 3: Die Themen",
+            },
+            "playlist": [
+                {
+                    "info_dict": {
+                        "id": "aa-27juub3a91w11",
+                        "title": "Corona - auf der Suche nach der Wahrheit",
+                        "description": "md5:b8de3e9d911bb2cdc0422cf720d795b5",
+                        "timestamp": int,
+                        "upload_date": "20210505",
+                    },
+                },
+                {
+                    "info_dict": {
+                        "id": "aa-28a3dbyxh1w11",
+                        "title": "Corona - auf der Suche nach der Wahrheit Teil 2",
+                        "description": "md5:9904e42bb1b99c731e651ed2276a87e6",
+                        "timestamp": int,
+                        "upload_date": "20210801",
+                    },
+                },
+            ],
+            "playlist_mincount": 2,
+            "params": {
+                "geo_bypass_country": "DE",
+                "nocheckcertificate": True,
+                "format": "bestvideo",
+                "skip_download": True,
+            },
+        },
+        {
             # live stream
             "url": "https://www.servustv.com/allgemein/p/jetzt-live/119753/",
             "info_dict": {
@@ -333,7 +369,7 @@ class ServusTVIE(InfoExtractor):
         flat_blocks = []
         for block in blocks:
             inner_blocks = block.get("innerBlocks")
-            if isinstance(inner_blocks, list):
+            if inner_blocks and isinstance(inner_blocks, list):
                 flat_blocks.extend(inner_blocks)
             else:
                 flat_blocks.append(block)
