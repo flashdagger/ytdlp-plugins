@@ -45,7 +45,7 @@ identify==2.4.0
     # via pre-commit
 idna==3.3
     # via requests
-importlib-metadata==4.8.2
+importlib-metadata==4.10.0
     # via
     #   keyring
     #   twine
@@ -55,13 +55,13 @@ isort==5.10.1
     # via pylint
 keyring==23.4.0
     # via twine
-lazy-object-proxy==1.6.0
+lazy-object-proxy==1.7.1
     # via astroid
 mccabe==0.6.1
     # via pylint
 mutagen==1.45.1
     # via yt-dlp
-mypy==0.910 ; platform_python_implementation != "PyPy"
+mypy==0.930 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 mypy-extensions==0.4.3
     # via
@@ -108,7 +108,7 @@ pywin32-ctypes==0.2.0
     # via keyring
 pyyaml==6.0
     # via pre-commit
-readme-renderer==31.0
+readme-renderer==32.0
     # via twine
 requests==2.26.0
     # via
@@ -124,12 +124,13 @@ six==1.16.0
     #   virtualenv
 toml==0.10.2
     # via
-    #   mypy
     #   pre-commit
     #   pylint
     #   pytest
-tomli==1.2.2
-    # via black
+tomli==1.2.3
+    # via
+    #   black
+    #   mypy
 tqdm==4.62.3
     # via twine
 twine==3.7.1
