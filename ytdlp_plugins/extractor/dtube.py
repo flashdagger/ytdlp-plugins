@@ -21,26 +21,64 @@ class DTubeIE(InfoExtractor):
                     (?P<uploader_id>[0-9a-z.-]+)/
                     (?P<id>\w+)
                     """
-    _TEST = {
-        "url": "https://d.tube/v/famigliacurione/QmUJquzf7DALjwUExoHtTjS8PgGqfGohzMr4W3XJ56q9pR",
-        "md5": "4ad5272197655dc033bfd0cc039b71f2",
-        "info_dict": {
-            "id": "famigliacurione/QmUJquzf7DALjwUExoHtTjS8PgGqfGohzMr4W3XJ56q9pR",
-            "title": "La Prova by SOSO",
-            "description": "md5:c942bfe98693a2e81510464d10869449",
-            "ext": "mp4",
-            "thumbnail": "https://cdn.steemitimages.com/"
-            "DQmbCfaJkTRrjerNhcyDCoviBqpXB8ZDh31NhQPWvcyEj6U/laprovathumb.jpg",
-            "tags": ["music", "hiphop"],
-            "duration": 71,
-            "uploader_id": "famigliacurione",
-            "upload_date": "20211223",
-            "timestamp": 1640297596.628,
+    _TESTS = [
+        {
+            "url": "https://d.tube/v/famigliacurione/"
+            "QmUJquzf7DALjwUExoHtTjS8PgGqfGohzMr4W3XJ56q9pR",
+            "md5": "4ad5272197655dc033bfd0cc039b71f2",
+            "info_dict": {
+                "id": "famigliacurione/QmUJquzf7DALjwUExoHtTjS8PgGqfGohzMr4W3XJ56q9pR",
+                "title": "La Prova by SOSO",
+                "description": "md5:c942bfe98693a2e81510464d10869449",
+                "ext": "mp4",
+                "thumbnail": "https://cdn.steemitimages.com/"
+                "DQmbCfaJkTRrjerNhcyDCoviBqpXB8ZDh31NhQPWvcyEj6U/laprovathumb.jpg",
+                "tags": ["music", "hiphop"],
+                "duration": 71,
+                "uploader_id": "famigliacurione",
+                "upload_date": "20211223",
+                "timestamp": 1640297596.628,
+            },
+            "params": {
+                "format": "480p",
+            },
         },
-        "params": {
-            "format": "480p",
+        # dailymotion forward
+        {
+            "url": "https://d.tube/#!/v/charliesmithmusic11/cup890u4sra",
+            "info_dict": {
+                "id": "x86k2uu",
+                "title": str,
+                "description": str,
+                "ext": str,
+                "uploader": str,
+                "uploader_id": str,
+                "upload_date": str,
+                "timestamp": (int, float),
+                "extractor": "dailymotion",
+            },
+            "params": {
+                "skip_download": True,
+            },
         },
-    }
+        # youtube forward
+        {
+            "url": "https://d.tube/#!/v/geneeverett33/jkp3e8v4tau",
+            "info_dict": {
+                "id": "InRmAxWpbOA",
+                "title": str,
+                "description": str,
+                "ext": str,
+                "uploader": str,
+                "uploader_id": str,
+                "upload_date": str,
+                "extractor": "youtube",
+            },
+            "params": {
+                "skip_download": True,
+            },
+        },
+    ]
 
     def formats(self, files):
         url_map = {
@@ -56,6 +94,7 @@ class DTubeIE(InfoExtractor):
 
         formats = []
         res_map = {}
+        # pylint: disable=W0631
         for format_id, content_id in files[provider].get("vid", {}).items():
             for candidate in base_urls:
                 head_response = self._request_webpage(
@@ -128,6 +167,8 @@ class DTubeIE(InfoExtractor):
         }
 
     def steemit_api(self, video_id):
+        """this api supports very few urls and is not used"""
+
         result = self._download_json(
             "https://api.steemit.com/",
             video_id,
@@ -143,11 +184,7 @@ class DTubeIE(InfoExtractor):
         content = traverse_obj(result, ("result", "content", video_id))
         if content is None:
             return None
-        with open("content.json", "w") as fd:
-            json.dump(content, fd, indent=4)
         metadata = json.loads(content["json_metadata"])
-        with open("metadata.json", "w") as fd:
-            json.dump(metadata, fd, indent=4)
 
         formats = []
 
@@ -169,10 +206,8 @@ class DTubeIE(InfoExtractor):
 
     def _real_extract(self, url):
         video_id = "/".join(self._match_valid_url(url).groups())
-        print("id:", video_id)
-        for api in (self.avalon_api, self.steemit_api):
-            info = api(video_id)
-            if info:
-                return info
+        info = self.avalon_api(video_id)
+        if info:
+            return info
 
         raise UnsupportedError(url)
