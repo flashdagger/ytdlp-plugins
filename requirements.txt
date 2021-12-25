@@ -151,10 +151,10 @@ websockets==10.1
     # via yt-dlp
 wrapt==1.13.3
     # via astroid
-yt-dlp==2021.12.1
+yt-dlp==2021.12.25
     # via ytdlp-plugins
-ytdlp-plugins==2021.11.19
-    # via ytdlp-auf1
+ytdlp-plugins==2021.12.25
+    # via ytdlp-dtube
 zipp==3.6.0
     # via importlib-metadata
 
