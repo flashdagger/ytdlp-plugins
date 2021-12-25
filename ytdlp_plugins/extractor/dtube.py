@@ -1,5 +1,6 @@
 # coding: utf-8
 import json
+import re
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
@@ -8,6 +9,7 @@ from yt_dlp.utils import (
     UnsupportedError,
     int_or_none,
     HEADRequest,
+    parse_duration,
 )
 
 __version__ = "2021.11.28"
@@ -21,6 +23,7 @@ class DTubeIE(InfoExtractor):
                     (?P<uploader_id>[0-9a-z.-]+)/
                     (?P<id>\w+)
                     """
+    IE_NAME = "d.tube"
     _TESTS = [
         {
             "url": "https://d.tube/v/famigliacurione/"
@@ -38,6 +41,26 @@ class DTubeIE(InfoExtractor):
                 "uploader_id": "famigliacurione",
                 "upload_date": "20211223",
                 "timestamp": 1640297596.628,
+            },
+            "params": {
+                "format": "480p",
+            },
+        },
+        # fallback files
+        {
+            "url": "https://d.tube/#!/v/reeta0119/QmX9rAqkTzYfUoi5VFuitzYQXyybFtURyUUWcYkyPXzkkz",
+            "md5": "179f4435eb5068d3b1c6188ec3065d9a",
+            "info_dict": {
+                "id": "reeta0119/QmX9rAqkTzYfUoi5VFuitzYQXyybFtURyUUWcYkyPXzkkz",
+                "title": "Splinterlands Battle Share Theme: DIVINE SORCERESS",
+                "description": "md5:4521cc098e7dcad3e9a7f73095c9ffe9",
+                "ext": "mp4",
+                "thumbnail": "https://snap1.d.tube/ipfs/"
+                "QmWYECptp7XKVEUk4tBf9R6d5XaRUo6Hcow6abtuy1Q3Vt",
+                "duration": None,
+                "uploader_id": "reeta0119",
+                "upload_date": "20200306",
+                "timestamp": 1583519894.482,
             },
             "params": {
                 "format": "480p",
@@ -95,7 +118,7 @@ class DTubeIE(InfoExtractor):
         formats = []
         res_map = {}
         # pylint: disable=W0631
-        for format_id, content_id in files[provider].get("vid", {}).items():
+        for format_id, content_id in sorted(files[provider].get("vid", {}).items()):
             for candidate in base_urls:
                 head_response = self._request_webpage(
                     HEADRequest(f"{candidate}/{content_id}"),
@@ -121,7 +144,21 @@ class DTubeIE(InfoExtractor):
                 )
                 base_urls = [candidate]
                 break
+        self._sort_formats(formats)
         return formats
+
+    @staticmethod
+    def fallback_files(info):
+        files = {}
+        for provider in ("ipfs", "btfs"):
+            provider_info = info.get(provider, {})
+            for key, value in provider_info.items():
+                match = re.match(r"video(\d*)hash", key)
+                if match is None:
+                    continue
+                resolution = match.group(1) or "src"
+                files.setdefault(provider, {}).setdefault("vid", {})[resolution] = value
+        return files
 
     def avalon_api(self, video_id):
         result = self._download_json(
@@ -132,7 +169,7 @@ class DTubeIE(InfoExtractor):
         )
         if result is False:
             return None
-        with open("content.json", "w") as fd:
+        with open("content.json", "w", encoding="utf8") as fd:
             json.dump(result, fd, indent=4)
         info = result["json"]
         video_provider = info.get("files", {})
@@ -153,15 +190,16 @@ class DTubeIE(InfoExtractor):
                 "url": redirect_url,
             }
         timestamp = result.get("ts")
+        fallback_files = self.fallback_files(info)
 
         return {
             "id": video_id,
             "title": info.get("title"),
-            "description": info.get("desc"),
+            "description": info.get("desc") or info.get("description"),
             "thumbnail": info.get("thumbnailUrl"),
             "tags": list(result.get("tags", {}).keys()),
-            "duration": int_or_none(info.get("dur")),
-            "formats": self.formats(info.get("files", {})),
+            "duration": int_or_none(info.get("dur")) or parse_duration(info.get("dur")),
+            "formats": self.formats(info.get("files", fallback_files)),
             "timestamp": timestamp and timestamp * 1e-3,
             "uploader_id": result.get("author"),
         }
