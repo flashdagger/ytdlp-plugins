@@ -44,12 +44,9 @@ def monkey_patch(orig):
 def calling_plugin_class():
     plugins = set(FOUND.values())
     for frame_info in stack():
-        try:
-            cls = frame_info[0].f_locals["self"].__class__
-        except (KeyError, AttributeError):
-            cls = None
-        if cls in plugins:
-            return cls
+        extractor_class = frame_info[0].f_locals.get("ie")
+        if extractor_class in plugins:
+            return extractor_class
     return None
 
 
