@@ -4,11 +4,10 @@ import re
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
-    parse_iso8601,
-    traverse_obj,
     int_or_none,
     HEADRequest,
     parse_duration,
+    LazyList,
 )
 
 __version__ = "2021.11.28"
@@ -83,7 +82,7 @@ class DTubeIE(InfoExtractor):
                 "skip_download": True,
             },
         },
-        # youtube forward
+        # YouTube forward
         {
             "url": "https://d.tube/#!/v/geneeverett33/jkp3e8v4tau",
             "info_dict": {
@@ -103,12 +102,13 @@ class DTubeIE(InfoExtractor):
     ]
 
     def formats(self, files):
-        url_map = {
+        provider_urls = {
             "ipfs": ["https://player.d.tube/ipfs", "https://ipfs.d.tube/ipfs"],
             "btfs": ["https://player.d.tube/btfs"],
+            "sia": ["https://siasky.net"],
         }
 
-        for provider, base_urls in url_map.items():
+        for provider, base_urls in provider_urls.items():
             if provider in files and "vid" in files[provider]:
                 break
         else:
@@ -229,44 +229,6 @@ class DTubeIE(InfoExtractor):
 
         return entry_info
 
-    def steemit_api(self, video_id):
-        """this api supports very few urls and is not used"""
-
-        result = self._download_json(
-            "https://api.steemit.com/",
-            video_id,
-            note="Downloading steemit metadata",
-            data=json.dumps(
-                {
-                    "jsonrpc": "2.0",
-                    "method": "call",
-                    "params": ["condenser_api", "get_state", [f"/dtube/@{video_id}"]],
-                }
-            ).encode(),
-        )
-        content = traverse_obj(result, ("result", "content", video_id))
-        if content is None:
-            return None
-        metadata = json.loads(content["json_metadata"])
-
-        formats = []
-
-        return {
-            "id": video_id,
-            "title": content.get("title"),
-            "description": traverse_obj(
-                metadata, "video/content/description".split("/"), default=None
-            ),
-            # "thumbnail": canonical_url(info.get("snaphash")),
-            "tags": traverse_obj(metadata, "video/content/tags".split("/"), default=[]),
-            "duration": traverse_obj(
-                metadata, "video/info/duration".split("/"), default=None
-            ),
-            "formats": formats,
-            "timestamp": parse_iso8601(content.get("created")),
-            "uploader_id": content.get("author"),
-        }
-
     def _real_extract(self, url):
         video_id = "/".join(self._match_valid_url(url).groups())
         result = self.avalon_api(f"content/{video_id}", video_id)
@@ -283,28 +245,26 @@ class DTubeUserIE(DTubeIE):
 
     def _real_extract(self, url):
         user_id = self._match_id(url)
-        video_list = []
-        last_id = None
 
-        while True:
-            endpoint = f"blog/{user_id}/{last_id}" if last_id else f"blog/{user_id}"
-            result = self.avalon_api(endpoint, user_id)
-            if result and result[0]["_id"] == last_id:
-                video_list.extend(result[1:])
-            else:
-                video_list.extend(result)
+        def iter_enries():
+            page_size = 50
+            last_id = None
 
-            if len(result) < 50:
-                break
+            while True:
+                endpoint = f"blog/{user_id}/{last_id}" if last_id else f"blog/{user_id}"
+                result = self.avalon_api(endpoint, user_id)
+                start_idx = 1 if result and result[0]["_id"] == last_id else 0
 
-            if result:
-                last_id = result[-1]["_id"]
+                for item in result[start_idx:]:
+                    yield self.entry_from_avalon_result(item, from_playlist=True)
+
+                if len(result) < page_size:
+                    return
+                if result:
+                    last_id = result[-1]["_id"]
 
         return self.playlist_result(
-            [
-                self.entry_from_avalon_result(item, from_playlist=True)
-                for item in video_list
-            ],
+            LazyList(iter_enries()),
             playlist_id=user_id,
             playlist_title=user_id,
         )
