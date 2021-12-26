@@ -18,8 +18,7 @@ class DTubeIE(InfoExtractor):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?v/
-                    (?P<uploader_id>[0-9a-z.-]+)/
-                    (?P<id>\w+)
+                    (?P<id>[0-9a-z.-]+/\w+)
                     """
     IE_NAME = "d.tube"
     _TESTS = [
@@ -230,7 +229,7 @@ class DTubeIE(InfoExtractor):
         return entry_info
 
     def _real_extract(self, url):
-        video_id = "/".join(self._match_valid_url(url).groups())
+        video_id = self._match_id(url)
         result = self.avalon_api(f"content/{video_id}", video_id)
         return self.entry_from_avalon_result(result)
 
@@ -243,28 +242,28 @@ class DTubeUserIE(DTubeIE):
                     """
     IE_NAME = "d.tube:user"
 
+    def iter_user_entries(self, user_id):
+        page_size = 50
+        last_id = None
+
+        while True:
+            endpoint = f"blog/{user_id}/{last_id}" if last_id else f"blog/{user_id}"
+            result = self.avalon_api(endpoint, user_id)
+            start_idx = 1 if result and result[0]["_id"] == last_id else 0
+
+            for item in result[start_idx:]:
+                yield self.entry_from_avalon_result(item, from_playlist=True)
+
+            if len(result) < page_size:
+                return
+            if result:
+                last_id = result[-1]["_id"]
+
     def _real_extract(self, url):
         user_id = self._match_id(url)
 
-        def iter_enries():
-            page_size = 50
-            last_id = None
-
-            while True:
-                endpoint = f"blog/{user_id}/{last_id}" if last_id else f"blog/{user_id}"
-                result = self.avalon_api(endpoint, user_id)
-                start_idx = 1 if result and result[0]["_id"] == last_id else 0
-
-                for item in result[start_idx:]:
-                    yield self.entry_from_avalon_result(item, from_playlist=True)
-
-                if len(result) < page_size:
-                    return
-                if result:
-                    last_id = result[-1]["_id"]
-
         return self.playlist_result(
-            LazyList(iter_enries()),
+            LazyList(self.iter_user_entries(user_id)),
             playlist_id=user_id,
             playlist_title=user_id,
         )
