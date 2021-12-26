@@ -6,7 +6,6 @@ from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     parse_iso8601,
     traverse_obj,
-    UnsupportedError,
     int_or_none,
     HEADRequest,
     parse_duration,
@@ -144,6 +143,8 @@ class DTubeIE(InfoExtractor):
                 )
                 base_urls = [candidate]
                 break
+            else:
+                return []
         self._sort_formats(formats)
         return formats
 
@@ -160,17 +161,18 @@ class DTubeIE(InfoExtractor):
                 files.setdefault(provider, {}).setdefault("vid", {})[resolution] = value
         return files
 
-    def avalon_api(self, video_id):
+    def avalon_api(self, endpoint, video_id):
         result = self._download_json(
-            f"https://avalon.d.tube/content/{video_id}",
+            f"https://avalon.d.tube/{endpoint}",
             video_id,
             note="Downloading avalon metadata",
-            fatal=False,
         )
-        if result is False:
-            return None
         with open("content.json", "w", encoding="utf8") as fd:
             json.dump(result, fd, indent=4)
+
+        return result
+
+    def entry_from_avalon_result(self, result, from_playlist=False):
         info = result["json"]
         video_provider = info.get("files", {})
         if "youtube" in video_provider:
@@ -183,26 +185,49 @@ class DTubeIE(InfoExtractor):
             redirect_url = info["url"]
         else:
             redirect_url = None
-        if redirect_url:
-            return {
-                "_type": "url",
-                "title": info.get("title"),
-                "url": redirect_url,
-            }
         timestamp = result.get("ts")
-        fallback_files = self.fallback_files(info)
 
-        return {
-            "id": video_id,
+        exceptions = any(
+            self.get_param(name)
+            for name in (
+                "forceurl",
+                "forcejson",
+                "forceformat",
+                "listformats",
+                "dump_single_json",
+            )
+        )
+        if redirect_url:
+            _type = "url"
+            formats = None
+        elif self.get_param("quiet") and self.get_param("simulate") and not exceptions:
+            # we are not interested in the formats which saves us some requests
+            _type = "video"
+            formats = None
+        elif from_playlist:
+            _type = "url"
+            formats = None
+        else:
+            _type = "video"
+            formats = self.formats(info.get("files", self.fallback_files(info)))
+
+        entry_info = {
+            "_type": _type,
+            "url": redirect_url or f"https://d.tube/v/{result['_id']}",
+            "id": result["_id"],
             "title": info.get("title"),
             "description": info.get("desc") or info.get("description"),
             "thumbnail": info.get("thumbnailUrl"),
             "tags": list(result.get("tags", {}).keys()),
             "duration": int_or_none(info.get("dur")) or parse_duration(info.get("dur")),
-            "formats": self.formats(info.get("files", fallback_files)),
             "timestamp": timestamp and timestamp * 1e-3,
             "uploader_id": result.get("author"),
         }
+
+        if formats is not None:
+            entry_info["formats"] = formats
+
+        return entry_info
 
     def steemit_api(self, video_id):
         """this api supports very few urls and is not used"""
@@ -244,8 +269,42 @@ class DTubeIE(InfoExtractor):
 
     def _real_extract(self, url):
         video_id = "/".join(self._match_valid_url(url).groups())
-        info = self.avalon_api(video_id)
-        if info:
-            return info
+        result = self.avalon_api(f"content/{video_id}", video_id)
+        return self.entry_from_avalon_result(result)
 
-        raise UnsupportedError(url)
+
+class DTubeUserIE(DTubeIE):
+    _VALID_URL = r"""(?x)
+                    https?://(?:www\.)?d\.tube/
+                    (?:\#!/)?c/
+                    (?P<id>[0-9a-z.-]+)
+                    """
+    IE_NAME = "d.tube:user"
+
+    def _real_extract(self, url):
+        user_id = self._match_id(url)
+        video_list = []
+        last_id = None
+
+        while True:
+            endpoint = f"blog/{user_id}/{last_id}" if last_id else f"blog/{user_id}"
+            result = self.avalon_api(endpoint, user_id)
+            if result and result[0]["_id"] == last_id:
+                video_list.extend(result[1:])
+            else:
+                video_list.extend(result)
+
+            if len(result) < 50:
+                break
+
+            if result:
+                last_id = result[-1]["_id"]
+
+        return self.playlist_result(
+            [
+                self.entry_from_avalon_result(item, from_playlist=True)
+                for item in video_list
+            ],
+            playlist_id=user_id,
+            playlist_title=user_id,
+        )
