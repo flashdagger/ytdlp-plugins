@@ -1,0 +1,25 @@
+[tool.black]
+line-length = 88
+target_version = ['py36', 'py37', 'py38']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | cache
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-v --tb=line -W ignore::DeprecationWarning"
+cache_dir = ".cache/pytest"
+
+[tool.mypy]
+python_version = "3.6"
+cache_dir = ".cache/mypy"
+namespace_packages = true
+exclude = "build|venv"
+ignore_missing_imports = true
