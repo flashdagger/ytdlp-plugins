@@ -25,6 +25,31 @@ class BitTubeIE(InfoExtractor):
     IE_NAME = "bittube"
     BASE_URL = "https://bittube.tv/"
 
+    _TESTS = [
+        {
+            "url": "https://bittube.tv/post/215f2674-6250-4bda-8955-6afe2718cca3",
+            "md5": "fe6036bee0c4494f39540e65f3eb3ad6",
+            "info_dict": {
+                "id": "215f2674-6250-4bda-8955-6afe2718cca3",
+                "title": "God Doesn't Want Anyone To Perish",
+                "description": "md5:962173b9525785518eeaf14adf04ec58",
+                "ext": "mp4",
+                "is_live": False,
+                "thumbnail": "contains:newpost/115366/bittube_115366_1640398063933.jpg?token=",
+                "duration": 25.38,
+                "uploader": "AnotherVoiceintheDarkness",
+                "channel": "Asher Brown",
+                "channel_id": "AnotherVoiceintheDarkness",
+                "channel_url": "https://bittube.tv/profile/AnotherVoiceintheDarkness",
+                "timestamp": float,
+                "upload_date": "20211225",
+                "view_count": int,
+                "like_count": int,
+            },
+            "params": {},
+        },
+    ]
+
     def __init__(self, downloader=None):
         self._magic_token = None
         super().__init__(downloader)
@@ -141,6 +166,20 @@ class BitTubeUserIE(BitTubeIE):
                     (?P<id>\w+)
                     """
     IE_NAME = "bittube:user"
+
+    _TESTS = [
+        {
+            # all videos from channel playlist
+            "url": "https://bittube.tv/profile/AnotherVoiceintheDarkness",
+            "playlist_mincount": 30,
+            "info_dict": {
+                "id": "AnotherVoiceintheDarkness",
+                "title": "Asher Brown",
+                "description": "An anonymous messenger trying to show people the truth about the "
+                "world they live in.",
+            },
+        },
+    ]
 
     def _paged_profile_entries(self, username, user_id, page_size):
         def fetch_page(page_number):
