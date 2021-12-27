@@ -17,7 +17,7 @@ from yt_dlp.utils import (
 )
 from ytdlp_plugins.utils import ParsedURL
 
-__version__ = "2021.12.27"
+__version__ = "2021.12.28"
 
 
 EXTERNAL_URL_EXTRACTORS = (YoutubeIE,)
