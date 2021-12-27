@@ -21,6 +21,8 @@ def unlazify(cls) -> InfoExtractor:
 
 # pylint: disable=abstract-method
 class GenericIE(GenericExtractor):
+    _VALID_URL = GenericExtractor._VALID_URL
+
     REQUEST_CACHE: Dict[str, Any] = {}
     OTHER_EXTRACTORS: List[InfoExtractor] = []
 

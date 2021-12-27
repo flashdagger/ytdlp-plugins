@@ -14,10 +14,11 @@ from .example import DummyPluginIE as _DummyPluginIE
 
 # original BitChuteIE defined in yt_dlp.extractor.bitchute
 class BitChuteIE(_BitChuteIE):
+    _VALID_URL = _BitChuteIE._VALID_URL
     IE_NAME = "bitchute:override"
     _TESTS = ()
 
 
 # already defined in .example
 class DummyPluginIE(_DummyPluginIE):
-    pass
+    _VALID_URL = _DummyPluginIE._VALID_URL
