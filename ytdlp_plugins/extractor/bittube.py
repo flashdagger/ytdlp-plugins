@@ -1,6 +1,7 @@
 # coding: utf-8
 import json
 from contextlib import suppress
+from typing import Callable
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
@@ -10,7 +11,9 @@ from yt_dlp.utils import (
     clean_html,
     determine_ext,
     int_or_none,
+    UnsupportedError,
 )
+from ytdlp_plugins.utils import ParsedURL
 
 __version__ = "2021.11.28"
 
@@ -119,19 +122,25 @@ class BitTubeIE(InfoExtractor):
     def entry_from_result(self, result, from_playlist=False):
         url = None
         is_live = False
+        _type = "video"
         timestamp = result.get("post_time")
         duration_mins = result.get("mediaDuration")
 
         if result["streamactive"]:
-            url = self._call_api(
-                "livestream/obtaintokenurl",
-                {"channel": result["streamchannel"], "feed": result["streamfeed"]},
-                result.get("post_id"),
-                what="token url",
-            ).get("url")
+            if "streamchannel" in result and "streamfeed" in result:
+                url = self._call_api(
+                    "livestream/obtaintokenurl",
+                    {"channel": result["streamchannel"], "feed": result["streamfeed"]},
+                    result.get("post_id"),
+                    what="token url",
+                ).get("url")
+            else:
+                _type = "url"
+                url = f"{self.BASE_URL}post/{result.get('post_id')}"
             is_live = bool(url)
 
         entry_info = {
+            "_type": _type,
             "id": result.get("post_id"),
             "title": result.get("title"),
             "description": clean_html(result.get("description")),
@@ -147,14 +156,13 @@ class BitTubeIE(InfoExtractor):
             "view_count": result.get("views"),
             "like_count": result.get("likes_count"),
         }
-        self.formats(entry_info, details=not from_playlist)
+        if _type == "video":
+            self.formats(entry_info, details=not from_playlist)
         return entry_info
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
         result = self._call_api("get-post", {"post_id": video_id}, video_id)
-        with open("content.json", "w", encoding="utf8") as fd:
-            json.dump(result, fd, indent=4)
         return self.entry_from_result(result)
 
 
@@ -171,26 +179,29 @@ class BitTubeUserIE(BitTubeIE):
         {
             # all videos from channel playlist
             "url": "https://bittube.tv/profile/AnotherVoiceintheDarkness",
-            "playlist_mincount": 30,
             "info_dict": {
                 "id": "AnotherVoiceintheDarkness",
                 "title": "Asher Brown",
                 "description": "An anonymous messenger trying to show people the truth about the "
                 "world they live in.",
             },
+            "playlist_mincount": 30,  # type: ignore
         },
     ]
 
-    def _paged_profile_entries(self, username, user_id, page_size):
+    def _paged_entries(
+        self, endpoint: str, page_size: int, gen_query: Callable[[int, int], dict]
+    ):
         def fetch_page(page_number):
             offset = page_number * page_size
+            query = gen_query(page_size, offset)
             result = self._call_api(
-                "get-user-posts",
-                {"user": user_id, "limit": page_size, "offset": offset},
-                username,
+                endpoint,
+                query,
+                endpoint,
                 what=f"entries from offset {offset:3}",
             )
-            for item in result["items"]:
+            for item in result.get("items") or result.get("posts"):
                 yield self.entry_from_result(item, from_playlist=True)
 
         return OnDemandPagedList(fetch_page, page_size)
@@ -202,9 +213,78 @@ class BitTubeUserIE(BitTubeIE):
             "details"
         ]
 
+        def gen_query(limit, offset):
+            return {"user": details["id"], "limit": limit, "offset": offset}
+
         return self.playlist_result(
-            self._paged_profile_entries(username, details["id"], page_size),
+            self._paged_entries("get-user-posts", page_size, gen_query),
             playlist_id=username,
             playlist_title=details.get("fullname"),
             playlist_description=details.get("bio"),
+        )
+
+
+# pylint: disable=abstract-method
+class BitTubeQueryIE(BitTubeUserIE):
+    _VALID_URL = r"""(?x)
+                    https?://(?:www\.)?bittube.tv/
+                    (?:recommended|explore)(?:$|[/?])
+                    """
+    IE_NAME = "bittube:query"
+
+    _TESTS = [
+        {
+            # all videos from channel playlist
+            "url": "https://bittube.tv/recommended",
+            "playlist_mincount": 30,
+            "info_dict": {
+                "id": "recommended",
+            },
+        },
+    ]
+
+    def _real_extract(self, url):
+        page_size = 30
+        parsed_url = ParsedURL(
+            url,
+            regex=r".*(?P<type>video|livestream|image|audio)s(?:$|\?)",
+        )
+        term = parsed_url.query("term", default="")
+        navigation = parsed_url.query("navigation", default="New")
+        media_type = parsed_url.match("type")
+
+        if parsed_url.path.startswith("/recommended"):
+            playlist_id = "recommended"
+            endpoint = "get-recommended-posts"
+
+            def gen_query(limit, offset):
+                return {
+                    "from": offset,
+                    "size": limit,
+                    "sort": navigation,
+                    "what": media_type or "all",
+                    "term": term,
+                    "explore": False,
+                }
+
+        elif parsed_url.path.startswith("/explore"):
+            playlist_id = "explore"
+            endpoint = "get-media-to-explore"
+
+            def gen_query(limit, offset):
+                return {
+                    "type": media_type or "all",
+                    "limit": limit,
+                    "offset": offset,
+                    "term": term,
+                    "sort": navigation,
+                    "newfirst": None,
+                }
+
+        else:
+            raise UnsupportedError(url)
+
+        return self.playlist_result(
+            self._paged_entries(endpoint, page_size, gen_query),
+            playlist_id=playlist_id,
         )
