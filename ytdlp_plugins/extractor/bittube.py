@@ -15,7 +15,7 @@ from yt_dlp.utils import (
 )
 from ytdlp_plugins.utils import ParsedURL
 
-__version__ = "2021.11.28"
+__version__ = "2021.12.27"
 
 
 # pylint: disable=abstract-method
