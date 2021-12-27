@@ -404,7 +404,7 @@ class BrighteontvIE(BrighteonIE):
             "info_dict": {
                 "id": "brighteontv-daily-show",
                 "ext": "mp4",
-                "title": "Brighteon.TV Daily Show",
+                "title": "startswith:Brighteon.TV Daily Show",
                 "description": "Live Daily Broadcast.",
                 "channel_id": "8c536b2f-e9a1-4e4c-a422-3867d0e472e4",
                 "tags": ["Brighteon", "TV", "News", "Video", "Stream"],
