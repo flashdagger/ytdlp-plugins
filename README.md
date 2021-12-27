@@ -1,4 +1,8 @@
 # bittube.tv support for yt-dlp
+* record live streaming
+* support for user profile playlists (e.g. https://bittube.tv/profile/bittube)
+* query urls with media-type and term filter (e.g. https://bittube.tv/explore/explore-videos?term=crypto&navigation=Trending)
+* topic hashtag playlists (e.g. https://bittube.tv/topic/bittube)
 
 ## installation
 
