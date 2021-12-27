@@ -99,6 +99,8 @@ class BitTubeIE(InfoExtractor):
         )
 
     def formats(self, info, details=True):
+        if not info["url"]:
+            raise ExtractorError("Post contains no media url.")
         url = info.pop("url")
         ext = determine_ext(url, default_ext="unknown_video")
         format_info = {"url": url, "ext": ext.lower()}
