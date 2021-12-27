@@ -1,5 +1,6 @@
 # coding: utf-8
 import json
+import re
 from contextlib import suppress
 from typing import Callable
 
@@ -8,10 +9,10 @@ from yt_dlp.utils import (
     ExtractorError,
     HEADRequest,
     OnDemandPagedList,
+    UnsupportedError,
     clean_html,
     determine_ext,
     int_or_none,
-    UnsupportedError,
 )
 from ytdlp_plugins.utils import ParsedURL
 
@@ -142,7 +143,7 @@ class BitTubeIE(InfoExtractor):
         entry_info = {
             "_type": _type,
             "id": result.get("post_id"),
-            "title": result.get("title"),
+            "title": re.sub(r"\s+", " ", clean_html(result["title"])).strip(),
             "description": clean_html(result.get("description")),
             "url": url or self.media_url(result.get("imgSrc")),
             "is_live": is_live,
