@@ -114,7 +114,7 @@ class BitTubeIE(InfoExtractor):
         format_info = {"url": url, "ext": ext.lower()}
         if ext == "m3u8":
             format_info["ext"] = "mp4"
-        elif details:
+        elif details and ext not in {"jpg", "gif"}:
             response = self._request_webpage(
                 HEADRequest(url),
                 info["id"],
