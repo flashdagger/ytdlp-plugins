@@ -99,9 +99,10 @@ class BitTubeIE(InfoExtractor):
         )
 
     def formats(self, info, details=True):
-        if not info["url"]:
-            raise ExtractorError("Post contains no media url.")
         url = info.pop("url")
+        if not url:
+            info["formats"] = []
+            return
         ext = determine_ext(url, default_ext="unknown_video")
         format_info = {"url": url, "ext": ext.lower()}
         if ext == "m3u8":
@@ -231,17 +232,25 @@ class BitTubeUserIE(BitTubeIE):
 class BitTubeQueryIE(BitTubeUserIE):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?bittube.tv/
-                    (?:recommended|explore)(?:$|[/?])
+                    (?:recommended|explore|topics?)(?:$|[/?])
                     """
     IE_NAME = "bittube:query"
 
     _TESTS = [
         {
-            # all videos from channel playlist
             "url": "https://bittube.tv/recommended",
             "playlist_mincount": 30,
             "info_dict": {
                 "id": "recommended",
+                "title": "recommended",
+            },
+        },
+        {
+            "url": "https://bittube.tv/topic/catsoftube",
+            "playlist_mincount": 20,
+            "info_dict": {
+                "id": "topic/catsoftube",
+                "title": "topic/catsoftube",
             },
         },
     ]
@@ -250,14 +259,21 @@ class BitTubeQueryIE(BitTubeUserIE):
         page_size = 30
         parsed_url = ParsedURL(
             url,
-            regex=r".*(?P<type>video|livestream|image|audio)s(?:$|\?)",
+            regex=r"""(?x)
+                  .*
+                  (?:
+                    (?:/
+                        (?:explore-)?(?P<type>video|livestream|image|audio)s
+                    ) | (?:/topic/(?P<topic>\w+))
+                  )
+                  """,
         )
         term = parsed_url.query("term", default="")
         navigation = parsed_url.query("navigation", default="New")
         media_type = parsed_url.match("type")
+        playlist_id = parsed_url.path.lstrip("/")
 
-        if parsed_url.path.startswith("/recommended"):
-            playlist_id = "recommended"
+        if playlist_id.startswith("recommended"):
             endpoint = "get-recommended-posts"
 
             def gen_query(limit, offset):
@@ -270,8 +286,7 @@ class BitTubeQueryIE(BitTubeUserIE):
                     "explore": False,
                 }
 
-        elif parsed_url.path.startswith("/explore"):
-            playlist_id = "explore"
+        elif playlist_id.startswith("explore"):
             endpoint = "get-media-to-explore"
 
             def gen_query(limit, offset):
@@ -284,10 +299,34 @@ class BitTubeQueryIE(BitTubeUserIE):
                     "newfirst": None,
                 }
 
+        elif playlist_id.startswith("topic/"):
+            topic = parsed_url.match("topic")
+            endpoint = "get-hashtag-posts"
+
+            def gen_query(limit, offset):
+                return {
+                    "hashtag": topic,
+                    "from": offset,
+                    "size": limit,
+                    "sort": navigation,
+                }
+
+        elif playlist_id.startswith("topics"):
+            endpoint = "get-posts-subscribed-topics"
+
+            def gen_query(limit, offset):
+                return {
+                    "from": offset,
+                    "size": limit,
+                    "sort": navigation,
+                    "what": media_type or "all",
+                }
+
         else:
             raise UnsupportedError(url)
 
         return self.playlist_result(
             self._paged_entries(endpoint, page_size, gen_query),
             playlist_id=playlist_id,
+            playlist_title=playlist_id,
         )
