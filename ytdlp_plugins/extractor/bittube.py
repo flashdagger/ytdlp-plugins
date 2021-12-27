@@ -5,6 +5,7 @@ from contextlib import suppress
 from typing import Callable
 
 from yt_dlp.extractor.common import InfoExtractor
+from yt_dlp.extractor.youtube import YoutubeIE
 from yt_dlp.utils import (
     ExtractorError,
     HEADRequest,
@@ -17,6 +18,9 @@ from yt_dlp.utils import (
 from ytdlp_plugins.utils import ParsedURL
 
 __version__ = "2021.12.27"
+
+
+EXTERNAL_URL_EXTRACTORS = (YoutubeIE,)
 
 
 # pylint: disable=abstract-method
@@ -93,6 +97,9 @@ class BitTubeIE(InfoExtractor):
         return self._magic_token
 
     def media_url(self, src):
+        if re.match(r"[a-z]+://", src):
+            return src
+
         return src and (
             f"https://webseed1.bittube.tv/mediaServer/static/posts/"
             f"{src}?token={self.magic_token}"
@@ -159,8 +166,19 @@ class BitTubeIE(InfoExtractor):
             "timestamp": timestamp and timestamp * 1e-3,
             "view_count": result.get("views"),
             "like_count": result.get("likes_count"),
+            "media_type": result.get("mediaType"),
         }
-        if _type == "video":
+
+        # check for external forward urls
+        if result.get("mediaType") == "external":
+            for extractor in EXTERNAL_URL_EXTRACTORS:
+                if extractor._match_valid_url(
+                    entry_info["url"]
+                ):  # pylint: disable=protected-access
+                    entry_info["_type"] = "url"
+                    break
+
+        if entry_info["_type"] == "video":
             self.formats(entry_info, details=not from_playlist)
         return entry_info
 
