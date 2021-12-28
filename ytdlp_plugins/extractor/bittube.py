@@ -145,17 +145,26 @@ class BitTubeIE(InfoExtractor):
                     result.get("post_id"),
                     what="token url",
                 ).get("url")
+                is_live = bool(url)
             else:
                 _type = "url"
                 url = f"{self.BASE_URL}post/{result.get('post_id')}"
-            is_live = bool(url)
+
+        url = url or self.media_url(result.get("imgSrc"))
+        # check for external forward urls
+        if result.get("mediaType") == "external":
+            for extractor in EXTERNAL_URL_EXTRACTORS:
+                # pylint: disable=protected-access
+                if extractor._match_valid_url(url):
+                    _type = "url"
+                    break
 
         entry_info = {
             "_type": _type,
             "id": result.get("post_id"),
             "title": re.sub(r"\s+", " ", clean_html(result["title"])).strip(),
             "description": clean_html(result.get("description")),
-            "url": url or self.media_url(result.get("imgSrc")),
+            "url": url,
             "is_live": is_live,
             "thumbnail": self.media_url(result.get("thumbSrc")),
             "duration": duration_mins and result.get("mediaDuration") * 60,
@@ -169,16 +178,9 @@ class BitTubeIE(InfoExtractor):
             "media_type": result.get("mediaType"),
         }
 
-        # check for external forward urls
-        if result.get("mediaType") == "external":
-            for extractor in EXTERNAL_URL_EXTRACTORS:
-                # pylint: disable=protected-access
-                if extractor._match_valid_url(entry_info["url"]):
-                    entry_info["_type"] = "url"
-                    break
-
         if entry_info["_type"] == "video":
             self.formats(entry_info, details=not from_playlist)
+
         return entry_info
 
     def _real_extract(self, url):
