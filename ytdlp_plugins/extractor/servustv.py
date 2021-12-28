@@ -21,8 +21,10 @@ class ServusTVIE(InfoExtractor):
     IE_NAME = "servustv"
     _VALID_URL = r"""(?x)
                     https?://
-                        (?:www\.)?(?:servustv|pm-wissen).com
-                        /[\w-]+/(?:v|[abp]/[\w-]+)
+                        (?:www\.)?(?:servustv|pm-wissen).com/
+                        (?:
+                            videos | (?: [\w-]+/(?: v | [abp]/[\w-]+ ) )
+                        )
                         /(?P<id>[A-Za-z0-9-]+)
                     """
 
@@ -43,6 +45,28 @@ class ServusTVIE(InfoExtractor):
         {
             # new URL schema
             "url": "https://www.servustv.com/wissen/v/aa-273cebhp12111/",
+            "info_dict": {
+                "id": "aa-273cebhp12111",
+                "ext": "mp4",
+                "title": "Was lebt im Steinbruch?",
+                "description": "md5:a905b6135469cf60a07d4d0ae1e8d49a",
+                "duration": 271,
+                "timestamp": int,
+                "categories": ["P.M. Wissen"],
+                "age_limit": 0,
+                "upload_date": "20211111",
+                "is_live": False,
+                "thumbnail": r"re:^https?://.*\.jpg",
+            },
+            "params": {
+                "skip_download": True,
+                "format": "bestvideo",
+                "geo_bypass_country": "DE",
+            },
+        },
+        {
+            # old URL schema
+            "url": "https://www.servustv.com/videos/aa-273cebhp12111/",
             "info_dict": {
                 "id": "aa-273cebhp12111",
                 "ext": "mp4",
@@ -387,6 +411,7 @@ class ServusTVIE(InfoExtractor):
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
+        print(video_id)
         parsed_url = ParsedURL(url)
         url_query = {key.lower(): value for key, value in parsed_url.query().items()}
 
@@ -397,7 +422,7 @@ class ServusTVIE(InfoExtractor):
             self.to_screen(f"Set timezone to {self.timezone!r}")
 
         # single video
-        if "/v/" in parsed_url.path:
+        if "/v/" in parsed_url.path or parsed_url.path.startswith("/videos/"):
             return self._entry_by_id(video_id)
 
         webpage = self._download_webpage(url, video_id=video_id)
