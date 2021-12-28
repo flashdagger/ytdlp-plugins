@@ -1,4 +1,7 @@
 # dtube.tv support for yt-dlp
+* support for user channel playlists (e.g. https://d.tube/#!/c/dtube)
+* query urls (e.g. https://d.tube/#!/newvideos)
+* searches (e.g. https://d.tube/#!/s/crypto)
 
 ## installation
 
@@ -13,13 +16,13 @@ You can install ytdlp-dtube via pip:
 
 Note that on some systems, you may need to use `py` or `python` instead of `python3`
 
-## example: show the 20 recent titles from channel
+## example: show the titles of the 20 most recent trending videos
 
-`python3 -m ytdlp_plugins -e --playlist-items 1-20 https://dtube.tv/videos`
+`python3 -m ytdlp_plugins -e --playlist-items 1-20 https://d.tube/trendingvideos`
 
 ## yt-dlp
 
-yt-dlp is a [youtube-dl](https://github.com/ytdl-org/youtube-dl) fork based on the now
+[yt-dlp](https://github.com/yt-dlp/yt-dlp) is a [youtube-dl](https://github.com/ytdl-org/youtube-dl) fork based on the now
 inactive [youtube-dlc](https://github.com/blackjack4494/yt-dlc). The main focus of this project is adding new features
 and patches while also keeping up to date with the original project
 

@@ -1,13 +1,18 @@
 # coding: utf-8
-import json
 import re
 
+from yt_dlp.compat import (
+    compat_urllib_parse_unquote_plus,
+    compat_urllib_parse_quote_plus,
+)
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     int_or_none,
     HEADRequest,
     parse_duration,
     LazyList,
+    OnDemandPagedList,
+    traverse_obj,
 )
 
 __version__ = "2021.11.28"
@@ -166,12 +171,11 @@ class DTubeIE(InfoExtractor):
             video_id,
             note="Downloading avalon metadata",
         )
-        with open("content.json", "w", encoding="utf8") as fd:
-            json.dump(result, fd, indent=4)
 
         return result
 
     def entry_from_avalon_result(self, result, from_playlist=False):
+        video_id = f"{result['author']}/{result['link']}"
         info = result["json"]
         video_provider = info.get("files", {})
         if "youtube" in video_provider:
@@ -210,14 +214,20 @@ class DTubeIE(InfoExtractor):
             _type = "video"
             formats = self.formats(info.get("files", self.fallback_files(info)))
 
+        tags = result.get("tags")
+        if tags:
+            tags = list(tags.keys()) if isinstance(tags, dict) else [tags]
+        else:
+            tags = []
+
         entry_info = {
             "_type": _type,
-            "url": redirect_url or f"https://d.tube/v/{result['_id']}",
-            "id": result["_id"],
+            "url": redirect_url or f"https://d.tube/v/{video_id}",
+            "id": video_id,
             "title": info.get("title"),
             "description": info.get("desc") or info.get("description"),
             "thumbnail": info.get("thumbnailUrl"),
-            "tags": list(result.get("tags", {}).keys()),
+            "tags": tags,
             "duration": int_or_none(info.get("dur")) or parse_duration(info.get("dur")),
             "timestamp": timestamp and timestamp * 1e-3,
             "uploader_id": result.get("author"),
@@ -242,13 +252,25 @@ class DTubeUserIE(DTubeIE):
                     """
     IE_NAME = "d.tube:user"
 
-    def iter_user_entries(self, user_id):
+    _TESTS = [
+        {
+            "url": "https://d.tube/#!/c/cahlen",
+            "playlist_mincount": 100,
+            "info_dict": {
+                "id": "cahlen",
+                "title": "cahlen",
+            },
+        },
+    ]
+
+    def iter_entries(self, user_id, endpoint):
         page_size = 50
         last_id = None
 
         while True:
-            endpoint = f"blog/{user_id}/{last_id}" if last_id else f"blog/{user_id}"
-            result = self.avalon_api(endpoint, user_id)
+            result = self.avalon_api(
+                f"{endpoint}/{last_id}" if last_id else endpoint, user_id
+            )
             start_idx = 1 if result and result[0]["_id"] == last_id else 0
 
             for item in result[start_idx:]:
@@ -261,9 +283,103 @@ class DTubeUserIE(DTubeIE):
 
     def _real_extract(self, url):
         user_id = self._match_id(url)
+        endpoint = f"blog/{user_id}"
 
         return self.playlist_result(
-            LazyList(self.iter_user_entries(user_id)),
+            LazyList(self.iter_entries(user_id, endpoint)),
             playlist_id=user_id,
             playlist_title=user_id,
+        )
+
+
+class DTubeQueryIE(DTubeUserIE):
+    _VALID_URL = r"""(?x)
+                    https?://(?:www\.)?d\.tube/
+                    (?:\#!/)?
+                    (?P<id>hotvideos|trendingvideos|newvideos)
+                    """
+    IE_NAME = "d.tube:query"
+
+    _TESTS = [
+        {
+            "url": "https://d.tube/#!/hotvideos",
+            "playlist_mincount": 100,
+            "info_dict": {
+                "id": "hotvideos",
+                "title": "hotvideos",
+            },
+        },
+        {
+            "url": "https://d.tube/trendingvideos",
+            "playlist_mincount": 50,
+            "info_dict": {
+                "id": "trendingvideos",
+                "title": "trendingvideos",
+            },
+        },
+        {
+            "url": "https://d.tube/newvideos",
+            "playlist_mincount": 50,
+            "info_dict": {
+                "id": "newvideos",
+                "title": "newvideos",
+            },
+        },
+    ]
+
+    def _real_extract(self, url):
+        query_id = self._match_id(url)
+        assert query_id.endswith("videos")
+        endpoint = query_id[: -len("videos")]
+
+        return self.playlist_result(
+            LazyList(self.iter_entries(query_id, endpoint)),
+            playlist_id=query_id,
+            playlist_title=query_id,
+        )
+
+
+class DTubeSearchIE(DTubeIE):
+    _VALID_URL = r"""(?x)
+                    https?://(?:www\.)?d\.tube/
+                    (?:\#!/)?s/
+                    (?P<id>[^?]+)
+                    """
+    IE_NAME = "d.tube:search"
+
+    _TESTS = [
+        {
+            "url": "https://d.tube/#!/s/crypto+currency",
+            "playlist_mincount": 60,
+            "info_dict": {
+                "id": "crypto+currency",
+                "title": "crypto currency",
+            },
+        },
+    ]
+
+    def _real_extract(self, url):
+        page_size = 30
+        search_term_quoted = self._match_id(url)
+        search_term = compat_urllib_parse_unquote_plus(search_term_quoted)
+        query = compat_urllib_parse_quote_plus(f"(NOT pa:*) AND {search_term}")
+
+        def fetch_page(page_number):
+            offset = page_number * page_size
+            result = self._download_json(
+                f"https://search.d.tube/avalon.contents/_search?"
+                f"q={query}&size={page_size}&from={offset}",
+                search_term,
+                note=f"Downloading entries from offset {offset:3}",
+                fatal=False,
+            )
+            if not result:
+                return
+            for hit in traverse_obj(result, ["hits", "hits"], default=()):
+                yield self.entry_from_avalon_result(hit["_source"], from_playlist=True)
+
+        return self.playlist_result(
+            OnDemandPagedList(fetch_page, page_size),
+            playlist_id=search_term_quoted,
+            playlist_title=search_term,
         )
