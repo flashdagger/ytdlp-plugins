@@ -231,12 +231,15 @@ class ServusTVIE(InfoExtractor):
 
     def _auto_merge_formats(self, formats):
         requested_format = self.get_param("format")
-        audio_only = [
-            fmt["format_id"] for fmt in formats if fmt.get("vcodec") == "none"
-        ]
+        audio_formats = [fmt for fmt in formats if fmt.get("vcodec") == "none"]
+        audio_only = [fmt["format_id"] for fmt in audio_formats]
         video_only = {
             fmt["format_id"] for fmt in formats if fmt.get("acodec") == "none"
         }
+
+        for fmt in audio_formats:
+            if fmt["ext"] == "m3u8":
+                fmt["ext"] = "m4a"
 
         if self._downloader and len(audio_only) == 1 and requested_format in video_only:
             requested_format = f"{requested_format}+{audio_only[0]}"
