@@ -172,9 +172,8 @@ class BitTubeIE(InfoExtractor):
         # check for external forward urls
         if result.get("mediaType") == "external":
             for extractor in EXTERNAL_URL_EXTRACTORS:
-                if extractor._match_valid_url(
-                    entry_info["url"]
-                ):  # pylint: disable=protected-access
+                # pylint: disable=protected-access
+                if extractor._match_valid_url(entry_info["url"]):
                     entry_info["_type"] = "url"
                     break
 
@@ -223,7 +222,13 @@ class BitTubeUserIE(BitTubeIE):
                 endpoint,
                 what=f"entries from offset {offset:3}",
             )
-            for item in result.get("items") or result.get("posts"):
+            for key in ("items", "posts"):
+                items = result.get(key)
+                if isinstance(items, list):
+                    break
+            else:
+                items = []
+            for item in items:
                 yield self.entry_from_result(item, from_playlist=True)
 
         return OnDemandPagedList(fetch_page, page_size)
