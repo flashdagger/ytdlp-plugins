@@ -10,10 +10,8 @@ astroid==2.9.0
     # via pylint
 atomicwrites==1.4.0
     # via pytest
-attrs==21.2.0
+attrs==21.3.0
     # via pytest
-backports.entry-points-selectable==1.1.1
-    # via virtualenv
 black==21.12b0 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 bleach==4.1.0
@@ -39,9 +37,9 @@ distlib==0.3.4
     # via virtualenv
 docutils==0.18.1
     # via readme-renderer
-filelock==3.4.0
+filelock==3.4.2
     # via virtualenv
-identify==2.4.0
+identify==2.4.1
     # via pre-commit
 idna==3.3
     # via requests
@@ -77,7 +75,7 @@ pathspec==0.9.0
     # via black
 pkginfo==1.8.2
     # via twine
-platformdirs==2.4.0
+platformdirs==2.4.1
     # via
     #   black
     #   pylint
@@ -143,7 +141,7 @@ typing-extensions==4.0.1
     #   pylint
 urllib3==1.26.7
     # via requests
-virtualenv==20.10.0
+virtualenv==20.11.0
     # via pre-commit
 webencodings==0.5.1
     # via bleach
@@ -151,9 +149,9 @@ websockets==10.1
     # via yt-dlp
 wrapt==1.13.3
     # via astroid
-yt-dlp==2021.12.25
+yt-dlp==2021.12.27
     # via ytdlp-plugins
-ytdlp-plugins==2021.12.25
+ytdlp-plugins==2021.12.27
     # via ytdlp-dtube
 zipp==3.6.0
     # via importlib-metadata
