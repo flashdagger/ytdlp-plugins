@@ -163,7 +163,8 @@ class BitTubeIE(InfoExtractor):
             "_type": _type,
             "id": result.get("post_id"),
             "title": re.sub(r"\s+", " ", clean_html(result["title"])).strip(),
-            "description": clean_html(result.get("description")),
+            "description": clean_html(result.get("description"))
+            or clean_html(result.get("mediaDescr")),
             "url": url,
             "is_live": is_live,
             "thumbnail": self.media_url(result.get("thumbSrc")),
