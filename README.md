@@ -1,4 +1,4 @@
-# dtube.tv support for yt-dlp
+# d.tube support for yt-dlp
 * support for user channel playlists (e.g. https://d.tube/#!/c/dtube)
 * query urls (e.g. https://d.tube/#!/newvideos)
 * searches (e.g. https://d.tube/#!/s/crypto)
