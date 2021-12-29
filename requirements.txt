@@ -10,7 +10,7 @@ astroid==2.9.0
     # via pylint
 atomicwrites==1.4.0
     # via pytest
-attrs==21.3.0
+attrs==21.4.0
     # via pytest
 black==21.12b0 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
@@ -141,7 +141,7 @@ typing-extensions==4.0.1
     #   pylint
 urllib3==1.26.7
     # via requests
-virtualenv==20.11.0
+virtualenv==20.11.2
     # via pre-commit
 webencodings==0.5.1
     # via bleach
