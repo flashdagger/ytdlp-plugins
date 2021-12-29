@@ -228,7 +228,9 @@ class DTubeIE(InfoExtractor):
             "description": info.get("desc") or info.get("description"),
             "thumbnail": info.get("thumbnailUrl"),
             "tags": tags,
-            "duration": int_or_none(info.get("dur")) or parse_duration(info.get("dur")),
+            "duration": info.get("duration")
+            or int_or_none(info.get("dur"))
+            or parse_duration(info.get("dur")),
             "timestamp": timestamp and timestamp * 1e-3,
             "uploader_id": result.get("author"),
         }
