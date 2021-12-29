@@ -2,16 +2,18 @@
 import re
 
 from yt_dlp.compat import (
-    compat_urllib_parse_unquote_plus,
     compat_urllib_parse_quote_plus,
+    compat_urllib_parse_unquote_plus,
 )
 from yt_dlp.extractor.common import InfoExtractor
+from yt_dlp.postprocessor import FFmpegPostProcessor
 from yt_dlp.utils import (
-    int_or_none,
+    ExtractorError,
     HEADRequest,
-    parse_duration,
     LazyList,
     OnDemandPagedList,
+    int_or_none,
+    parse_duration,
     traverse_obj,
 )
 
@@ -26,6 +28,13 @@ class DTubeIE(InfoExtractor):
                     (?P<id>[0-9a-z.-]+/\w+)
                     """
     IE_NAME = "d.tube"
+
+    PROVIDER_URLS = {
+        "ipfs": ["https://player.d.tube/ipfs", "https://ipfs.d.tube/ipfs"],
+        "btfs": ["https://player.d.tube/btfs"],
+        "sia": ["https://siasky.net"],
+    }
+
     _TESTS = [
         {
             "url": "https://d.tube/v/famigliacurione/"
@@ -45,7 +54,7 @@ class DTubeIE(InfoExtractor):
                 "timestamp": 1640297596.628,
             },
             "params": {
-                "format": "480p",
+                "format": "480",
             },
         },
         # fallback files
@@ -65,7 +74,7 @@ class DTubeIE(InfoExtractor):
                 "timestamp": 1583519894.482,
             },
             "params": {
-                "format": "480p",
+                "format": "480",
             },
         },
         # dailymotion forward
@@ -105,50 +114,98 @@ class DTubeIE(InfoExtractor):
         },
     ]
 
-    def formats(self, files):
-        provider_urls = {
-            "ipfs": ["https://player.d.tube/ipfs", "https://ipfs.d.tube/ipfs"],
-            "btfs": ["https://player.d.tube/btfs"],
-            "sia": ["https://siasky.net"],
+    def __init__(self, downloader=None):
+        super().__init__(downloader)
+        self.ffmpeg = FFmpegPostProcessor(downloader)
+
+    def ffprobe_format(self, media_url):
+        # Invoking ffprobe to determine resolution
+        self.to_screen("Checking format with ffprobe")
+        metadata = self.ffmpeg.get_metadata_object(
+            media_url, opts=("-timeout", "2000000")
+        )
+        if not metadata:
+            return None
+
+        v_stream = {}
+        a_stream = {}
+        for stream in metadata["streams"]:
+            if not v_stream and stream["codec_type"] == "video":
+                v_stream.update(stream)
+            elif not a_stream and stream["codec_type"] == "audio":
+                a_stream.update(stream)
+
+        extension_map = {"matroska": "mkv"}
+        extensions = metadata["format"]["format_name"].split(",")
+        extension = (
+            "mp4"
+            if "mp4" in extensions
+            else extension_map.get(extensions[0], extensions[0])
+        )
+        fps = None
+        if "r_frame_rate" in v_stream:
+            match = re.match(r"(\d+)(?:/(\d+))?", v_stream["r_frame_rate"])
+            if match:
+                nom, den = match.groups()
+                fps = int(nom) / int(den or 1)
+
+        return {
+            "url": media_url,
+            "ext": extension,
+            "container": extension,
+            "vcodec": v_stream.get("codec_name"),
+            "acodec": a_stream.get("codec_name"),
+            "fps": fps,
+            "asr": int_or_none(a_stream.get("sample_rate")),
+            "tbr": int_or_none(metadata["format"].get("bit_rate"), scale=1000),
+            "vbr": int_or_none(v_stream.get("bit_rate"), scale=1000) or 0,
+            "abr": int_or_none(a_stream.get("bit_rate"), scale=1000) or 0,
+            "height": int_or_none(v_stream.get("height")),
+            "width": int_or_none(v_stream.get("width")),
+            "filesize": int(metadata["format"]["size"]),
         }
 
-        for provider, base_urls in provider_urls.items():
+    def http_format(self, media_url):
+        try:
+            head_response = self._request_webpage(
+                HEADRequest(media_url), None, note="Checking format"
+            )
+        except ExtractorError:
+            return None
+
+        return {
+            "url": media_url,
+            "filesize": int_or_none(head_response.headers["Content-Length"]),
+            "ext": head_response.headers["Content-Type"].split("/")[-1],
+        }
+
+    def formats(self, files):
+        for provider, base_urls in self.PROVIDER_URLS.items():
             if provider in files and "vid" in files[provider]:
                 break
         else:
             return []
 
         formats = []
-        res_map = {}
         # pylint: disable=W0631
         for format_id, content_id in sorted(files[provider].get("vid", {}).items()):
-            for candidate in base_urls:
-                head_response = self._request_webpage(
-                    HEADRequest(f"{candidate}/{content_id}"),
-                    None,
-                    note=False,
-                    errnote=f"skipping {candidate!r}",
-                    fatal=False,
+            for idx, candidate in enumerate(base_urls):
+                media_url = f"{candidate}/{content_id}"
+                media_format = (
+                    self.ffprobe_format(media_url)
+                    if self.ffmpeg.probe_available
+                    else self.http_format(media_url)
                 )
-                if head_response is False:
-                    continue
-                fsize = int_or_none(head_response.headers["Content-Length"])
-                height = int_or_none(format_id)
-                if height:
-                    res_map[fsize] = height
-                formats.append(
-                    {
-                        "format_id": f"{height}p" if height else format_id,
-                        "url": f"{candidate}/{content_id}",
-                        "height": height or res_map.get(fsize),
-                        "filesize": fsize,
-                        "ext": head_response.headers["Content-Type"].split("/")[-1],
-                    }
-                )
-                base_urls = [candidate]
-                break
+                if media_format:
+                    media_format["format_id"] = format_id
+                    formats.append(media_format)
+                    break
+                self.report_warning(f"skipping {candidate!r}")
+                continue
             else:
                 return []
+            assert base_urls.pop(idx) == candidate
+            base_urls.insert(0, candidate)
         self._sort_formats(formats)
         return formats
 
