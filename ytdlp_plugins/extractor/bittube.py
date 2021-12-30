@@ -62,6 +62,21 @@ class BitTubeIE(InfoExtractor):
         self._magic_token = None
         super().__init__(downloader)
 
+    def _media_url(self):
+        js_string = self._download_webpage(
+            f"{self.BASE_URL}js/main.js",
+            video_id=None,
+            note="Downloading media server url",
+        )
+        for match_string in re.findall(
+            r'{(?:\s*[A-Z_]+\s*:\s*"[^"]*"\s*,?)+\s*}', js_string
+        ):
+            mapping = dict(re.findall(r'(\w+)\s*:\s*"([^"]*)"', match_string))
+            if "MEDIA_SRV_URL" in mapping:
+                return f"{mapping['MEDIA_SRV_URL']}/static/posts/"
+
+        return None
+
     def _real_initialize(self):
         if not self._get_cookies(self.BASE_URL):
             self._request_webpage(
