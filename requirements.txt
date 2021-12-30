@@ -10,10 +10,8 @@ astroid==2.9.0
     # via pylint
 atomicwrites==1.4.0
     # via pytest
-attrs==21.2.0
+attrs==21.4.0
     # via pytest
-backports.entry-points-selectable==1.1.1
-    # via virtualenv
 black==21.12b0 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 bleach==4.1.0
@@ -41,7 +39,7 @@ docutils==0.18.1
     # via readme-renderer
 filelock==3.4.2
     # via virtualenv
-identify==2.4.0
+identify==2.4.1
     # via pre-commit
 idna==3.3
     # via requests
@@ -92,7 +90,7 @@ pycryptodomex==3.12.0
     # via yt-dlp
 pyflakes==2.4.0
     # via -r requirements.in
-pygments==2.10.0
+pygments==2.11.0
     # via readme-renderer
 pylint==2.12.2
     # via -r requirements.in
@@ -143,7 +141,7 @@ typing-extensions==4.0.1
     #   pylint
 urllib3==1.26.7
     # via requests
-virtualenv==20.10.0
+virtualenv==20.11.2
     # via pre-commit
 webencodings==0.5.1
     # via bleach
