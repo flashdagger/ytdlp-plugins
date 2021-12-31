@@ -6,6 +6,7 @@ from typing import Callable
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.extractor.youtube import YoutubeIE
+from yt_dlp.postprocessor import FFmpegPostProcessor
 from yt_dlp.utils import (
     ExtractorError,
     HEADRequest,
@@ -60,6 +61,7 @@ class BitTubeIE(InfoExtractor):
 
     def __init__(self, downloader=None):
         self._magic_token = None
+        self.ffmpeg = FFmpegPostProcessor(downloader)
         super().__init__(downloader)
 
     def _media_url(self):
@@ -120,6 +122,60 @@ class BitTubeIE(InfoExtractor):
             f"{src}?token={self.magic_token}"
         )
 
+    def ffprobe_format(self, media_url):
+        # Invoking ffprobe to determine resolution
+        self.to_screen("Checking format with ffprobe")
+        metadata = self.ffmpeg.get_metadata_object(
+            media_url, opts=("-timeout", "2000000")
+        )
+        if not metadata:
+            return {}
+
+        v_stream = {}
+        a_stream = {}
+        for stream in metadata["streams"]:
+            if not v_stream and stream["codec_type"] == "video":
+                v_stream.update(stream)
+            elif not a_stream and stream["codec_type"] == "audio":
+                a_stream.update(stream)
+
+        extension_map = {
+            "matroska": "mkv",
+            "hls": "mp4",
+            "mp4": "mp4",
+            "jpeg_pipe": "jpg",
+        }
+        extensions = metadata["format"]["format_name"].split(",")
+        for ext in extensions:
+            if ext in extension_map:
+                extension = extension_map[ext]
+                break
+        else:
+            extension = extensions[0]
+
+        fps = None
+        if "r_frame_rate" in v_stream:
+            match = re.match(r"(\d+)(?:/(\d+))?", v_stream["r_frame_rate"])
+            if match:
+                nom, den = match.groups()
+                fps = round(int(nom) / int(den or 1))
+
+        return {
+            "url": media_url,
+            "ext": extension,
+            "container": extension,
+            "vcodec": v_stream.get("codec_name", "none"),
+            "acodec": a_stream.get("codec_name", "none"),
+            "fps": fps,
+            "asr": int_or_none(a_stream.get("sample_rate")),
+            "tbr": int_or_none(metadata["format"].get("bit_rate"), scale=1000),
+            "vbr": int_or_none(v_stream.get("bit_rate"), scale=1000),
+            "abr": int_or_none(a_stream.get("bit_rate"), scale=1000),
+            "height": int_or_none(v_stream.get("height")),
+            "width": int_or_none(v_stream.get("width")),
+            "filesize": int_or_none(metadata["format"].get("size")),
+        }
+
     def formats(self, info, details=True):
         url = info.pop("url")
         if not url:
@@ -127,13 +183,16 @@ class BitTubeIE(InfoExtractor):
             return
         ext = determine_ext(url, default_ext="unknown_video")
         format_info = {"url": url, "ext": ext.lower()}
-        if ext == "m3u8":
+
+        if details and self.ffmpeg.probe_available:
+            format_info.update(self.ffprobe_format(url))
+        elif ext == "m3u8":
             format_info["ext"] = "mp4"
         elif details and ext not in {"jpg", "gif", "png"}:
             response = self._request_webpage(
                 HEADRequest(url),
-                info["id"],
-                note="Checking media",
+                video_id=None,
+                note="Checking media url",
                 errnote="Media error",
                 fatal=False,
             )
@@ -195,7 +254,9 @@ class BitTubeIE(InfoExtractor):
         }
 
         if entry_info["_type"] == "video":
-            self.formats(entry_info, details=not from_playlist)
+            self.formats(
+                entry_info, details=not from_playlist or self.get_param("listformats")
+            )
 
         return entry_info
 
