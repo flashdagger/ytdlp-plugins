@@ -1,8 +1,8 @@
 # coding: utf-8
 import re
+from datetime import datetime, timedelta
 
 from yt_dlp.compat import (
-    compat_urllib_parse_quote_plus,
     compat_urllib_parse_unquote_plus,
 )
 from yt_dlp.extractor.common import InfoExtractor
@@ -15,6 +15,8 @@ from yt_dlp.utils import (
     int_or_none,
     parse_duration,
     traverse_obj,
+    update_url_query,
+    float_or_none,
 )
 
 __version__ = "2021.12.30"
@@ -245,7 +247,6 @@ class DTubeIE(InfoExtractor):
             redirect_url = info["url"]
         else:
             redirect_url = None
-        timestamp = result.get("ts")
 
         exceptions = any(
             self.get_param(name)
@@ -288,7 +289,7 @@ class DTubeIE(InfoExtractor):
             "duration": info.get("duration")
             or int_or_none(info.get("dur"))
             or parse_duration(info.get("dur")),
-            "timestamp": timestamp and timestamp * 1e-3,
+            "timestamp": float_or_none(result.get("ts"), scale=1000),
             "uploader_id": result.get("author"),
         }
 
@@ -401,7 +402,7 @@ class DTubeQueryIE(DTubeUserIE):
 class DTubeSearchIE(DTubeIE):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
-                    (?:\#!/)?s/
+                    (?:\#!/)?[st]/
                     (?P<id>[^?]+)
                     """
     IE_NAME = "d.tube:search"
@@ -415,19 +416,39 @@ class DTubeSearchIE(DTubeIE):
                 "title": "crypto currency",
             },
         },
+        {
+            "url": "https://d.tube/t/music",
+            "playlist_mincount": 50,
+            "info_dict": {
+                "id": "music",
+                "title": "music",
+            },
+        },
     ]
 
     def _real_extract(self, url):
         page_size = 30
         search_term_quoted = self._match_id(url)
         search_term = compat_urllib_parse_unquote_plus(search_term_quoted)
-        query = compat_urllib_parse_quote_plus(f"(NOT pa:*) AND {search_term}")
+
+        if "/t/" in url:
+            # tag search
+            timestamp = int((datetime.now() - timedelta(days=7)).timestamp() * 1e3)
+            payload = {
+                "q": f"(NOT pa:*) AND ts:>={timestamp} AND tags:{search_term}",
+                "sort": "ups:desc",
+            }
+        else:
+            # common search
+            payload = {"q": f"(NOT pa:*) AND {search_term}"}
 
         def fetch_page(page_number):
             offset = page_number * page_size
             result = self._download_json(
-                f"https://search.d.tube/avalon.contents/_search?"
-                f"q={query}&size={page_size}&from={offset}",
+                update_url_query(
+                    "https://search.d.tube/avalon.contents/_search",
+                    dict(payload, **{"size": page_size, "from": offset}),
+                ),
                 search_term,
                 note=f"Downloading entries from offset {offset:3}",
                 fatal=False,
