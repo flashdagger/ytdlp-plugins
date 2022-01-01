@@ -125,8 +125,10 @@ class BitTubeIE(InfoExtractor):
     def ffprobe_format(self, media_url):
         # Invoking ffprobe to determine resolution
         self.to_screen("Checking format with ffprobe")
+        timeout = self.get_param("socket_timeout")
+        timeout = int(timeout * 1e6) if timeout else 2000000
         metadata = self.ffmpeg.get_metadata_object(
-            media_url, opts=("-timeout", "2000000")
+            media_url, opts=("-timeout", str(timeout))
         )
         if not metadata:
             return {}
