@@ -419,11 +419,11 @@ class DTubeSearchIE(DTubeIE):
             },
         },
         {
-            "url": "https://d.tube/t/music",
-            "playlist_mincount": 50,
+            "url": "https://d.tube/t/gaming",
+            "playlist_mincount": 30,
             "info_dict": {
-                "id": "music",
-                "title": "music",
+                "id": "gaming",
+                "title": "gaming",
             },
         },
     ]
