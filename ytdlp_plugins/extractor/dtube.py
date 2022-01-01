@@ -27,7 +27,7 @@ class DTubeIE(InfoExtractor):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?v/
-                    (?P<id>[0-9a-z.-]+/\w+)
+                    (?P<id>[0-9a-z.-]+/[\w-]+)
                     """
     IE_NAME = "d.tube"
 
