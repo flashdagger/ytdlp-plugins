@@ -126,7 +126,13 @@ class DTubeIE(InfoExtractor):
         timeout = self.get_param("socket_timeout")
         timeout = int(timeout * 1e6) if timeout else 2000000
         metadata = self.ffmpeg.get_metadata_object(
-            media_url, opts=("-timeout", str(timeout))
+            media_url,
+            opts=(
+                "-timeout",
+                str(timeout),
+                "-headers",
+                "referer: https://emb.d.tube/\r\n",
+            ),
         )
         if not metadata:
             return None
@@ -172,7 +178,10 @@ class DTubeIE(InfoExtractor):
     def http_format(self, media_url):
         try:
             head_response = self._request_webpage(
-                HEADRequest(media_url), None, note="Checking format"
+                HEADRequest(media_url),
+                None,
+                note="Checking format",
+                headers={"referer": "https://emb.d.tube/"},
             )
         except ExtractorError:
             return None
@@ -184,6 +193,7 @@ class DTubeIE(InfoExtractor):
         }
 
     def formats(self, files):
+        # pylint: disable=undefined-loop-variable
         for provider, base_urls in self.PROVIDER_URLS.items():
             if provider in files and "vid" in files[provider]:
                 break
@@ -191,7 +201,7 @@ class DTubeIE(InfoExtractor):
             return []
 
         formats = []
-        # pylint: disable=W0631
+        media_format = candidate = idx = None
         for format_id, content_id in sorted(files[provider].get("vid", {}).items()):
             for idx, candidate in enumerate(base_urls):
                 media_url = f"{candidate}/{content_id}"
@@ -202,12 +212,10 @@ class DTubeIE(InfoExtractor):
                 )
                 if media_format:
                     media_format["format_id"] = format_id
-                    formats.append(media_format)
                     break
+                media_format = {"url": media_url, "ext": "mp4", "format_id": format_id}
                 self.write_debug(f"skipping {candidate!r}")
-                continue
-            else:
-                return []
+            formats.append(media_format)
             assert base_urls.pop(idx) == candidate
             base_urls.insert(0, candidate)
         self._sort_formats(formats)
@@ -317,7 +325,7 @@ class DTubeUserIE(DTubeIE):
     _TESTS = [
         {
             "url": "https://d.tube/#!/c/cahlen",
-            "playlist_mincount": 100,
+            "playlist_mincount": 100,  # type: ignore
             "info_dict": {
                 "id": "cahlen",
                 "title": "cahlen",
@@ -412,7 +420,7 @@ class DTubeSearchIE(DTubeIE):
     _TESTS = [
         {
             "url": "https://d.tube/#!/s/crypto+currency",
-            "playlist_mincount": 60,
+            "playlist_mincount": 60,  # type: ignore
             "info_dict": {
                 "id": "crypto+currency",
                 "title": "crypto currency",
@@ -420,7 +428,7 @@ class DTubeSearchIE(DTubeIE):
         },
         {
             "url": "https://d.tube/t/gaming",
-            "playlist_mincount": 30,
+            "playlist_mincount": 30,  # type: ignore
             "info_dict": {
                 "id": "gaming",
                 "title": "gaming",
