@@ -216,6 +216,11 @@ class BrighteonIE(InfoExtractor):
                 media_formats = ()
                 self.report_warning(f"unknown video format {typ!r}")
             formats.extend(media_formats)
+
+        for fmt in formats:
+            fps = fmt.get("fps")
+            fmt["fps"] = fps and round(fps)
+
         return formats
 
     def _estimate_filesize(self, formats, duration):
@@ -224,7 +229,7 @@ class BrighteonIE(InfoExtractor):
             if not fmt.get("format_note", "").startswith("DASH video"):
                 continue
             if fmt.get("height"):
-                fmt["fps"] = 29 if fmt["height"] >= 540 else 14
+                fmt["fps"] = 30 if fmt["height"] >= 540 else 15
             del fmt["filesize_approx"]
             if not self.get_param("listformats"):
                 continue
