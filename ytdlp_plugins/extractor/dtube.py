@@ -32,8 +32,12 @@ class DTubeIE(InfoExtractor):
     IE_NAME = "d.tube"
 
     PROVIDER_URLS = {
-        "ipfs": ["https://player.d.tube/ipfs", "https://ipfs.d.tube/ipfs"],
-        "btfs": ["https://player.d.tube/btfs"],
+        "ipfs": [
+            "https://player.d.tube/ipfs",
+            "https://ipfs.d.tube/ipfs",
+            "https://ipfs.io/ipfs",
+        ],
+        "btfs": ["https://player.d.tube/btfs", "https://btfs.d.tube/btfs"],
         "sia": ["https://siasky.net"],
     }
 
@@ -145,19 +149,24 @@ class DTubeIE(InfoExtractor):
             elif not a_stream and stream["codec_type"] == "audio":
                 a_stream.update(stream)
 
-        extension_map = {"matroska": "mkv"}
+        extension_map = {
+            "matroska": "mkv",
+            "mp4": "mp4",
+        }
         extensions = metadata["format"]["format_name"].split(",")
-        extension = (
-            "mp4"
-            if "mp4" in extensions
-            else extension_map.get(extensions[0], extensions[0])
-        )
+        for ext in extensions:
+            if ext in extension_map:
+                extension = extension_map[ext]
+                break
+        else:
+            extension = extensions[0]
+
         fps = None
         if "r_frame_rate" in v_stream:
             match = re.match(r"(\d+)(?:/(\d+))?", v_stream["r_frame_rate"])
             if match:
                 nom, den = match.groups()
-                fps = int(round(int(nom) / int(den or 1)))
+                fps = round(int(nom) / int(den or 1))
 
         return {
             "url": media_url,
@@ -172,7 +181,7 @@ class DTubeIE(InfoExtractor):
             "abr": int_or_none(a_stream.get("bit_rate"), scale=1000) or 0,
             "height": int_or_none(v_stream.get("height")),
             "width": int_or_none(v_stream.get("width")),
-            "filesize": int(metadata["format"]["size"]),
+            "filesize": int_or_none(metadata["format"].get("size")),
         }
 
     def http_format(self, media_url):
@@ -201,9 +210,15 @@ class DTubeIE(InfoExtractor):
             return []
 
         formats = []
-        media_format = candidate = idx = None
+        media_format = {}
+        candidate = files[provider].get("gw", "").rstrip("/")
+
         for format_id, content_id in sorted(files[provider].get("vid", {}).items()):
-            for idx, candidate in enumerate(base_urls):
+            if candidate in base_urls:
+                base_urls.remove(candidate)
+                base_urls.insert(0, candidate)
+
+            for candidate in base_urls:
                 media_url = f"{candidate}/{content_id}"
                 media_format = (
                     self.ffprobe_format(media_url)
@@ -214,11 +229,11 @@ class DTubeIE(InfoExtractor):
                     media_format["format_id"] = format_id
                     break
                 media_format = {"url": media_url, "ext": "mp4", "format_id": format_id}
-                self.write_debug(f"skipping {candidate!r}")
+                self.write_debug(f"gateway {candidate!r} timed out")
+
             formats.append(media_format)
-            assert base_urls.pop(idx) == candidate
-            base_urls.insert(0, candidate)
         self._sort_formats(formats)
+
         return formats
 
     @staticmethod
