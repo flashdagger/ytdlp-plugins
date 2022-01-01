@@ -149,7 +149,7 @@ class DTubeIE(InfoExtractor):
             match = re.match(r"(\d+)(?:/(\d+))?", v_stream["r_frame_rate"])
             if match:
                 nom, den = match.groups()
-                fps = int(nom) / int(den or 1)
+                fps = int(round(int(nom) / int(den or 1)))
 
         return {
             "url": media_url,
@@ -202,7 +202,7 @@ class DTubeIE(InfoExtractor):
                     media_format["format_id"] = format_id
                     formats.append(media_format)
                     break
-                self.report_warning(f"skipping {candidate!r}")
+                self.write_debug(f"skipping {candidate!r}")
                 continue
             else:
                 return []
