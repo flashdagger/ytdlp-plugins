@@ -41,6 +41,14 @@ class DTubeIE(InfoExtractor):
         "sia": ["https://siasky.net"],
     }
 
+    REDIRECT_TEMPLATES = {
+        "vimeo": "https://vimeo.com/{}",
+        "twitch": "https://www.twitch.tv/{}",
+        "youtube": "{}",
+        "facebook": "https://www.facebook.com/video.php?v={}",
+        "dailymotion": "https://www.dailymotion.com/video/{}",
+    }
+
     _TESTS = [
         {
             "url": "https://d.tube/v/famigliacurione/"
@@ -262,11 +270,11 @@ class DTubeIE(InfoExtractor):
         video_id = f"{result['author']}/{result['link']}"
         info = result["json"]
         video_provider = info.get("files", {})
-        if "youtube" in video_provider:
-            redirect_url = video_provider["youtube"]
-        elif "dailymotion" in video_provider:
-            redirect_url = (
-                f"https://www.dailymotion.com/video/{video_provider['dailymotion']}"
+        redirect_ies = set(self.REDIRECT_TEMPLATES.keys()) & set(video_provider.keys())
+        if redirect_ies:
+            redirect_ie = redirect_ies.pop()
+            redirect_url = self.REDIRECT_TEMPLATES[redirect_ie].format(
+                video_provider[redirect_ie]
             )
         elif "url" in info:
             redirect_url = info["url"]
