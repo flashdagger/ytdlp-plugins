@@ -19,7 +19,7 @@ from yt_dlp.utils import (
     float_or_none,
 )
 
-__version__ = "2022.01.01"
+__version__ = "2022.01.02"
 
 
 # pylint: disable=abstract-method
