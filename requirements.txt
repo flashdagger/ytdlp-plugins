@@ -6,7 +6,7 @@
 #
 -e file:.
     # via -r requirements.in
-astroid==2.9.1
+astroid==2.9.3
     # via pylint
 atomicwrites==1.4.0
     # via pytest
@@ -22,7 +22,7 @@ certifi==2021.10.8
     # via requests
 cfgv==3.3.1
     # via pre-commit
-charset-normalizer==2.0.9
+charset-normalizer==2.0.10
     # via requests
 click==8.0.3
     # via black
@@ -41,11 +41,11 @@ execnet==1.9.0
     # via pytest-xdist
 filelock==3.4.2
     # via virtualenv
-identify==2.4.1
+identify==2.4.6
     # via pre-commit
 idna==3.3
     # via requests
-importlib-metadata==4.10.0
+importlib-metadata==4.10.1
     # via
     #   keyring
     #   twine
@@ -53,7 +53,7 @@ iniconfig==1.1.1
     # via pytest
 isort==5.10.1
     # via pylint
-keyring==23.4.0
+keyring==23.5.0
     # via twine
 lazy-object-proxy==1.7.1
     # via astroid
@@ -61,7 +61,7 @@ mccabe==0.6.1
     # via pylint
 mutagen==1.45.1
     # via yt-dlp
-mypy==0.930 ; platform_python_implementation != "PyPy"
+mypy==0.931 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 mypy-extensions==0.4.3
     # via
@@ -84,21 +84,21 @@ platformdirs==2.4.1
     #   virtualenv
 pluggy==1.0.0
     # via pytest
-pre-commit==2.16.0
+pre-commit==2.17.0
     # via -r requirements.in
 py==1.11.0
     # via
     #   pytest
     #   pytest-forked
-pycryptodomex==3.12.0
+pycryptodomex==3.13.0
     # via yt-dlp
 pyflakes==2.4.0
     # via -r requirements.in
-pygments==2.11.1
+pygments==2.11.2
     # via readme-renderer
 pylint==2.12.2
     # via -r requirements.in
-pyparsing==3.0.6
+pyparsing==3.0.7
     # via packaging
 pytest==6.2.5
     # via
@@ -108,7 +108,7 @@ pytest==6.2.5
     #   pytest-xdist
 pytest-forked==1.4.0
     # via pytest-xdist
-pytest-subtests==0.5.0
+pytest-subtests==0.6.0
     # via -r requirements.in
 pytest-xdist==2.5.0
     # via -r requirements.in
@@ -118,13 +118,13 @@ pyyaml==6.0
     # via pre-commit
 readme-renderer==32.0
     # via twine
-requests==2.26.0
+requests==2.27.1
     # via
     #   requests-toolbelt
     #   twine
 requests-toolbelt==0.9.1
     # via twine
-rfc3986==1.5.0
+rfc3986==2.0.0
     # via twine
 six==1.16.0
     # via
@@ -149,9 +149,9 @@ typing-extensions==4.0.1
     #   black
     #   mypy
     #   pylint
-urllib3==1.26.7
+urllib3==1.26.8
     # via requests
-virtualenv==20.12.1
+virtualenv==20.13.0
     # via pre-commit
 webencodings==0.5.1
     # via bleach
@@ -159,7 +159,7 @@ websockets==10.1
     # via yt-dlp
 wrapt==1.13.3
     # via astroid
-yt-dlp==2021.12.27
+yt-dlp==2022.1.21
     # via ytdlp-plugins
 ytdlp-plugins==2021.12.27
     # via ytdlp-brighteon
