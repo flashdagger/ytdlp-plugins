@@ -451,7 +451,7 @@ class DTubeSearchIE(DTubeIE):
         },
         {
             "url": "https://d.tube/t/gaming",
-            "playlist_mincount": 30,  # type: ignore
+            "playlist_mincount": 20,  # type: ignore
             "info_dict": {
                 "id": "gaming",
                 "title": "gaming",
