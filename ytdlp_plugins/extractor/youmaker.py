@@ -242,7 +242,7 @@ class YoumakerIE(InfoExtractor):
             msg = f'{what} - {status or "Bad JSON response"}'
             if fatal or status is None:
                 raise ExtractorError(
-                    msg, video_id=uid, expected=isinstance(status, str)
+                    msg, video_id=None, expected=isinstance(status, str)
                 )
             self.report_warning(msg, video_id=uid)
 
@@ -315,9 +315,6 @@ class YoumakerIE(InfoExtractor):
             if formats:
                 break
 
-        if not formats:
-            return None, None
-
         # sometimes there are duplicate entries, so we filter them out
         format_mapping = {item["url"]: item for item in formats}
         formats = list(format_mapping.values())
@@ -355,14 +352,16 @@ class YoumakerIE(InfoExtractor):
                 live_status = self._download_json(
                     self._live_url(video_uid, "status"),
                     video_uid,
-                    note="Getting live status",
+                    note="Checking live status",
                 )
             except ExtractorError as exc:
-                raise ExtractorError("live stream not scheduled yet") from exc
+                raise ExtractorError("This live event was not scheduled yet.") from exc
 
             is_live = True
             playlist_url = self._live_url(video_uid)
-            release_timestamp = traverse_obj(live_status, ("data", "start_time"))
+            release_timestamp = parse_iso8601(
+                traverse_obj(live_status, ("data", "start_time"))
+            )
         else:
             is_live = False
             release_timestamp = None
@@ -371,6 +370,13 @@ class YoumakerIE(InfoExtractor):
         duration = video_info.get("duration")
         estimate_filesize(formats, duration)
 
+        if is_live and not (
+            formats
+            or self.get_param("wait_for_video")
+            or self.get_param("ignore_no_formats_error")
+        ):
+            raise ExtractorError("This live event has not started yet.")
+
         return {
             "id": video_uid,
             "title": title,
@@ -378,7 +384,7 @@ class YoumakerIE(InfoExtractor):
             "formats": formats,
             "is_live": is_live,
             "timestamp": parse_iso8601(info.get("uploaded_at")),
-            "release_timestamp": parse_iso8601(release_timestamp),
+            "release_timestamp": release_timestamp,
             "uploader": info.get("uploaded_by"),
             "duration": duration,
             "categories": self._categories_by_id(info.get("category_id")),
