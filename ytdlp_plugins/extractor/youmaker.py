@@ -193,8 +193,8 @@ class YoumakerIE(InfoExtractor):
         # it needs to be extracted from some js magic...
         return self._fix_url("//vs.youmaker.com/assets")
 
-    def _live_url(self, video_id):
-        return self._fix_url(f"//live.youmaker.com/{video_id}/playlist.m3u8")
+    def _live_url(self, video_id, endpoint="playlist.m3u8"):
+        return self._fix_url(f"//live.youmaker.com/{video_id}/{endpoint}")
 
     @staticmethod
     def _try_server_urls(url):
@@ -316,13 +316,7 @@ class YoumakerIE(InfoExtractor):
                 break
 
         if not formats:
-            # as there are some videos on the platform with missing playlist
-            # expected is set True if the playlist url is valid
-            raise ExtractorError(
-                "No video formats found!",
-                video_id=video_uid,
-                expected=playlist_url is not None,
-            )
+            return None, None
 
         # sometimes there are duplicate entries, so we filter them out
         format_mapping = {item["url"]: item for item in formats}
@@ -357,14 +351,21 @@ class YoumakerIE(InfoExtractor):
             video_info, ["videoAssets", "Stream"], expected_type=str
         )
         if info.get("live") and playlist_url is None:
+            try:
+                live_status = self._download_json(
+                    self._live_url(video_uid, "status"),
+                    video_uid,
+                    note="Getting live status",
+                )
+            except ExtractorError as exc:
+                raise ExtractorError("live stream not scheduled yet") from exc
+
             is_live = True
             playlist_url = self._live_url(video_uid)
-            if info.get("live_status") != "start":
-                self.report_warning(
-                    "Live stream might not be ready yet.", video_id=video_uid
-                )
+            release_timestamp = traverse_obj(live_status, ("data", "start_time"))
         else:
             is_live = False
+            release_timestamp = None
 
         formats, playlist_subtitles = self.handle_formats(playlist_url, video_uid)
         duration = video_info.get("duration")
@@ -377,6 +378,7 @@ class YoumakerIE(InfoExtractor):
             "formats": formats,
             "is_live": is_live,
             "timestamp": parse_iso8601(info.get("uploaded_at")),
+            "release_timestamp": parse_iso8601(release_timestamp),
             "uploader": info.get("uploaded_by"),
             "duration": duration,
             "categories": self._categories_by_id(info.get("category_id")),
