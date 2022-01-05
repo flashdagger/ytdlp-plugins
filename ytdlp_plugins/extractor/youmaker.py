@@ -344,6 +344,9 @@ class YoumakerIE(InfoExtractor):
             else None
         )
 
+        is_live = False
+        was_live = False
+        release_timestamp = None
         playlist_url = traverse_obj(
             video_info, ["videoAssets", "Stream"], expected_type=str
         )
@@ -359,14 +362,18 @@ class YoumakerIE(InfoExtractor):
 
             is_live = True
             was_live = traverse_obj(live_info, ("data", "status")) == "end"
-            playlist_url = self._live_url(video_uid)
+            storage_path = traverse_obj(live_info, ("data", "storage_path"))
             release_timestamp = parse_iso8601(
                 traverse_obj(live_info, ("data", "start_time"))
             )
-        else:
-            is_live = False
-            was_live = False
-            release_timestamp = None
+
+            if was_live and storage_path:
+                is_live = False
+                playlist_url = (
+                    f"{self._asset_url}/{storage_path}/{video_uid}/playlist.m3u8"
+                )
+            else:
+                playlist_url = self._live_url(video_uid)
 
         formats, playlist_subtitles = self.handle_formats(playlist_url, video_uid)
         duration = video_info.get("duration")
@@ -384,7 +391,8 @@ class YoumakerIE(InfoExtractor):
             "description": info.get("description"),
             "formats": formats,
             "is_live": is_live,
-            "was_live": is_live,
+            "was_live": was_live,
+            "live_status": "is_upcoming" if is_live and not formats else None,
             "timestamp": parse_iso8601(info.get("uploaded_at")),
             "release_timestamp": release_timestamp,
             "uploader": info.get("uploaded_by"),
