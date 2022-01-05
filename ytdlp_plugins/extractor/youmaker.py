@@ -349,7 +349,7 @@ class YoumakerIE(InfoExtractor):
         )
         if info.get("live") and playlist_url is None:
             try:
-                live_status = self._download_json(
+                live_info = self._download_json(
                     self._live_url(video_uid, "status"),
                     video_uid,
                     note="Checking live status",
@@ -358,24 +358,25 @@ class YoumakerIE(InfoExtractor):
                 raise ExtractorError("This live event was not scheduled yet.") from exc
 
             is_live = True
+            was_live = traverse_obj(live_info, ("data", "status")) == "end"
             playlist_url = self._live_url(video_uid)
             release_timestamp = parse_iso8601(
-                traverse_obj(live_status, ("data", "start_time"))
+                traverse_obj(live_info, ("data", "start_time"))
             )
         else:
             is_live = False
+            was_live = False
             release_timestamp = None
 
         formats, playlist_subtitles = self.handle_formats(playlist_url, video_uid)
         duration = video_info.get("duration")
         estimate_filesize(formats, duration)
 
-        if is_live and not (
-            formats
-            or self.get_param("wait_for_video")
-            or self.get_param("ignore_no_formats_error")
-        ):
-            raise ExtractorError("This live event has not started yet.")
+        if is_live and not (formats or self.get_param("ignore_no_formats_error")):
+            if was_live:
+                raise ExtractorError("This live event has ended.")
+            if not self.get_param("wait_for_video"):
+                raise ExtractorError("This live event has not started yet.")
 
         return {
             "id": video_uid,
@@ -383,6 +384,7 @@ class YoumakerIE(InfoExtractor):
             "description": info.get("description"),
             "formats": formats,
             "is_live": is_live,
+            "was_live": is_live,
             "timestamp": parse_iso8601(info.get("uploaded_at")),
             "release_timestamp": release_timestamp,
             "uploader": info.get("uploaded_by"),
