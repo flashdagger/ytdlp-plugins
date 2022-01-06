@@ -414,7 +414,6 @@ class ServusTVIE(InfoExtractor):
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
-        print(video_id)
         parsed_url = ParsedURL(url)
         url_query = {key.lower(): value for key, value in parsed_url.query().items()}
 
