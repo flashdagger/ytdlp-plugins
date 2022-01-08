@@ -292,8 +292,12 @@ class ServusTVIE(InfoExtractor):
         if errors and info.get("videoUrl") is None:
             raise ExtractorError(errormsg, expected=True)
 
+        duration = info.get("duration")
+        if is_live:
+            duration = None
+        elif not duration:
+            is_live = True
         formats, subtitles = self._download_formats(info, video_id)
-        duration = None if is_live else info.get("duration")
         estimate_filesize(formats, duration)
         self._auto_merge_formats(formats)
 
