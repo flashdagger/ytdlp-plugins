@@ -12,7 +12,7 @@ from yt_dlp.utils import (
     parse_iso8601,
     traverse_obj,
 )
-from ytdlp_plugins.utils import estimate_filesize, ParsedURL
+from ytdlp_plugins.utils import ParsedURL
 
 __version__ = "2022.01.09"
 
@@ -298,7 +298,6 @@ class ServusTVIE(InfoExtractor):
         elif not duration:
             is_live = True
         formats, subtitles = self._download_formats(info, video_id)
-        estimate_filesize(formats, duration)
         self._auto_merge_formats(formats)
 
         return {
