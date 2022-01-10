@@ -4,7 +4,6 @@ import re
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.extractor.peertube import PeerTubeIE
 from yt_dlp.utils import UnsupportedError
-from ytdlp_plugins.utils import ParsedURL
 
 __version__ = "2021.11.28"
 
@@ -22,7 +21,8 @@ class Auf1IE(InfoExtractor):
 
     _TESTS = [
         {
-            "url": "https://auf1.tv/nachrichten-auf1/ampelkoalition-eine-abrissbirne-fuer-deutschland/",
+            "url": "https://auf1.tv/nachrichten-auf1/"
+            "ampelkoalition-eine-abrissbirne-fuer-deutschland/",
             "info_dict": {
                 "id": "rKjpWNnocoARnj4pQMRKXQ",
                 "title": "Ampelkoalition: Eine Abrissbirne für Deutschland?",
@@ -49,34 +49,32 @@ class Auf1IE(InfoExtractor):
                 "title": "AUF1.TV - Alle Videos",
             },
             "params": {"skip_download": True},
-            "playlist_mincount": 10,
+            "playlist_mincount": 400,
         },
     ]
 
     def _real_extract(self, url):
         page_id = self._match_id(url)
-        parsed_url = ParsedURL(url)
+        base_url = self._search_regex(r"(https?://[^/]+)", url, "base url")
         webpage = self._download_webpage(url, video_id=page_id)
 
-        match = self._html_search_regex(
-            r"<link\s+[^>]*href=\"([^\"]+/payload.js)", webpage, "payload.js url"
+        payloadjs_path = self._html_search_regex(
+            r'<link\s+[^>]*href="(/[^"]+/payload.js)', webpage, "payload.js url"
         )
-        payloadjs_url = f"{parsed_url.scheme}://{parsed_url.netloc}{match}"
+
         payloadjs_string = self._download_webpage(
-            payloadjs_url,
+            f"{base_url}{payloadjs_path}",
             video_id=page_id,
             encoding="unicode_escape",
             note="Downloading payload.js",
         )
 
-        peertube_urls = []
-        for embed_url in re.findall(
-            r'"(https?://[^/]+/videos/embed/[^"]+)"', payloadjs_string
-        ):
-            parsed_url = ParsedURL(embed_url)
-            peertube_urls.append(
-                f"peertube:{parsed_url.netloc}:{parsed_url.path.split('/')[-1]}"
+        peertube_urls = [
+            f"peertube:{netloc}:{video_id}"
+            for netloc, video_id in re.findall(
+                r'"https?://([^/]+)/videos/embed/([^"?]+)', payloadjs_string
             )
+        ]
 
         if not peertube_urls:
             raise UnsupportedError(url)
