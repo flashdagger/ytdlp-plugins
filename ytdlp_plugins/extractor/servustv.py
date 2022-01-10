@@ -14,7 +14,7 @@ from yt_dlp.utils import (
 )
 from ytdlp_plugins.utils import estimate_filesize, ParsedURL
 
-__version__ = "2022.01.07"
+__version__ = "2022.01.09"
 
 
 class ServusTVIE(InfoExtractor):
