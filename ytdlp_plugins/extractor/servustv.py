@@ -456,8 +456,10 @@ class ServusTVIE(InfoExtractor):
         # create playlist from blocks
         page_id = self._page_id(json_obj)
         page_post = traverse_obj(json_obj, ("source", "post", str(page_id)), default={})
-        url = traverse_obj(page_post, ("stv_embedded_video", "link"), default=None)
-        urls = [url] if url else []
+        embed_url = traverse_obj(
+            page_post, ("stv_embedded_video", "link"), default=None
+        )
+        urls = [embed_url] if embed_url else []
         urls.extend(self._urls_from_blocks(page_post.get("blocks", ())))
         if urls:
             return self.playlist_from_matches(
@@ -469,7 +471,7 @@ class ServusTVIE(InfoExtractor):
                 ie=self.ie_key(),
             )
 
-        # finally create playlist from query
+        # finally, create playlist from query
         query_type, query_id = self.taxonomy(json_obj, page_id, url)
         return self.playlist_result(
             self._paged_playlist_by_query(
