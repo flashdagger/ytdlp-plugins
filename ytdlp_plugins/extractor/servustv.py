@@ -322,16 +322,17 @@ class ServusTVIE(InfoExtractor):
         }
 
     def _live_stream_from_schedule(self, schedule):
-        live_url = self._LIVE_URLS["AT"]
+        assert schedule
+        video_url = self._LIVE_URLS.get(self.country_code, self._LIVE_URLS["AT"])
+
         for item in sorted(
             schedule, key=lambda x: x.get("is_live", False), reverse=True
         ):
-            is_live = item.get("is_live", False)
-            video_url = (
-                self._LIVE_URLS.get(self.country_code, live_url) if is_live else None
-            )
+            if item.get("is_live", False) is False:
+                self.report_warning("Livestream might not be available")
+
             return self._entry_by_id(
-                item["aa_id"].lower(), video_url=video_url, is_live=is_live
+                item["aa_id"].lower(), video_url=video_url, is_live=True
             )
 
     def _paged_playlist_by_query(
