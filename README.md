@@ -15,9 +15,9 @@ You can install ytdlp-servustv via pip:
 
 Note that on some systems, you may need to use `py` or `python` instead of `python3`
 
-## example: show the 20 recent titles from channel
+## example: show all titles from channel
 
-  `python3 -m ytdlp_plugins -e --playlist-items 1-20 https://www.servustv.com/unterhaltung/b/spielfilme/aa-1u4ebfxk52111/`
+  `python3 -m ytdlp_plugins -e https://www.servustv.com/unterhaltung/b/spielfilme/aa-1u4ebfxk52111/`
 
 
 ## yt-dlp
