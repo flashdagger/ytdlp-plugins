@@ -1,4 +1,5 @@
 # coding: utf-8
+import re
 from operator import itemgetter
 from urllib.parse import unquote_plus
 
@@ -49,6 +50,9 @@ class ServusTVIE(InfoExtractor):
                 "id": "aa-273cebhp12111",
                 "ext": "mp4",
                 "title": "Was lebt im Steinbruch?",
+                "series": "P.M. Wissen",
+                "season_number": 1,
+                "episode_number": 113,
                 "description": "md5:a905b6135469cf60a07d4d0ae1e8d49a",
                 "duration": 271,
                 "timestamp": int,
@@ -300,9 +304,19 @@ class ServusTVIE(InfoExtractor):
         formats, subtitles = self._download_formats(info, video_id)
         self._auto_merge_formats(formats)
 
+        program_info = {"series": info.get("label"), "chapter": info.get("chapter")}
+        match = re.match(r"[^\d]+(\d+)", info.get("season", ""))
+        if match:
+            program_info["season_number"] = int(match[1])
+        match = re.match(r"Episode\s+(\d+)(?:\s+-(.*))?", info.get("chapter", ""))
+        if match:
+            program_info["episode_number"] = int(match[1])
+            program_info["chapter"] = match[2] and match[2].strip()
+
         return {
             "id": video_id,
-            "title": info.get("title"),
+            "title": info.get("title", "").strip() or program_info.get("chapter"),
+            **program_info,
             "description": info.get("description"),
             "thumbnail": info.get("poster"),
             "duration": duration,
