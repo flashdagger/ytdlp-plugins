@@ -337,7 +337,12 @@ class ServusTVIE(InfoExtractor):
 
     def _live_stream_from_schedule(self, schedule):
         assert schedule
-        video_url = self._LIVE_URLS.get(self.country_code, self._LIVE_URLS["AT"])
+        if self.country_code in self._LIVE_URLS:
+            video_url = self._LIVE_URLS[self.country_code]
+        else:
+            video_url = self._LIVE_URLS["DE"].replace(
+                "/de_DE/", f"/de_{self.country_code}/"
+            )
 
         for item in sorted(
             schedule, key=lambda x: x.get("is_live", False), reverse=True
