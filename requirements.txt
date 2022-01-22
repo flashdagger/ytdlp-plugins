@@ -45,7 +45,7 @@ identify==2.4.4
     # via pre-commit
 idna==3.3
     # via requests
-importlib-metadata==4.10.0
+importlib-metadata==4.10.1
     # via
     #   keyring
     #   twine
@@ -84,7 +84,7 @@ platformdirs==2.4.1
     #   virtualenv
 pluggy==1.0.0
     # via pytest
-pre-commit==2.16.0
+pre-commit==2.17.0
     # via -r requirements.in
 py==1.11.0
     # via
@@ -98,7 +98,7 @@ pygments==2.11.2
     # via readme-renderer
 pylint==2.12.2
     # via -r requirements.in
-pyparsing==3.0.6
+pyparsing==3.0.7
     # via packaging
 pytest==6.2.5
     # via
@@ -159,7 +159,7 @@ websockets==10.1
     # via yt-dlp
 wrapt==1.13.3
     # via astroid
-yt-dlp==2021.12.27
+yt-dlp==2022.1.21
     # via ytdlp-plugins
 ytdlp-plugins==2021.12.27
     # via ytdlp-servustv
