@@ -256,7 +256,7 @@ class ServusTVIE(InfoExtractor):
             )
 
     def _download_formats(self, info, video_id):
-        if not info["videoUrl"]:
+        if not info.get("videoUrl"):
             return [], {}
 
         try:
@@ -291,7 +291,8 @@ class ServusTVIE(InfoExtractor):
         if "message" in info:
             raise ExtractorError(info["message"], expected=True)
 
-        info.setdefault("videoUrl", video_url)
+        if video_url:
+            info["videoUrl"] = video_url
         errors = ", ".join(info.get("playabilityErrors", ()))
         errormsg = f'{info.get("title", "Unknown")} - {errors}'
         available_from = traverse_obj(
@@ -309,7 +310,7 @@ class ServusTVIE(InfoExtractor):
             countries = set(self._GEO_COUNTRIES) - set(info.get("blockedCountries", ()))
             raise GeoRestrictedError(errormsg, countries=countries)
 
-        if errors and info.get("videoUrl") is None and not wait_for_video:
+        if errors and not (info.get("videoUrl") or wait_for_video):
             raise ExtractorError(errormsg, expected=True)
 
         duration = info.get("duration")
