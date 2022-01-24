@@ -35,6 +35,7 @@ class ServusTVIE(InfoExtractor):
 
     _API_URL = "https://api-player.redbull.com/stv/servus-tv"
     _QUERY_API_URL = "https://backend.servustv.com/wp-json/rbmh/v2/query-filters/query/"
+    _LOGO = "https://presse.servustv.com/Content/76166/cfbc6a68-fd77-46d6-8149-7f84f76efe5c/"
     _LIVE_URLS = {
         "AT": "https://dms.redbull.tv/v4/destination/stv/stv-linear"
         "/personal_computer/chrome/at/de_AT/playlist.m3u8",
@@ -333,7 +334,7 @@ class ServusTVIE(InfoExtractor):
             "title": info.get("title", "").strip() or program_info.get("chapter"),
             **program_info,
             "description": info.get("description"),
-            "thumbnail": info.get("poster"),
+            "thumbnail": info.get("poster", self._LOGO),
             "duration": duration,
             "timestamp": parse_iso8601(info.get("currentSunrise")),
             "release_timestamp": parse_iso8601(available_from),
