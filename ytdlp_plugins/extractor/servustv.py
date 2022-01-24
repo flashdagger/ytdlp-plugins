@@ -255,6 +255,9 @@ class ServusTVIE(InfoExtractor):
             )
 
     def _download_formats(self, info, video_id):
+        if not info["videoUrl"]:
+            return [], {}
+
         try:
             formats, subtitles = self._extract_m3u8_formats_and_subtitles(
                 info["videoUrl"],
@@ -290,10 +293,22 @@ class ServusTVIE(InfoExtractor):
         info.setdefault("videoUrl", video_url)
         errors = ", ".join(info.get("playabilityErrors", ()))
         errormsg = f'{info.get("title", "Unknown")} - {errors}'
+        available_from = traverse_obj(
+            info,
+            ("playabilityErrorDetails", "NOT_YET_AVAILABLE", "availableFrom"),
+            default=None,
+        )
+        wait_for_video = bool(
+            errors == "NOT_YET_AVAILABLE"
+            and available_from
+            and self.get_param("wait_for_video")
+        )
+
         if "GEO_BLOCKED" in errors:
             countries = set(self._GEO_COUNTRIES) - set(info.get("blockedCountries", ()))
             raise GeoRestrictedError(errormsg, countries=countries)
-        if errors and info.get("videoUrl") is None:
+
+        if errors and info.get("videoUrl") is None and not wait_for_video:
             raise ExtractorError(errormsg, expected=True)
 
         duration = info.get("duration")
@@ -321,6 +336,7 @@ class ServusTVIE(InfoExtractor):
             "thumbnail": info.get("poster"),
             "duration": duration,
             "timestamp": parse_iso8601(info.get("currentSunrise")),
+            "release_timestamp": parse_iso8601(available_from),
             "is_live": is_live,
             "categories": [info["label"]] if info.get("label") else [],
             "age_limit": int(
