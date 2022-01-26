@@ -306,7 +306,7 @@ class ServusTVIE(InfoExtractor):
             and self.get_param("wait_for_video")
         )
 
-        if "GEO_BLOCKED" in errors:
+        if "GEO_BLOCKED" in errors and not info.get("videoUrl"):
             countries = set(self._GEO_COUNTRIES) - set(info.get("blockedCountries", ()))
             raise GeoRestrictedError(errormsg, countries=countries)
 
