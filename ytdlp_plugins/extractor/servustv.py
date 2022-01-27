@@ -15,7 +15,7 @@ from yt_dlp.utils import (
 )
 from ytdlp_plugins.utils import ParsedURL
 
-__version__ = "2022.01.24"
+__version__ = "2022.01.27"
 
 
 class ServusTVIE(InfoExtractor):
