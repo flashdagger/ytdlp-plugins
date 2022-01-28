@@ -354,7 +354,6 @@ class ServusTVIE(InfoExtractor):
         }
 
     def _live_stream_from_schedule(self, schedule):
-        assert schedule
         if self.country_code in self._LIVE_URLS:
             video_url = self._LIVE_URLS[self.country_code]
         else:
