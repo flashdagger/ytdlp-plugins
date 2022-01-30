@@ -5,7 +5,7 @@ from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.extractor.peertube import PeerTubeIE
 from yt_dlp.utils import UnsupportedError
 
-__version__ = "2021.11.28"
+__version__ = "2022.01.30"
 
 
 # pylint: disable=abstract-method
