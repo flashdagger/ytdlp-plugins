@@ -112,7 +112,8 @@ class ServusTVIE(InfoExtractor):
                 {
                     "info_dict": {
                         "id": "aa-24hxt6ycw1w12",
-                        "title": "Ich, Bauer",
+                        "title": "Der Generationenhof",
+                        "series": "Ich, Bauer",
                         "description": "md5:01335fd4f02d66d6ae9af2c5387d18a3",
                         "timestamp": int,
                         "upload_date": "20210501",
@@ -139,7 +140,7 @@ class ServusTVIE(InfoExtractor):
                 {
                     "info_dict": {
                         "id": "aa-28zh3u3dn2111",
-                        "title": "Corona-Doku - Teil 3",
+                        "title": "Corona - auf der Suche nach der Wahrheit Teil 3",
                         "description": "md5:5e020c2618a6d6d2b8a316891c8b8195",
                         "timestamp": int,
                         "upload_date": "20211222",
@@ -277,16 +278,13 @@ class ServusTVIE(InfoExtractor):
         return formats, subtitles
 
     def _entry_by_id(self, video_id, video_url=None, is_live=False):
-        info = (
-            self._download_json(
-                self._API_URL,
-                query={"videoId": video_id.upper(), "timeZone": self.timezone},
-                video_id=video_id,
-                fatal=False,
-                expected_status=(400, 404, 500),
-            )
-            or {"message": "Bad JSON Response"}
-        )
+        info = self._download_json(
+            self._API_URL,
+            query={"videoId": video_id.upper(), "timeZone": self.timezone},
+            video_id=video_id,
+            fatal=False,
+            expected_status=(400, 404, 500),
+        ) or {"message": "Bad JSON Response"}
 
         if "message" in info:
             raise ExtractorError(info["message"], expected=True)
