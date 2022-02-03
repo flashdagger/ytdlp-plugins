@@ -1,5 +1,6 @@
 # coding: utf-8
 import re
+from contextlib import suppress
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.extractor.peertube import PeerTubeIE
@@ -42,10 +43,20 @@ class Auf1IE(InfoExtractor):
             "params": {"skip_download": True, "nocheckcertificate": True},
         },
         {
-            # playlist
+            # playlist for category
+            "url": "https://auf1.tv/stefan-magnet-auf1/",
+            "info_dict": {
+                "id": "stefan-magnet-auf1",
+                "title": "Stefan Magnet AUF1",
+            },
+            "params": {"skip_download": True},
+            "playlist_mincount": 20,
+        },
+        {
+            # playlist for all videos
             "url": "https://auf1.tv/videos",
             "info_dict": {
-                "id": "videos",
+                "id": "all_videos",
                 "title": "AUF1.TV - Alle Videos",
             },
             "params": {"skip_download": True},
@@ -53,8 +64,28 @@ class Auf1IE(InfoExtractor):
         },
     ]
 
+    def all_videos_from_api(self):
+        all_videos = self._download_json("https://auf1.at/api/getVideos", video_id=None)
+        urls = []
+        for item in all_videos:
+            with suppress(KeyError):
+                urls.append(
+                    f"https://auf1.tv/{item['show']['public_id']}/{item['public_id']}/"
+                )
+
+        return self.playlist_from_matches(
+            urls,
+            playlist_id="all_videos",
+            playlist_title="AUF1.TV - Alle Videos",
+            ie=self.ie_key(),
+        )
+
     def _real_extract(self, url):
         page_id = self._match_id(url)
+
+        if page_id == "videos":
+            return self.all_videos_from_api()
+
         base_url = self._search_regex(r"(https?://[^/]+)", url, "base url")
         webpage = self._download_webpage(url, video_id=page_id)
 
