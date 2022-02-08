@@ -348,6 +348,12 @@ class BitTubeQueryIE(BitTubeUserIE):
                 "id": "recommended",
                 "title": "recommended",
             },
+            "expected_warnings": [
+                'Extractor failed to obtain "title".',
+                "No video formats found!",
+                "Requested format is not available",
+            ],
+            "params": {"ignore_no_formats_error": True},
         },
         {
             "url": "https://bittube.tv/topic/catsoftube",
@@ -356,6 +362,12 @@ class BitTubeQueryIE(BitTubeUserIE):
                 "id": "topic/catsoftube",
                 "title": "topic/catsoftube",
             },
+            "expected_warnings": [
+                'Extractor failed to obtain "title".',
+                "No video formats found!",
+                "Requested format is not available",
+            ],
+            "params": {"ignore_no_formats_error": True},
         },
     ]
 
