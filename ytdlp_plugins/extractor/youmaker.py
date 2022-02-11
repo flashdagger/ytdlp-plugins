@@ -21,7 +21,7 @@ __version__ = "2022.01.05.post1"
 class YoumakerIE(InfoExtractor):
     _VALID_URL = r"""(?x)
                     https?://(?:[a-z][a-z0-9]+\.)?youmaker\.com/
-                    (?:v|video|embed|channel|playlist)/
+                    (?:v|c|video|embed|channel|playlist)/
                     (?P<id>[0-9a-zA-Z-]+)
                     """
 
@@ -92,6 +92,18 @@ class YoumakerIE(InfoExtractor):
             },
         },
         {
+            # all videos from channel (new scheme)
+            "url": "https://youmaker.com/c/QDRVZ1RAm2DY_Horror-Sci-Fi-Classics.html",
+            "playlist_mincount": 10,
+            "info_dict": {
+                "id": "694dd4c5-edcc-4718-9d1e-d907b0994fa7",
+                "title": "Horror & Sci-Fi + Classics",
+                "description": "Horror & Sci-Fi + Classics is meant to provide a fun place to enjoy"
+                " and get excited about classic films and TV series from the past"
+                " that you might have missed and now could be interested in watching.\n\n",
+            },
+        },
+        {
             # all videos from channel playlist
             "url": "https://www.youmaker.com/channel/f8d585f8-2ff7-4c3c-b1ea-a78d77640d54/"
             "playlists/f99a120c-7a5e-47b2-9235-3817d1c12662",
@@ -155,6 +167,10 @@ class YoumakerIE(InfoExtractor):
         {"url": "https://vs.youmaker.com/v/Dnnrq0lw8062/", "only_matching": True},
         {"url": "https://youmaker.com/playlist/v6aLJnrqkoXO/", "only_matching": True},
         {"url": "http://youmaker.com/channel/ntd/", "only_matching": True},
+        {
+            "url": "https://youmaker.com/c/Vvle0k05VQpm_Musical-Moments-East.html",
+            "only_matching": True,
+        },
     ]
     REQUEST_LIMIT = 50
 
@@ -496,7 +512,10 @@ class YoumakerIE(InfoExtractor):
                 r"(/channel/[a-zA-z0-9-]+)?/playlists?/(?P<uid>[a-zA-z0-9-]+)",
                 self._playlist_entries_by_id,
             ),
-            (r"/channel/(?P<uid>[a-zA-z0-9-]+)/?$", self._channel_entries_by_id),
+            (
+                r"/(?:c|channel)/(?P<uid>[a-zA-z0-9-]+)(?:[^/]*)/?$",
+                self._channel_entries_by_id,
+            ),
         )
 
         for regex, func in dispatch:
