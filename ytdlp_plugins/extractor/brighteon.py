@@ -205,6 +205,18 @@ class BrighteonIE(InfoExtractor):
                     url, video_id=video_id, fatal=False
                 )
                 self._rename_formats(media_formats, "hls")
+
+                mpg_formats = []
+                for fmt in media_formats:
+                    mpg_fmt = {
+                        key: value
+                        for key, value in fmt.items()
+                        if key not in {"url", "manifest_url", "protocol"}
+                    }
+                    mpg_fmt["url"] = fmt["url"].replace(".m3u8", ".ts")
+                    mpg_formats.append(mpg_fmt)
+                self._rename_formats(mpg_formats, "mpeg")
+                media_formats.extend(mpg_formats)
             elif url.endswith(".mpd"):
                 media_formats = self._extract_mpd_formats(
                     url, video_id=video_id, fatal=False
