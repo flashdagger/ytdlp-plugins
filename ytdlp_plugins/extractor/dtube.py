@@ -1,4 +1,5 @@
 # coding: utf-8
+import json
 import re
 from datetime import datetime, timedelta
 
@@ -17,6 +18,7 @@ from yt_dlp.utils import (
     traverse_obj,
     update_url_query,
     float_or_none,
+    parse_iso8601,
 )
 
 __version__ = "2022.01.02"
@@ -90,6 +92,28 @@ class DTubeIE(InfoExtractor):
             "params": {
                 "format": "480",
             },
+        },
+        {
+            # using steemit API
+            "url": "https://d.tube/v/cahlen/hcyx513ospn",
+            "md5": "fd03f59d2c1f7b1e0ed5a2098116e443",
+            "info_dict": {
+                "id": "cahlen/hcyx513ospn",
+                "title": "Wizard's Life - February 20th, 2022",
+                "description": "md5:4308b3aac098bf762489eeeea290b8e1",
+                "ext": "mp4",
+                "thumbnail": "https://ipfs.cahlen.org/ipfs/"
+                "QmW9PQUeZAZZ2zryMp5kEVQqpKjJpHNGGUShmojcsW4zQZ",
+                "tags": ["dtube", "life"],
+                "duration": 1120,
+                "uploader_id": "cahlen",
+                "upload_date": "20220220",
+                "timestamp": 1645382061.0,
+            },
+            "params": {
+                "format": "src",
+            },
+            "expected_warnings": ["Unable to download avalon metadata"],
         },
         # dailymotion forward
         {
@@ -225,6 +249,8 @@ class DTubeIE(InfoExtractor):
             if candidate in base_urls:
                 base_urls.remove(candidate)
                 base_urls.insert(0, candidate)
+            elif candidate:
+                base_urls.insert(0, f"{candidate}/ipfs")
 
             for candidate in base_urls:
                 media_url = f"{candidate}/{content_id}"
@@ -262,9 +288,38 @@ class DTubeIE(InfoExtractor):
             f"https://avalon.d.tube/{endpoint}",
             video_id,
             note="Downloading avalon metadata",
+            errnote="Unable to download avalon metadata",
+            fatal=False,
         )
 
         return result
+
+    def steemit_api(self, video_id):
+        data = {
+            "id": 0,
+            "jsonrpc": "2.0",
+            "method": "call",
+            "params": ["condenser_api", "get_state", [f"/dtube/@{video_id}"]],
+        }
+        result = self._download_json(
+            "https://api.steemit.com/",
+            video_id,
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(data).encode("utf-8"),
+            note="Downloading steemit metadata",
+        )
+
+        content = traverse_obj(result, ("result", "content", video_id), default={})
+        metadata = json.loads(content.get("json_metadata", "{}"))
+
+        return {
+            "_id": video_id,
+            "author": content.get("author"),
+            "link": content.get("permlink"),
+            "json": metadata.get("video", {}),
+            "ts": (parse_iso8601(content.get("last_update")) or 0) * 1000,
+            "tags": dict.fromkeys(metadata.get("tags", ()), 0),
+        }
 
     def entry_from_avalon_result(self, result, from_playlist=False):
         video_id = f"{result['author']}/{result['link']}"
@@ -334,6 +389,9 @@ class DTubeIE(InfoExtractor):
     def _real_extract(self, url):
         video_id = self._match_id(url)
         result = self.avalon_api(f"content/{video_id}", video_id)
+        if not result:
+            result = self.steemit_api(video_id)
+
         return self.entry_from_avalon_result(result)
 
 
