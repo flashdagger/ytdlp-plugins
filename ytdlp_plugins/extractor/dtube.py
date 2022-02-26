@@ -33,7 +33,7 @@ class DTubeIE(InfoExtractor):
                     """
     IE_NAME = "d.tube"
 
-    PROVIDER_URLS = {
+    GATEWAY_URLS = {
         "ipfs": [
             "https://player.d.tube/ipfs",
             "https://ipfs.d.tube/ipfs",
@@ -235,7 +235,7 @@ class DTubeIE(InfoExtractor):
 
     def formats(self, files):
         # pylint: disable=undefined-loop-variable
-        for provider, base_urls in self.PROVIDER_URLS.items():
+        for provider, default_gateways in self.GATEWAY_URLS.items():
             if provider in files and "vid" in files[provider]:
                 break
         else:
@@ -243,17 +243,21 @@ class DTubeIE(InfoExtractor):
 
         formats = []
         media_format = {}
-        candidate = files[provider].get("gw", "").rstrip("/")
+        gateway = files[provider].get("gw", "").rstrip("/")
+        if gateway and not re.match(r".*/(?:btfs|ipfs)$", gateway):
+            gateway = f"{gateway}/{provider}"
+
+        if gateway in default_gateways:
+            default_gateways.remove(gateway)
+            default_gateways.insert(0, gateway)
+
+        loop_gateways = list(default_gateways)
+        if gateway and gateway not in loop_gateways:
+            loop_gateways.insert(0, gateway)
 
         for format_id, content_id in sorted(files[provider].get("vid", {}).items()):
-            if candidate in base_urls:
-                base_urls.remove(candidate)
-                base_urls.insert(0, candidate)
-            elif candidate:
-                base_urls.insert(0, f"{candidate}/ipfs")
-
-            for candidate in base_urls:
-                media_url = f"{candidate}/{content_id}"
+            for gateway in list(loop_gateways):
+                media_url = f"{gateway}/{content_id}"
                 media_format = (
                     self.ffprobe_format(media_url)
                     if self.ffmpeg.probe_available
@@ -262,8 +266,10 @@ class DTubeIE(InfoExtractor):
                 if media_format:
                     media_format["format_id"] = format_id
                     break
+                if len(loop_gateways) > 1:
+                    loop_gateways.remove(gateway)
                 media_format = {"url": media_url, "ext": "mp4", "format_id": format_id}
-                self.write_debug(f"gateway {candidate!r} timed out")
+                self.write_debug(f"gateway {gateway!r} timed out")
 
             formats.append(media_format)
         self._sort_formats(formats)
