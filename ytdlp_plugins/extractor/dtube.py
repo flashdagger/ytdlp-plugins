@@ -374,7 +374,8 @@ class DTubeIE(InfoExtractor):
             "description": info.get("desc") or info.get("description"),
             "thumbnail": info.get("thumbnailUrl"),
             "tags": tags,
-            "duration": info.get("duration")
+            "duration": float(info.get("duration") or 0)
+            or None
             or int_or_none(info.get("dur"))
             or parse_duration(info.get("dur")),
             "timestamp": float_or_none(result.get("ts"), scale=1000),
