@@ -164,6 +164,8 @@ class DTubeIE(InfoExtractor):
         metadata = self.ffmpeg.get_metadata_object(
             media_url,
             opts=(
+                "-fflags",
+                "+ignidx",
                 "-timeout",
                 str(timeout),
                 "-headers",
