@@ -22,9 +22,9 @@ certifi==2021.10.8
     # via requests
 cfgv==3.3.1
     # via pre-commit
-charset-normalizer==2.0.11
+charset-normalizer==2.0.12
     # via requests
-click==8.0.3
+click==8.0.4
     # via black
 colorama==0.4.4
     # via
@@ -37,13 +37,13 @@ distlib==0.3.4
     # via virtualenv
 docutils==0.18.1
     # via readme-renderer
-filelock==3.4.2
+filelock==3.6.0
     # via virtualenv
-identify==2.4.9
+identify==2.4.11
     # via pre-commit
 idna==3.3
     # via requests
-importlib-metadata==4.11.0
+importlib-metadata==4.11.2
     # via
     #   keyring
     #   twine
@@ -75,7 +75,7 @@ pathspec==0.9.0
     # via black
 pkginfo==1.8.2
     # via twine
-platformdirs==2.5.0
+platformdirs==2.5.1
     # via
     #   black
     #   pylint
@@ -100,7 +100,7 @@ pytest==7.0.1
     # via
     #   -r requirements.in
     #   pytest-subtests
-pytest-subtests==0.6.0
+pytest-subtests==0.7.0
     # via -r requirements.in
 pywin32-ctypes==0.2.0
     # via keyring
@@ -129,11 +129,11 @@ tomli==2.0.1
     #   black
     #   mypy
     #   pytest
-tqdm==4.62.3
+tqdm==4.63.0
     # via twine
 twine==3.8.0
     # via -r requirements.in
-typing-extensions==4.0.1
+typing-extensions==4.1.1
     # via
     #   astroid
     #   black
@@ -143,11 +143,11 @@ urllib3==1.26.8
     # via
     #   requests
     #   twine
-virtualenv==20.13.1
+virtualenv==20.13.2
     # via pre-commit
 webencodings==0.5.1
     # via bleach
-websockets==10.1
+websockets==10.2
     # via yt-dlp
 wrapt==1.13.3
     # via astroid
