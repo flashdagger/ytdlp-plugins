@@ -298,18 +298,14 @@ class ServusTVIE(InfoExtractor):
             ("playabilityErrorDetails", "NOT_YET_AVAILABLE", "availableFrom"),
             default=None,
         )
-        wait_for_video = bool(
-            errors == "NOT_YET_AVAILABLE"
-            and available_from
-            and self.get_param("wait_for_video")
-        )
 
-        if "GEO_BLOCKED" in errors and not info.get("videoUrl"):
-            countries = set(self._GEO_COUNTRIES) - set(info.get("blockedCountries", ()))
-            raise GeoRestrictedError(errormsg, countries=countries)
-
-        if errors and not (info.get("videoUrl") or wait_for_video):
-            raise ExtractorError(errormsg, expected=True)
+        if errors and not info.get("videoUrl"):
+            if "GEO_BLOCKED" in errors:
+                countries = set(self._GEO_COUNTRIES) - set(
+                    info.get("blockedCountries", ())
+                )
+                raise GeoRestrictedError(errormsg, countries=countries)
+            self.raise_no_formats(errormsg, expected=True)
 
         duration = info.get("duration")
         if is_live:
