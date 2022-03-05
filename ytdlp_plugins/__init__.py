@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import importlib
+import re
 import sys
 import traceback
 from contextlib import suppress
@@ -148,6 +149,8 @@ def load_plugins(name, suffix, namespace=None):
         return check_predicate
 
     for finder, module_name, _is_pkg in iter_plugin_modules(name):
+        if re.match(r"^(\w+\.)*_", module_name):
+            continue
         try:
             if isinstance(finder, zipimporter):
                 module = finder.load_module(module_name)

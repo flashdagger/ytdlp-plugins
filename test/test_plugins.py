@@ -49,8 +49,17 @@ class TestPlugins(unittest.TestCase):
         self.assertIn(self.SAMPLE_PLUGIN_DIR, plugin_dirs)
 
     def test_extractor_classes(self):
+        for module_name in tuple(sys.modules):
+            if module_name.startswith("ytdlp_plugins.extractor"):
+                del sys.modules[module_name]
         plugins_ie = load_plugins("extractor", "IE")
+        self.assertIn("ytdlp_plugins.extractor.example", sys.modules.keys())
         self.assertIn("ExamplePluginIE", plugins_ie.keys())
+        # don't load modules with underscore prefix
+        self.assertFalse(
+            "ytdlp_plugins.extractor._ignore" in sys.modules.keys(),
+            "loaded module beginning with underscore",
+        )
 
     def test_postprocessor_classes(self):
         plugins_pp = load_plugins("postprocessor", "PP")
