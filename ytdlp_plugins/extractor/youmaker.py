@@ -367,21 +367,23 @@ class YoumakerIE(InfoExtractor):
             video_info, ["videoAssets", "Stream"], expected_type=str
         )
         if info.get("live") and playlist_url is None:
-            try:
-                live_info = self._download_json(
+            live_info = (
+                self._download_json(
                     self._live_url(video_uid, "status"),
                     video_uid,
                     note="Checking live status",
+                    errnote="Live status not available",
+                    fatal=False,
                 )
-            except ExtractorError as exc:
-                raise ExtractorError("This live event was not scheduled yet.") from exc
+                or {}
+            )
 
             is_live = True
             was_live = traverse_obj(live_info, ("data", "status")) == "end"
             storage_path = traverse_obj(live_info, ("data", "storage_path"))
             release_timestamp = parse_iso8601(
                 traverse_obj(live_info, ("data", "start_time"))
-            )
+            ) or parse_iso8601(info.get("scheduled_time"))
 
             if was_live and storage_path:
                 is_live = False
@@ -395,11 +397,13 @@ class YoumakerIE(InfoExtractor):
         duration = video_info.get("duration")
         estimate_filesize(formats, duration)
 
-        if is_live and not (formats or self.get_param("ignore_no_formats_error")):
-            if was_live:
-                raise ExtractorError("This live event has ended.")
-            if not self.get_param("wait_for_video"):
-                raise ExtractorError("This live event has not started yet.")
+        if is_live and not formats:
+            errmsg = (
+                "This live event has ended."
+                if was_live
+                else "This live event has not started yet."
+            )
+            self.raise_no_formats(errmsg, expected=True)
 
         return {
             "id": video_uid,
