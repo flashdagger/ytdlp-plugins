@@ -42,6 +42,30 @@ class Auf1IE(InfoExtractor):
             },
             "params": {"skip_download": True, "nocheckcertificate": True},
         },
+        {  # JSON API without payload.js
+            "url": "https://auf1.tv/stefan-magnet-auf1/"
+            "heiko-schoening-chaos-und-krieg-gehoeren-leider-zu-deren-plan/",
+            "info_dict": {
+                "id": "dVk8Q3VNMLi7b7uhyuSSp6",
+                "ext": "mp4",
+                "title": "Heiko Schöning: „Chaos und Krieg gehören leider zu deren Plan“",
+                "description": "md5:6fb9e7eb469fc544223018a2ff3c998c",
+                "timestamp": 1646671536,
+                "uploader": "AUF1.TV",
+                "uploader_id": "25408",
+                "upload_date": "20220307",
+                "channel": "AUF1.TV",
+                "channel_url": "https://gegenstimme.tv/video-channels/auf1.tv",
+                "duration": 2089,
+                "view_count": int,
+                "like_count": int,
+                "dislike_count": int,
+                "tags": [],
+                "categories": ["News & Politics"],
+            },
+            "params": {"skip_download": True, "nocheckcertificate": True},
+            "expected_warnings": ["payload.js"],
+        },
         {
             # playlist for category
             "url": "https://auf1.tv/stefan-magnet-auf1/",
@@ -98,7 +122,15 @@ class Auf1IE(InfoExtractor):
             video_id=page_id,
             encoding="unicode_escape",
             note="Downloading payload.js",
+            errnote="payload.js",
+            fatal=False,
         )
+
+        if not payloadjs_string:
+            info = self._download_json(
+                f"https://auf1.at/api/getContent/{page_id}", page_id
+            )
+            payloadjs_string = f"\"{info.get('videoUrl')}\""
 
         peertube_urls = [
             f"peertube:{netloc}:{video_id}"
