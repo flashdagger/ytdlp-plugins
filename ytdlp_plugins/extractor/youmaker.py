@@ -210,7 +210,7 @@ class YoumakerIE(InfoExtractor):
         return self._fix_url("//vs.youmaker.com/assets")
 
     def _live_url(self, video_id, endpoint="playlist.m3u8"):
-        return self._fix_url(f"//live.youmaker.com/{video_id}/{endpoint}")
+        return self._fix_url(f"//live2.youmaker.com/{video_id}/{endpoint}")
 
     @staticmethod
     def _try_server_urls(url):
