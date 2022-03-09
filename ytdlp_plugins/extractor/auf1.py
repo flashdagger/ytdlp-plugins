@@ -13,7 +13,7 @@ from yt_dlp.utils import (
     clean_html,
 )
 
-__version__ = "2022.03.08"
+__version__ = "2022.03.09"
 
 
 # pylint: disable=abstract-method
