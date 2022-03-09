@@ -114,9 +114,9 @@ class Auf1IE(InfoExtractor):
                 time_left = start + max_duration_s - time.time()
                 error_code = getattr(exc.cause, "code", 0)
                 if error_code in {429} and time_left > 0.0:
-                    _, msg = str(exc).split(": ", maxsplit=1)
                     self.report_warning(
-                        f"{msg}. Pausing up to {time_left:.0f} seconds."
+                        f"HTTP Error 429: Too Many Requests "
+                        f"({time_left:.1f} seconds left)"
                     )
                     time.sleep(sleep_duration_s)
                     continue
