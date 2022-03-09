@@ -163,7 +163,7 @@ websockets==10.2
     # via yt-dlp
 wrapt==1.13.3
     # via astroid
-yt-dlp==2022.3.8.1
+yt-dlp==2022.3.8.2
     # via ytdlp-plugins
 ytdlp-plugins==2021.12.27
     # via ytdlp-auf1
