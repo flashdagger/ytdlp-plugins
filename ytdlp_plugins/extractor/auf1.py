@@ -1,6 +1,7 @@
 # coding: utf-8
 import re
 import time
+from urllib.error import HTTPError
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.extractor.peertube import PeerTubeIE
@@ -10,6 +11,7 @@ from yt_dlp.utils import (
     parse_duration,
     clean_html,
     traverse_obj,
+    UnsupportedError,
 )
 
 __version__ = "2022.03.09"
@@ -48,6 +50,7 @@ class Auf1IE(InfoExtractor):
                 "categories": ["News & Politics"],
             },
             "params": {"skip_download": True, "nocheckcertificate": True},
+            "expected_warnings": ["Retrying due to too many requests."],
         },
         {  # JSON API without payload.js
             "url": "https://auf1.tv/stefan-magnet-auf1/"
@@ -71,7 +74,7 @@ class Auf1IE(InfoExtractor):
                 "categories": ["News & Politics"],
             },
             "params": {"skip_download": True, "nocheckcertificate": True},
-            "expected_warnings": ["payload.js"],
+            "expected_warnings": ["Retrying due to too many requests."],
         },
         {
             # playlist for category
@@ -83,7 +86,7 @@ class Auf1IE(InfoExtractor):
             },
             "params": {"skip_download": True},
             "playlist_mincount": 300,
-            "expected_warnings": ["Too Many Requests"],
+            "expected_warnings": ["Retrying due to too many requests."],
         },
         {
             # playlist for all videos
@@ -94,7 +97,7 @@ class Auf1IE(InfoExtractor):
             },
             "params": {"skip_download": True},
             "playlist_mincount": 400,
-            "expected_warnings": ["Too Many Requests"],
+            "expected_warnings": ["Retrying due to too many requests."],
         },
     ]
 
@@ -125,28 +128,30 @@ class Auf1IE(InfoExtractor):
     def call_with_retries(
         self,
         operation,
-        fatal=True,
-        sleep_duration_s=5.0,
-        max_duration_s=30.0,
+        retry_durations_s=(20.0, 5.0, 5.0),
+        http_error_map=None,
     ):
+        http_error_map = http_error_map or {}
+        max_duration_s = sum(retry_durations_s)
         start = time.time()
-        while True:
+        for sleep_duration_s in retry_durations_s + (0,):
             try:
                 return operation()
             except ExtractorError as exc:
                 time_left = start + max_duration_s - time.time()
-                error_code = getattr(exc.cause, "code", 0)
-                if error_code in {429} and time_left > 0.0:
+                errorcode = exc.cause.code if isinstance(exc.cause, HTTPError) else None
+                if sleep_duration_s and errorcode == 429 and time_left > 0.0:
                     self.report_warning(
                         f"Retrying due to too many requests. "
-                        f"Will give up in {time_left:.1f} seconds."
+                        f"Giving up in {round(time_left):.0f} seconds."
                     )
                     time.sleep(sleep_duration_s)
                     continue
-
-                if not fatal:
-                    self.report_warning(exc)
-                    return False
+                for errors, exception in http_error_map.items():
+                    if isinstance(errors, int):
+                        errors = {errors}
+                    if errorcode in errors:
+                        raise exception from exc
                 raise
 
     def peertube_extract(self, url):
@@ -158,8 +163,7 @@ class Auf1IE(InfoExtractor):
 
         return self.call_with_retries(
             lambda: self.peertube_extract_url(url),
-            sleep_duration_s=3.0,
-            max_duration_s=5.0,
+            retry_durations_s=(3.0, 2.0),
         )
 
     def playlist_from_entries(self, all_videos, **kwargs):
@@ -186,11 +190,13 @@ class Auf1IE(InfoExtractor):
 
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
+        http_error_map = {500: UnsupportedError(url)}
 
         # single video
         if category:
             metadata = self.call_with_retries(
-                lambda: self.call_api(f"getContent/{page_id}", page_id)
+                lambda: self.call_api(f"getContent/{page_id}", page_id),
+                http_error_map=http_error_map,
             )
             peertube_url = self.parse_url(metadata.get("videoUrl"))
             peertube_info = (
@@ -202,14 +208,15 @@ class Auf1IE(InfoExtractor):
         if page_id == "videos":
             return self.playlist_from_entries(
                 self.call_with_retries(
-                    lambda: self.call_api("getVideos", video_id="all_videos")
+                    lambda: self.call_api("getVideos", video_id="all_videos"),
                 ),
                 playlist_id="all_videos",
                 playlist_title="AUF1.TV - Alle Videos",
             )
 
         metadata = self.call_with_retries(
-            lambda: self.call_api(f"getShow/{page_id}", page_id)
+            lambda: self.call_api(f"getShow/{page_id}", page_id),
+            http_error_map=http_error_map,
         )
 
         return self.playlist_from_entries(
