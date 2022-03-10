@@ -14,7 +14,7 @@ from yt_dlp.utils import (
     UnsupportedError,
 )
 
-__version__ = "2022.03.09"
+__version__ = "2022.03.10"
 
 
 # pylint: disable=abstract-method
