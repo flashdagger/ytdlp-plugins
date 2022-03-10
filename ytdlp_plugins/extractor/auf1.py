@@ -1,16 +1,18 @@
 # coding: utf-8
+import json
 import re
 import time
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.extractor.peertube import PeerTubeIE
 from yt_dlp.utils import (
-    UnsupportedError,
-    OnDemandPagedList,
     ExtractorError,
     parse_iso8601,
     parse_duration,
     clean_html,
+    traverse_obj,
+    js_to_json,
+    UnsupportedError,
 )
 
 __version__ = "2022.03.09"
@@ -23,7 +25,7 @@ class Auf1IE(InfoExtractor):
                     https?://
                         (?:www\.)?
                         (?:auf1\.tv/)
-                        (?:[^/]+/)*
+                        (?P<category>[^/]+/)?
                         (?P<id>[^/]+)
                     """
 
@@ -76,13 +78,13 @@ class Auf1IE(InfoExtractor):
         },
         {
             # playlist for category
-            "url": "https://auf1.tv/schicksale-auf1/",
+            "url": "https://auf1.tv/nachrichten-auf1/",
             "info_dict": {
-                "id": "schicksale-auf1",
-                "title": "Schicksale AUF1",
+                "id": "nachrichten-auf1",
+                "title": "Nachrichten AUF1",
             },
             "params": {"skip_download": True},
-            "playlist_mincount": 3,
+            "playlist_mincount": 300,
             "expected_warnings": ["Too Many Requests"],
         },
         {
@@ -93,10 +95,34 @@ class Auf1IE(InfoExtractor):
                 "title": "AUF1.TV - Alle Videos",
             },
             "params": {"skip_download": True},
-            "playlist_mincount": 5,
+            "playlist_mincount": 400,
             "expected_warnings": ["Too Many Requests"],
         },
     ]
+
+    @staticmethod
+    def parse_urls(html_string):
+        return [
+            f"peertube:{netloc}:{video_id}"
+            for netloc, video_id in re.findall(
+                r"[\"']https?://([^/]+)/videos/embed/([^\"'?]+)", html_string
+            )
+        ]
+
+    @staticmethod
+    def sparse_info(metadata):
+        return {
+            "id": metadata.get("public_id", "unknown"),
+            "url": metadata.get("videoUrl"),
+            "title": metadata.get("title"),
+            "description": clean_html(metadata.get("text")),
+            "duration": parse_duration(metadata.get("duration")),
+            "timestamp": parse_iso8601(metadata.get("published_at") or None),
+        }
+
+    def parse_url(self, url):
+        urls = self.parse_urls(repr(url))
+        return urls[0] if urls else None
 
     def call_api(self, endpoint, video_id=None, fatal=True):
         return self._download_json(
@@ -104,7 +130,11 @@ class Auf1IE(InfoExtractor):
         )
 
     def call_with_retries(
-        self, operation, default=None, sleep_duration_s=5.0, max_duration_s=30.0
+        self,
+        operation,
+        fatal=True,
+        sleep_duration_s=5.0,
+        max_duration_s=30.0,
     ):
         start = time.time()
         while True:
@@ -115,13 +145,16 @@ class Auf1IE(InfoExtractor):
                 error_code = getattr(exc.cause, "code", 0)
                 if error_code in {429} and time_left > 0.0:
                     self.report_warning(
-                        f"HTTP Error 429: Too Many Requests "
-                        f"({time_left:.1f} seconds left)"
+                        f"Retrying due to too many requests. "
+                        f"Will give up in {time_left:.1f} seconds."
                     )
                     time.sleep(sleep_duration_s)
                     continue
-                self.report_warning(exc)
-                return default
+
+                if not fatal:
+                    self.report_warning(exc)
+                    return False
+                raise
 
     def peertube_extract(self, url):
         if self.peertube_extract_url is None:
@@ -136,93 +169,86 @@ class Auf1IE(InfoExtractor):
             max_duration_s=5.0,
         )
 
-    @staticmethod
-    def parse_urls(html_string):
-        return [
-            f"peertube:{netloc}:{video_id}"
-            for netloc, video_id in re.findall(
-                r"[\"']https?://([^/]+)/videos/embed/([^\"'?]+)", html_string
+    def playlist_from_entries(self, all_videos, **kwargs):
+        with open("videos.json", "w") as fd:
+            json.dump(all_videos, fd, indent=4)
+        entries = []
+
+        for item in all_videos:
+            public_id = item.get("public_id")
+            if not public_id:
+                continue
+            category = traverse_obj(item, ("show", "public_id"), default="video")
+            entries.append(
+                {
+                    "_type": "url",
+                    "ie_key": self.ie_key(),
+                    **self.sparse_info(item),
+                    "url": f"//auf1.tv/{category}/{public_id}/",
+                }
             )
-        ]
-
-    def all_videos_from_api(self):
-        all_videos = self.call_with_retries(
-            lambda: self.call_api("getVideos", video_id="all_videos")
-        )
-        valid_videos = [item for item in all_videos if item.get("public_id")]
-
-        def fetch_page(page_number: int):
-            if page_number >= len(valid_videos):
-                return
-            self.to_screen(f"Downloading metadata {page_number} of {len(valid_videos)}")
-            item = valid_videos[page_number]
-            public_id = item["public_id"]
-            backup_info = {
-                "id": public_id,
-                "url": "//",
-                "title": item.get("title"),
-                "description": clean_html(item.get("text")),
-                "duration": parse_duration(item.get("duration")),
-                "timestamp": parse_iso8601(item.get("published_at")),
-            }
-            info = self.call_with_retries(
-                lambda: self.call_api(f"getContent/{public_id}", public_id),
-            )
-            if not info:
-                yield backup_info
-                return
-
-            urls = self.parse_urls(repr(info.get("videoUrl")))
-            if not urls:
-                yield backup_info
-                return
-
-            ie_info = self.peertube_extract(urls[0])
-            if ie_info:
-                yield ie_info if ie_info else backup_info
 
         return self.playlist_result(
-            OnDemandPagedList(fetch_page, 1),
-            playlist_id="all_videos",
-            playlist_title="AUF1.TV - Alle Videos",
+            entries,
+            **kwargs,
         )
 
     def _real_extract(self, url):
-        page_id = self._match_id(url)
+        def entry(info):
+            peertube_url = self.parse_url(info.get("videoUrl"))
+            peertube_info = (
+                self.peertube_extract(peertube_url) if peertube_url else None
+            )
+            return peertube_info if peertube_info else self.sparse_info(info)
 
-        if page_id == "videos":
-            return self.all_videos_from_api()
+        category, page_id = self._match_valid_url(url).groups()
+
+        if category is None and page_id == "videos":
+            return self.playlist_from_entries(
+                self.call_with_retries(
+                    lambda: self.call_api("getVideos", video_id="all_videos")
+                ),
+                playlist_id="all_videos",
+                playlist_title="AUF1.TV - Alle Videos",
+            )
+
+        if category:
+            return entry(
+                self.call_with_retries(
+                    lambda: self.call_api(f"getContent/{page_id}", page_id)
+                )
+            )
 
         base_url = self._search_regex(r"(https?://[^/]+)", url, "base url")
         webpage = self._download_webpage(url, video_id=page_id)
-
+        title = self._og_search_title(webpage)
         payloadjs_path = self._html_search_regex(
             r'<link\s+[^>]*href="(/[^"]+/payload.js)', webpage, "payload.js url"
         )
-
         payloadjs_string = self._download_webpage(
             f"{base_url}{payloadjs_path}",
             video_id=page_id,
-            encoding="unicode_escape",
             note="Downloading payload.js",
             errnote="payload.js",
-            fatal=False,
         )
 
-        if payloadjs_string:
-            peertube_urls = self.parse_urls(payloadjs_string)
-        else:
-            info = self.call_api(f"getContent/{page_id}", page_id)
-            peertube_urls = self.parse_urls(repr(info.get("videoUrl")))
+        match = re.match(r".*?\(function\(([^)]+)", payloadjs_string)
+        keys = match.group(1).split(",") if match else ()
 
-        if not peertube_urls:
+        match = re.match(r".*}\((.*)\){3};", payloadjs_string)
+        values = json.loads(f"[{match.group(1)}]") if match else ()
+        js_vars = {key: json.dumps(value) for key, value in zip(keys, values)}
+
+        match = re.match(r".*?contents:(\[{.+}]).+}}]", payloadjs_string)
+        if not match:
             raise UnsupportedError(url)
 
-        if len(peertube_urls) == 1:
-            return self.peertube_extract(peertube_urls[0])
-
-        return self.playlist_result(
-            [self.peertube_extract(url) for url in peertube_urls],
-            playlist_id=page_id,
-            playlist_title=self._og_search_title(webpage),
+        video_data = json.loads(
+            js_to_json(
+                match.group(1),
+                vars=js_vars,
+            )
+        )
+        return self.playlist_from_entries(
+            video_data, playlist_id=page_id, playlist_title=title
         )
