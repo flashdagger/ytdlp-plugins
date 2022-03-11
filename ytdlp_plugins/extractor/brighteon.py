@@ -16,6 +16,7 @@ from yt_dlp.utils import (
     parse_iso8601,
     traverse_obj,
     update_url_query,
+    urljoin,
 )
 from ytdlp_plugins.utils import estimate_filesize, ParsedURL
 
@@ -33,6 +34,7 @@ class BrighteonIE(InfoExtractor):
                         (?P<id>[a-zA-z0-9-]+)
                     """
     _BASE_URL = "https://www.brighteon.com"
+    _MPEG_TS = True
 
     _TESTS = [
         {
@@ -206,17 +208,18 @@ class BrighteonIE(InfoExtractor):
                 )
                 self._rename_formats(media_formats, "hls")
 
-                mpg_formats = []
-                for fmt in media_formats:
-                    mpg_fmt = {
-                        key: value
-                        for key, value in fmt.items()
-                        if key not in {"url", "manifest_url", "protocol"}
-                    }
-                    mpg_fmt["url"] = fmt["url"].replace(".m3u8", ".ts")
-                    mpg_formats.append(mpg_fmt)
-                self._rename_formats(mpg_formats, "mpeg")
-                media_formats.extend(mpg_formats)
+                if self._MPEG_TS:
+                    mpg_formats = []
+                    for fmt in media_formats:
+                        mpg_fmt = {
+                            key: value
+                            for key, value in fmt.items()
+                            if key not in {"url", "manifest_url", "protocol"}
+                        }
+                        mpg_fmt["url"] = fmt["url"].replace(".m3u8", ".ts")
+                        mpg_formats.append(mpg_fmt)
+                    self._rename_formats(mpg_formats, "mpeg")
+                    media_formats.extend(mpg_formats)
             elif url.endswith(".mpd"):
                 media_formats = self._extract_mpd_formats(
                     url, video_id=video_id, fatal=False
@@ -407,13 +410,16 @@ class BrighteonIE(InfoExtractor):
         raise UnsupportedError(url)
 
 
-class BrighteontvIE(BrighteonIE):
+class BrighteonTvIE(BrighteonIE):
     IE_NAME = "brighteontv"
     _VALID_URL = r"""(?x)
                     https?://
                         (?:www\.)?
                         brighteon\.tv/?
                     """
+
+    _BASE_URL = "https://www.brighteon.tv"
+    _MPEG_TS = False
 
     _TESTS = [
         {
@@ -425,13 +431,14 @@ class BrighteontvIE(BrighteonIE):
                 "description": "Live Daily Broadcast.",
                 "channel_id": "8c536b2f-e9a1-4e4c-a422-3867d0e472e4",
                 "tags": ["Brighteon", "TV", "News", "Video", "Stream"],
+                "is_live": True,
             },
             "params": {"skip_download": True, "nocheckcertificate": True},
         }
     ]
 
     def _real_extract(self, url):
-        video_id = "live"
+        video_id = self.ie_key()
         webpage = self._download_webpage(url, video_id=video_id)
         description = self._og_search_description(webpage)
         tags = self._html_search_meta("keywords", webpage, default="")
@@ -446,3 +453,68 @@ class BrighteontvIE(BrighteonIE):
         )
 
         return video_info
+
+
+class BrighteonRadioIE(BrighteonIE):
+    IE_NAME = "brighteonradio"
+    _VALID_URL = r"(?P<base>https?://(?:www\.)?brighteonradio\.com)/?"
+    _BASE_URL = "https://www.brighteonradio.com"
+    _MPEG_TS = False
+
+    _TESTS = [
+        {
+            "url": "https://www.brighteonradio.com/",
+            "info_dict": {
+                "id": "BrighteonRadio",
+                "ext": "ts",
+                "title": "startswith:Brighteon Radio",
+                "description": "Free Speech Audio Streaming for Humanity",
+                "tags": ["Brighteon", "Radio", "News", "Audio", "Streaming"],
+                "is_live": True,
+            },
+            "params": {"skip_download": True, "nocheckcertificate": True},
+        }
+    ]
+
+    def _real_extract(self, url):
+        video_id = self.ie_key()
+        webpage = self._download_webpage(url, video_id=video_id)
+        player_url = self._search_regex(
+            r'<script[^>]+src="([^"]+/Player\w*.js)"', webpage, "player_url"
+        )
+        player_js = self._download_webpage(
+            urljoin(self._BASE_URL, player_url),
+            note="Downloading JS player",
+            video_id=video_id,
+        )
+        stream_url = self._search_regex(
+            r"^\s*var\s+[^'\"/]+['\"](https?://[^'\"]+/index\.m3u8)['\"]",
+            player_js,
+            "stream_url",
+            flags=re.MULTILINE,
+        )
+        formats = self._extract_m3u8_formats(stream_url, video_id)
+        for fmt in formats:
+            if not fmt.get("height"):
+                continue
+            fmt["height"] = fmt["width"] = None
+            fmt["protocol"] = "http_dash_segments"
+            fmt["fragments"] = []
+            fmt["manifest_stream_number"] = 1
+            fmt["ext"] = "ts"
+        self._sort_formats(formats)
+        tags = [
+            tag.strip()
+            for tag in self._html_search_meta("keywords", webpage, default="").split(
+                ","
+            )
+        ]
+
+        return {
+            "id": video_id,
+            "title": self._og_search_title(webpage, default="Brighteon Radio"),
+            "description": self._og_search_description(webpage),
+            "tags": tags,
+            "is_live": True,
+            "formats": formats,
+        }
