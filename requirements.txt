@@ -16,6 +16,8 @@ black==22.1.0 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 bleach==4.1.0
     # via readme-renderer
+brotli==1.0.9
+    # via yt-dlp
 bump2version==1.0.1
     # via -r requirements.in
 certifi==2021.10.8
@@ -45,7 +47,7 @@ identify==2.4.11
     # via pre-commit
 idna==3.3
     # via requests
-importlib-metadata==4.11.1
+importlib-metadata==4.11.2
     # via
     #   keyring
     #   twine
@@ -61,7 +63,7 @@ mccabe==0.6.1
     # via pylint
 mutagen==1.45.1
     # via yt-dlp
-mypy==0.931 ; platform_python_implementation != "PyPy"
+mypy==0.940 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 mypy-extensions==0.4.3
     # via
@@ -116,7 +118,7 @@ pywin32-ctypes==0.2.0
     # via keyring
 pyyaml==6.0
     # via pre-commit
-readme-renderer==32.0
+readme-renderer==34.0
     # via twine
 requests==2.27.1
     # via
@@ -139,7 +141,7 @@ tomli==2.0.1
     #   black
     #   mypy
     #   pytest
-tqdm==4.62.3
+tqdm==4.63.0
     # via twine
 twine==3.8.0
     # via -r requirements.in
@@ -153,7 +155,7 @@ urllib3==1.26.8
     # via
     #   requests
     #   twine
-virtualenv==20.13.2
+virtualenv==20.13.3
     # via pre-commit
 webencodings==0.5.1
     # via bleach
@@ -161,7 +163,7 @@ websockets==10.2
     # via yt-dlp
 wrapt==1.13.3
     # via astroid
-yt-dlp==2022.2.4
+yt-dlp==2022.3.8.2
     # via ytdlp-plugins
 ytdlp-plugins==2021.12.27
     # via ytdlp-brighteon
