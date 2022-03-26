@@ -3,10 +3,15 @@
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import determine_ext, ExtractorError
+from ytdlp_plugins.probe import probe_media
 
 
 # ℹ️ Instructions on making extractors can be found at:
 # 🔗 https://github.com/yt-dlp/yt-dlp/blob/master/CONTRIBUTING.md#adding-support-for-a-new-site
+
+
+class DummyPluginIE(InfoExtractor):
+    _VALID_URL = r"^dummyplugin:(?P<id>\w+)"
 
 
 class ExamplePluginIE(InfoExtractor):
@@ -55,5 +60,19 @@ class FailingPluginIE(InfoExtractor):
         raise ExtractorError("Should not happen")
 
 
-class DummyPluginIE(InfoExtractor):
-    _VALID_URL = r"^dummyplugin:(?P<id>\w+)"
+class FFProbePluginIE(InfoExtractor):
+    _WORKING = True
+    IE_NAME = "ffprobe"
+    IE_DESC = "extract media format with ffprobe"
+    _VALID_URL = r"^ffprobe:(?P<id>https?://.+)"
+
+    def _real_extract(self, _url):
+        url = self._match_id(_url)
+        formats = probe_media(self, url)
+
+        return {
+            "id": self._generic_id(url),
+            "title": self._generic_title(url),
+            "duration": formats[0].get("duration") if formats else None,
+            "formats": formats,
+        }
