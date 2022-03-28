@@ -1,7 +1,6 @@
 # dev requirements
 -e file:.
-black==19.3b0; platform_python_implementation == 'PyPy'
-black; platform_python_implementation != 'PyPy'
+black
 bump2version
 mypy; platform_python_implementation != 'PyPy'
 pre-commit
@@ -10,4 +9,4 @@ pylint
 pytest
 pytest-subtests
 pytest-xdist
-twine
+twine; platform_python_implementation != 'PyPy'
