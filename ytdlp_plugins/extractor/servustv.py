@@ -96,7 +96,7 @@ class ServusTVIE(InfoExtractor):
             "url": "https://www.servustv.com/volkskultur/b/ich-bauer/aa-1qcy94h3s1w11/",
             "info_dict": {
                 "id": "116155",
-                "title": "Ich, Bauer",
+                "title": "startswith:Ich, Bauer",
                 "description": "md5:04cd98226e5c07ca50d0dc90f4a27ea1",
             },
             "playlist": [
@@ -129,7 +129,7 @@ class ServusTVIE(InfoExtractor):
             },
         },
         {
-            # block playlist
+            # block post playlist
             "url": "https://www.servustv.com/aktuelles/a/"
             "corona-auf-der-suche-nach-der-wahrheit-teil-3-die-themen/193214/",
             "info_dict": {
@@ -192,6 +192,21 @@ class ServusTVIE(InfoExtractor):
                 "skip_download": True,
                 "outtmpl": "livestream.%(ext)s",
                 "format": "bestvideo/best",
+            },
+        },
+        {
+            # block page playlist
+            "url": "https://www.servustv.com/sport/p/sport-livestreams-bei-servustv-on/222987/",
+            "info_dict": {
+                "id": "sport-livestreams-bei-servustv-on",
+                "title": "Sport-Livestreams bei ServusTV On",
+            },
+            "playlist_mincount": 0,
+            "params": {
+                "geo_bypass_country": "DE",
+                "nocheckcertificate": True,
+                "format": "bestvideo",
+                "skip_download": True,
             },
         },
         {
@@ -316,7 +331,7 @@ class ServusTVIE(InfoExtractor):
         self._auto_merge_formats(formats)
 
         program_info = {"series": info.get("label"), "chapter": info.get("chapter")}
-        match = re.match(r"[^\d]+(\d+)", info.get("season", ""))
+        match = re.match(r"\D+(\d+)", info.get("season", ""))
         if match:
             program_info["season_number"] = int(match[1])
         match = re.match(r"Episode\s+(\d+)(?:\s+-(.*))?", info.get("chapter", ""))
@@ -485,7 +500,12 @@ class ServusTVIE(InfoExtractor):
 
         # create playlist from blocks
         page_id = self._page_id(json_obj)
-        page_post = traverse_obj(json_obj, ("source", "post", str(page_id)), default={})
+        for item in ("post", "page"):
+            page_post = traverse_obj(
+                json_obj, ("source", item, str(page_id)), default={}
+            )
+            if page_post:
+                break
         embed_url = traverse_obj(
             page_post, ("stv_embedded_video", "link"), default=None
         )
