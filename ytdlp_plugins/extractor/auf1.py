@@ -18,7 +18,7 @@ from yt_dlp.utils import (
     js_to_json,
 )
 
-__version__ = "2022.04.10"
+__version__ = "2022.05.06"
 
 
 # pylint: disable=abstract-method
