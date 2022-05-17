@@ -235,10 +235,11 @@ class Auf1IE(InfoExtractor):
                 self.report_warning(exc, page_id)
                 metadata = self._metadata(url, page_id=page_id, method="payloadjs")
             peertube_url = self.parse_url(metadata.get("videoUrl"))
-            peertube_info = (
-                self.peertube_extract(peertube_url) if peertube_url else None
+            return (
+                self.peertube_extract(peertube_url)
+                if peertube_url
+                else self.sparse_info(metadata)
             )
-            return peertube_info if peertube_info else self.sparse_info(metadata)
 
         # video playlist
         if page_id == "videos":
