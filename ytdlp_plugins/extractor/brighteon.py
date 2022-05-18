@@ -137,8 +137,8 @@ class BrighteonIE(InfoExtractor):
         return re.findall(
             r"""(?x)
                 <iframe[^>]+src="
-                (?P<url>https?://(?:[a-z][a-z0-9]+\.)?
-                brighteon\.com/embed/[0-9a-zA-Z-]+)
+                (?P<url>https?://(?:[a-z][\da-z]+\.)?
+                brighteon\.com/embed/[\da-zA-Z-]+)
                 [^"]*"
                 """,
             webpage,
@@ -466,7 +466,7 @@ class BrighteonRadioIE(BrighteonIE):
             "url": "https://www.brighteonradio.com/",
             "info_dict": {
                 "id": "BrighteonRadio",
-                "ext": "ts",
+                "ext": "mp4",
                 "title": "startswith:Brighteon Radio",
                 "description": "Free Speech Audio Streaming for Humanity",
                 "tags": ["Brighteon", "Radio", "News", "Audio", "Streaming"],
@@ -495,14 +495,13 @@ class BrighteonRadioIE(BrighteonIE):
         )
         formats = self._extract_m3u8_formats(stream_url, video_id)
         for fmt in formats:
-            if not fmt.get("height"):
-                continue
             fmt["height"] = fmt["width"] = None
-            fmt["protocol"] = "http_dash_segments"
-            fmt["fragments"] = []
-            fmt["manifest_stream_number"] = 1
-            fmt["ext"] = "ts"
+            fmt["vcodec"] = "none"
         self._sort_formats(formats)
+        ffmpeg_args = self.get_param("external_downloader_args")
+        if isinstance(ffmpeg_args, dict):
+            ffmpeg_args.setdefault("ffmpeg_o", []).append("-vn")
+
         tags = [
             tag.strip()
             for tag in self._html_search_meta("keywords", webpage, default="").split(
