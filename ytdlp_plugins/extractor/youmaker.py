@@ -97,10 +97,10 @@ class YoumakerIE(InfoExtractor):
             "playlist_mincount": 10,
             "info_dict": {
                 "id": "694dd4c5-edcc-4718-9d1e-d907b0994fa7",
-                "title": "Horror & Sci-Fi + Classics",
-                "description": "Horror & Sci-Fi + Classics is meant to provide a fun place to enjoy"
-                " and get excited about classic films and TV series from the past"
-                " that you might have missed and now could be interested in watching.\n\n",
+                "title": "Classics +",
+                "description": "Classics +  is a channel to enjoy classics films and series from "
+                "the past that you might have missed and now could be interested in watching or "
+                "just simply want to see again.\n\n",
             },
         },
         {
