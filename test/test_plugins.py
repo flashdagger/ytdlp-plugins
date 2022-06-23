@@ -6,9 +6,12 @@
 import importlib
 import sys
 import unittest
+from contextlib import redirect_stderr
 from inspect import getclosurevars
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from urllib.error import HTTPError
 from zipfile import ZipFile
 
 import yt_dlp
@@ -166,18 +169,22 @@ class TestPlugins(unittest.TestCase):
     def test_orig_bug_report_message(self):
         orig_bug_report = yt_dlp.utils.bug_reports_message()
         self.assertIn("yt-dlp", orig_bug_report)
+        stderr = StringIO()
 
-        params = dict(skip_download=True)
-        ydl = yt_dlp.YoutubeDL(params, auto_init=True)
         with self.assertRaises(yt_dlp.utils.DownloadError) as context:
-            with patch_context():
-                ydl.download(["http://www.vimeo.com/123/123"])
+            with redirect_stderr(stderr):
+                params = dict(skip_download=True)
+                ydl = yt_dlp.YoutubeDL(params, auto_init=True)
+                with patch_context():
+                    ydl.download(["http://www.vimeo.com/123/123"])
 
         exc, obj, _ = context.exception.exc_info
         self.assertEqual(orig_bug_report, yt_dlp.utils.bug_reports_message())
-        self.assertIs(exc, yt_dlp.utils.ExtractorError)
+        self.assertIn(exc, {HTTPError, yt_dlp.utils.ExtractorError})
         self.assertIn(
-            orig_bug_report, str(obj), "Original Bug report message is suppressed"
+            orig_bug_report,
+            stderr.getvalue(),
+            "Original Bug report message is suppressed",
         )
 
     def test_patch_function_globals_warning(self):
