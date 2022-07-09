@@ -35,7 +35,7 @@ PACKAGE_NAME = __name__
 class PluginLoader(Loader):
     """Dummy loader for virtual namespace packages"""
 
-    # pylint: disable=unused-argument, no-self-use
+    # pylint: disable=unused-argument
     def exec_module(self, module):
         return None
 
@@ -182,7 +182,7 @@ def add_plugins():
     ie_plugins = load_plugins("extractor", "IE", extractor.__dict__)
     FOUND.update(ie_plugins)
     extractors = getattr(extractor, "extractors", None)
-    if extractors:
+    if extractors is not None:
         extractors.__dict__.update(ie_plugins)
 
     all_classes = getattr(extractor, "_ALL_CLASSES", [])
