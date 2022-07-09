@@ -423,18 +423,47 @@ class BrighteonTvIE(BrighteonIE):
 
     _TESTS = [
         {
-            "url": "https://www.brighteon.tv/LiveStream01.html",
+            "url": "https://www.brighteon.tv/LiveTV/",
             "info_dict": {
                 "id": "brighteontv-daily-show",
                 "ext": "mp4",
                 "title": "startswith:Brighteon.TV Daily Show",
-                "description": "Live Daily Broadcast.",
+                "description": str,
                 "channel_id": "8c536b2f-e9a1-4e4c-a422-3867d0e472e4",
-                "tags": ["Brighteon", "TV", "News", "Video", "Stream"],
+                "tags": [
+                    "Brighteon.TV",
+                    "Video",
+                    "Live",
+                    "Streaming",
+                    "Shows",
+                    "Events",
+                    "Documentaries",
+                ],
                 "is_live": True,
             },
             "params": {"skip_download": True, "nocheckcertificate": True},
-        }
+        },
+        {
+            "url": "https://www.brighteon.tv/LiveEvents/",
+            "info_dict": {
+                "id": "brighteon2-show",
+                "ext": "mp4",
+                "title": "startswith:Brighteon.TV Daily Show",
+                "description": str,
+                "channel_id": "8c536b2f-e9a1-4e4c-a422-3867d0e472e4",
+                "tags": [
+                    "Brighteon.TV",
+                    "Video",
+                    "Live",
+                    "Streaming",
+                    "Shows",
+                    "Events",
+                    "Documentaries",
+                ],
+                "is_live": True,
+            },
+            "params": {"skip_download": True, "nocheckcertificate": True},
+        },
     ]
 
     def _real_extract(self, url):
@@ -443,8 +472,10 @@ class BrighteonTvIE(BrighteonIE):
         description = self._og_search_description(webpage)
         tags = self._html_search_meta("keywords", webpage, default="")
         stream_url = self._search_regex(
-            r'<iframe[^>]+src="(https?://[\w./-]+)"', webpage, "stream_url"
+            r'<iframe[^>]+src="(https?://[\w./-]+)"', webpage, "stream_url", fatal=False
         )
+        if stream_url is None:
+            raise UnsupportedError(url)
         json_obj = self._json_extract(stream_url, video_id=video_id)
         stream_info = traverse_obj(json_obj, self.page_props_path("stream"))
         video_info = self._entry_from_info(stream_info, {})
