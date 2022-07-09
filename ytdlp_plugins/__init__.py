@@ -196,6 +196,7 @@ def add_plugins():
     if issubclass(GenericIE, last_extractor):
         setattr(extractor, last_extractor.__name__, GenericIE)
         all_classes[-1] = GenericIE
+        extractors.GenericIE = GenericIE
 
     pp_plugins = load_plugins("postprocessor", "PP", postprocessor.__dict__)
     FOUND.update(pp_plugins)
