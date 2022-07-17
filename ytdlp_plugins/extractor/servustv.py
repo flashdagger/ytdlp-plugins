@@ -95,7 +95,7 @@ class ServusTVIE(InfoExtractor):
             # playlist
             "url": "https://www.servustv.com/volkskultur/b/ich-bauer/aa-1qcy94h3s1w11/",
             "info_dict": {
-                "id": "116155",
+                "id": "aa-1qcy94h3s1w11",
                 "title": "startswith:Ich, Bauer",
                 "description": "md5:04cd98226e5c07ca50d0dc90f4a27ea1",
             },
@@ -140,7 +140,7 @@ class ServusTVIE(InfoExtractor):
                 {
                     "info_dict": {
                         "id": "aa-28zh3u3dn2111",
-                        "title": "Corona - auf der Suche nach der Wahrheit Teil 3",
+                        "title": "Corona-Doku: Teil 3",
                         "description": "md5:5e020c2618a6d6d2b8a316891c8b8195",
                         "timestamp": int,
                         "upload_date": "20211222",
@@ -149,7 +149,7 @@ class ServusTVIE(InfoExtractor):
                 {
                     "info_dict": {
                         "id": "aa-27juub3a91w11",
-                        "title": "Corona - auf der Suche nach der Wahrheit",
+                        "title": "Corona-Doku: Teil 1",
                         "description": "md5:b8de3e9d911bb2cdc0422cf720d795b5",
                         "timestamp": int,
                         "upload_date": "20210505",
@@ -158,7 +158,7 @@ class ServusTVIE(InfoExtractor):
                 {
                     "info_dict": {
                         "id": "aa-28a3dbyxh1w11",
-                        "title": "Corona - auf der Suche nach der Wahrheit Teil 2",
+                        "title": "Corona-Doku: Teil 2",
                         "description": "md5:9904e42bb1b99c731e651ed2276a87e6",
                         "timestamp": int,
                         "upload_date": "20210801",
@@ -427,13 +427,6 @@ class ServusTVIE(InfoExtractor):
         return title
 
     @staticmethod
-    def _page_id(json_obj):
-        for value in traverse_obj(json_obj, ("source", "data"), default={}).values():
-            if isinstance(value, dict) and "id" in value:
-                return value["id"]
-        return None
-
-    @staticmethod
     def taxonomy(json_obj, page_id, url):
         asset_paths = (
             ("source", "media_asset", str(page_id), "categories"),
@@ -479,49 +472,54 @@ class ServusTVIE(InfoExtractor):
         webpage = self._download_webpage(url, video_id=video_id)
         try:
             json_obj = self._parse_json(
-                get_element_by_id("__FRONTITY_CONNECT_STATE__", webpage), video_id
+                get_element_by_id("__NEXT_DATA__", webpage), video_id
             )
         except TypeError as exc:
             raise ExtractorError("Cannot extract metadata.") from exc
 
         if self.country_override is None:
             self.country_override = traverse_obj(
-                json_obj, ("geolocation", "countryCode"), default=None
+                json_obj, "props/pageProps/geo".split("/"), default=None
             )
 
+        for item in ("data", "post", "page"):
+            page_data = traverse_obj(
+                json_obj, f"props/pageProps/{item}".split("/"), default={}
+            )
+            if page_data:
+                break
+
         # find livestreams
-        live_schedule = traverse_obj(
-            json_obj,
-            ("source", "page", video_id, "stv_live_player_schedule"),
-            default=None,
-        )
+        live_schedule = page_data.get("stv_live_player_schedule")
         if live_schedule:
             return self._live_stream_from_schedule(live_schedule)
 
         # create playlist from blocks
-        page_id = self._page_id(json_obj)
-        for item in ("post", "page"):
-            page_post = traverse_obj(
-                json_obj, ("source", item, str(page_id)), default={}
-            )
-            if page_post:
-                break
+        fallback = traverse_obj(
+            json_obj, "props/pageProps/fallback".split("/"), default={}
+        )
+        filters = {item["currentFilter"]: item for item in fallback.values()}
+        all_videos = traverse_obj(filters, "all-videos/items".split("/"), default=[])
+
         embed_url = traverse_obj(
-            page_post, ("stv_embedded_video", "link"), default=None
+            page_data, "stv_embedded_video/link".split("/"), default=None
         )
         urls = [embed_url] if embed_url else []
-        urls.extend(self._urls_from_blocks(page_post.get("blocks", ())))
+        urls.extend(self._urls_from_blocks(page_data.get("blocks", [])))
+        urls.extend((item["link"] for item in all_videos))
         if urls:
             return self.playlist_from_matches(
                 urls,
-                playlist_id=page_post.get("slug"),
+                playlist_id=page_data.get("slug"),
                 playlist_title=traverse_obj(
-                    page_post, ("title", "rendered"), default=page_post.get("slug")
+                    page_data, ("title", "rendered"), default=page_data.get("slug")
                 ),
+                description=page_data.get("stv_short_description"),
                 ie=self.ie_key(),
             )
 
         # finally, create playlist from query
+        page_id = page_data.get("id")
         query_type, query_id = self.taxonomy(json_obj, page_id, url)
         return self.playlist_result(
             self._paged_playlist_by_query(
