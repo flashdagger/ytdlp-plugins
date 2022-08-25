@@ -21,7 +21,7 @@ from yt_dlp.utils import (
     parse_iso8601,
 )
 
-__version__ = "2022.02.27"
+__version__ = "2022.08.26"
 
 
 # pylint: disable=abstract-method
