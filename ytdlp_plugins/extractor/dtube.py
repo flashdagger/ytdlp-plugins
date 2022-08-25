@@ -518,7 +518,7 @@ class DTubeSearchIE(DTube2IE):
         },
         {
             "url": "https://d.tube/t/gaming",
-            "playlist_mincount": 0,  # type: ignore
+            "playlist_mincount": 20,  # type: ignore
             "info_dict": {
                 "id": "gaming",
                 "title": "gaming",
@@ -533,7 +533,7 @@ class DTubeSearchIE(DTube2IE):
 
         if "/t/" in url:
             # tag search
-            timestamp = int((datetime.now() - timedelta(days=7)).timestamp() * 1e3)
+            timestamp = int((datetime.now() - timedelta(weeks=52)).timestamp() * 1e3)
             payload = {
                 "q": f"(NOT pa:*) AND ts:>={timestamp} AND tags:{search_term}",
                 "sort": "ups:desc",
