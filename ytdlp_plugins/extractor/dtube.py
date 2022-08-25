@@ -25,7 +25,7 @@ __version__ = "2022.02.27"
 
 
 # pylint: disable=abstract-method
-class DTubeIE(InfoExtractor):
+class DTube2IE(InfoExtractor):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?v/
@@ -135,9 +135,9 @@ class DTubeIE(InfoExtractor):
         },
         # YouTube forward
         {
-            "url": "https://d.tube/#!/v/geneeverett33/jkp3e8v4tau",
+            "url": "https://d.tube/#!/v/geneeverett33/74w7hgkthww",
             "info_dict": {
-                "id": "InRmAxWpbOA",
+                "id": "rmFZqbh7TaU",
                 "title": str,
                 "description": str,
                 "ext": str,
@@ -404,7 +404,7 @@ class DTubeIE(InfoExtractor):
         return self.entry_from_avalon_result(result)
 
 
-class DTubeUserIE(DTubeIE):
+class DTubeUserIE(DTube2IE):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?c/
@@ -499,7 +499,7 @@ class DTubeQueryIE(DTubeUserIE):
         )
 
 
-class DTubeSearchIE(DTubeIE):
+class DTubeSearchIE(DTube2IE):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?[st]/
@@ -518,7 +518,7 @@ class DTubeSearchIE(DTubeIE):
         },
         {
             "url": "https://d.tube/t/gaming",
-            "playlist_mincount": 20,  # type: ignore
+            "playlist_mincount": 0,  # type: ignore
             "info_dict": {
                 "id": "gaming",
                 "title": "gaming",
