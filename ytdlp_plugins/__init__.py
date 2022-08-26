@@ -179,13 +179,18 @@ def add_plugins():
     # pylint: disable=import-outside-toplevel
     from yt_dlp import extractor, postprocessor
 
-    ie_plugins = load_plugins("extractor", "IE", extractor.__dict__)
+    all_classes = getattr(extractor, "_ALL_CLASSES", [])
+    extractor_map = extractor.__dict__
+    extractor_map.update(
+        {cls.__name__: cls for cls in all_classes if cls.__name__ not in extractor_map}
+    )
+
+    ie_plugins = load_plugins("extractor", "IE", extractor_map)
     FOUND.update(ie_plugins)
     extractors = getattr(extractor, "extractors", None)
     if extractors is not None:
         extractors.__dict__.update(ie_plugins)
 
-    all_classes = getattr(extractor, "_ALL_CLASSES", [])
     for cls in OVERRIDDEN:
         with suppress(ValueError):
             all_classes.remove(cls)
@@ -196,7 +201,8 @@ def add_plugins():
     if issubclass(GenericIE, last_extractor):
         setattr(extractor, last_extractor.__name__, GenericIE)
         all_classes[-1] = GenericIE
-        extractors.GenericIE = GenericIE
+        if extractors:
+            extractors.GenericIE = GenericIE
 
     pp_plugins = load_plugins("postprocessor", "PP", postprocessor.__dict__)
     FOUND.update(pp_plugins)
