@@ -42,10 +42,10 @@ def monkey_patch(orig):
 
 
 def calling_plugin_class():
-    plugins = set(FOUND.values())
+    plugins = {str(cls) for cls in FOUND.values()}
     for frame_info in stack():
         extractor_class = frame_info[0].f_locals.get("ie")
-        if extractor_class in plugins:
+        if str(extractor_class) in plugins:
             return extractor_class
     return None
 
@@ -74,7 +74,8 @@ def plugin_debug_header(self):
     if OVERRIDDEN:
         self.write_debug("Overridden classes due to name collisions:")
         items = [
-            (f"{cls.__name__!r}", f"from {cls.__module__!r}") for cls in OVERRIDDEN
+            (f"{name!r}", f"from {cls.__module__!r}")
+            for name, cls in OVERRIDDEN.items()
         ]
         for line in tabify(items):
             self.write_debug(" " + line)

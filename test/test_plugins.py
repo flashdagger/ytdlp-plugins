@@ -95,7 +95,7 @@ class TestPlugins(unittest.TestCase):
         reset()
         add_plugins()
 
-        overridden_names = {cls.__name__ for cls in OVERRIDDEN}
+        overridden_names = set(OVERRIDDEN.keys())
         self.assertGreaterEqual(len(overridden_names), 2)
         all_names = set(yt_dlp.extractor.__dict__.keys()) | set(
             yt_dlp.postprocessor.__dict__.keys()
@@ -105,7 +105,7 @@ class TestPlugins(unittest.TestCase):
         self.assertFalse(not_in_names, f"missing {not_in_names} in extractor namespace")
 
         all_classes = getattr(yt_dlp.extractor, "_ALL_CLASSES", ())
-        for cls in OVERRIDDEN:
+        for cls in OVERRIDDEN.values():
             self.assertFalse(
                 cls in all_classes,
                 f"Overridden class {cls.__name__!r} still found in _ALL_CLASSES",

@@ -13,7 +13,7 @@ from inspect import getmembers, isclass
 from itertools import accumulate
 from pathlib import Path
 from pkgutil import iter_modules
-from typing import Dict, List
+from typing import Dict
 from zipfile import ZipFile
 from zipimport import zipimporter
 
@@ -27,7 +27,7 @@ __version__ = "2022.07.09"
 
 _INITIALIZED = False
 FOUND: Dict[str, InfoExtractor] = {}
-OVERRIDDEN: List[type] = []
+OVERRIDDEN: Dict[str, InfoExtractor] = {}
 PACKAGE_NAME = __name__
 
 
@@ -43,7 +43,7 @@ class PluginLoader(Loader):
 class PluginFinder(MetaPathFinder):
     """
     This class provides one or multiple namespace packages
-    it searches in sys.path for the existing subdirectories
+    it searches in 'sys.path' for the existing subdirectories
     from which the modules can be imported
     """
 
@@ -111,8 +111,6 @@ def initialize():
 
 
 def reset():
-    FOUND.clear()
-    OVERRIDDEN.clear()
     importlib.invalidate_caches()  # reset the import caches
 
 
@@ -130,7 +128,9 @@ def iter_plugin_modules(subpackage):
 
 def detected_collisions(from_dict, to_dict):
     collisions = set(from_dict.keys()) & set(to_dict.keys())
-    return [to_dict[key] for key in collisions if from_dict[key] is not to_dict[key]]
+    return {
+        key: to_dict[key] for key in collisions if from_dict[key] is not to_dict[key]
+    }
 
 
 # noinspection PyBroadException
@@ -166,10 +166,10 @@ def load_plugins(name, suffix, namespace=None):
         sys.modules[module_name] = module
         module_classes = dict(getmembers(module, gen_predicate(module_name)))
 
-        OVERRIDDEN.extend(detected_collisions(module_classes, classes))
+        OVERRIDDEN.update(detected_collisions(module_classes, classes))
         classes.update(module_classes)
 
-    OVERRIDDEN.extend(detected_collisions(classes, namespace))
+    OVERRIDDEN.update(detected_collisions(classes, namespace))
     namespace.update(classes)
 
     return classes
@@ -184,6 +184,13 @@ def add_plugins():
     extractor_map.update(
         {cls.__name__: cls for cls in all_classes if cls.__name__ not in extractor_map}
     )
+    for key in FOUND:
+        if key in OVERRIDDEN:
+            extractor_map[key] = OVERRIDDEN[key]
+        elif key in extractor_map:
+            del extractor_map[key]
+    FOUND.clear()
+    OVERRIDDEN.clear()
 
     ie_plugins = load_plugins("extractor", "IE", extractor_map)
     FOUND.update(ie_plugins)
@@ -191,7 +198,7 @@ def add_plugins():
     if extractors is not None:
         extractors.__dict__.update(ie_plugins)
 
-    for cls in OVERRIDDEN:
+    for cls in OVERRIDDEN.values():
         with suppress(ValueError):
             all_classes.remove(cls)
     all_classes[:0] = ie_plugins.values()
@@ -201,7 +208,7 @@ def add_plugins():
     if issubclass(GenericIE, last_extractor):
         setattr(extractor, last_extractor.__name__, GenericIE)
         all_classes[-1] = GenericIE
-        if extractors:
+        if extractors:  # pylint: disable=using-constant-test
             extractors.GenericIE = GenericIE
 
     pp_plugins = load_plugins("postprocessor", "PP", postprocessor.__dict__)
