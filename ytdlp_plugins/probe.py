@@ -1,4 +1,5 @@
 import re
+from typing import Dict, Any
 
 from yt_dlp.postprocessor import FFmpegPostProcessor
 from yt_dlp.utils import HEADRequest, determine_ext, int_or_none, traverse_obj
@@ -7,7 +8,7 @@ from yt_dlp.utils import HEADRequest, determine_ext, int_or_none, traverse_obj
 # pylint: disable=too-few-public-methods
 class GLOBALS:
     FFMPEG = FFmpegPostProcessor()
-    LAST_METADATA = {}
+    LAST_METADATA: Dict[str, Any] = {}
 
 
 def codec_name(info):

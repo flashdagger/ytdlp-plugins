@@ -3,7 +3,7 @@
 from contextlib import suppress
 from importlib import import_module
 from inspect import getfullargspec
-from typing import List, Optional, Callable, Dict, Any
+from typing import List, Callable, Dict, Any
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.extractor.generic import GenericIE as GenericExtractor
@@ -31,7 +31,7 @@ class GenericIE(GenericExtractor):
     ) -> List[str]:
         if "_extract_urls" not in cls.__dict__:
             return []
-        func: Optional[Callable] = getattr(cls, "_extract_urls")
+        func: Callable = getattr(cls, "_extract_urls")
         args = getfullargspec(func).args
         if args[0] == "cls":
             args = args[1:]
