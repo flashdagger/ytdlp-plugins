@@ -120,7 +120,7 @@ class ServusTVIE(InfoExtractor):
                     },
                 },
             ],
-            "playlist_mincount": 10,
+            "playlist_mincount": 9,
             "params": {
                 "geo_bypass_country": "AT",
                 "nocheckcertificate": True,
