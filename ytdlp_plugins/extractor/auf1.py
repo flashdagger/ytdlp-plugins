@@ -2,6 +2,7 @@
 import json
 import re
 import time
+from shlex import shlex
 from urllib.error import HTTPError
 
 from yt_dlp.extractor.common import InfoExtractor
@@ -19,6 +20,20 @@ from yt_dlp.utils import (
 )
 
 __version__ = "2022.05.06"
+
+
+class JSHLEX(shlex):
+    def __init__(self, instream):
+        super().__init__(
+            instream=instream, infile=None, posix=True, punctuation_chars=False
+        )
+        self.whitespace = ", \t\r\n"
+        self.whitespace_split = True
+
+    @classmethod
+    def split(cls, string):
+        lex = cls(string)
+        return list(lex)
 
 
 # pylint: disable=abstract-method
@@ -210,12 +225,29 @@ class Auf1IE(InfoExtractor):
         payload_js = self._download_webpage(
             payloadjs_url, page_id, note="Downloading payload.js"
         )
-        metadata = self._search_regex(r"{ *return ({.+}).*}", payload_js, "payloadjs")
-        js_string = js_to_json(metadata, vars={"a": f'"{page_id}"', "b": "null"})
+
+        variables = self._search_regex(r"function *\(([^)]*)", payload_js, "variables")
+        values = self._search_regex(
+            r"{ *return *{.+}.*}\((.*)[)]{3}", payload_js, "values"
+        )
+        metadata = self._search_regex(r"{ *return *({.+}).*}", payload_js, "payloadjs")
+        var_mapping = dict(zip(variables.split(","), JSHLEX.split(values)))
+
+        for key in var_mapping.keys():
+            value = var_mapping[key]
+            try:
+                json.loads(value)
+            except json.JSONDecodeError:
+                quote_escaped = value.replace('"', '\\"')
+                var_mapping[key] = f'"{quote_escaped}"'
+
+        control_character_mapping = dict.fromkeys(range(32))
+        js_string = js_to_json(metadata, vars=var_mapping).translate(
+            control_character_mapping
+        )
         return json.loads(js_string)
 
     def _metadata(self, url, *, page_id, method="api"):
-
         if method == "api":
             return self.call_with_retries(
                 lambda: self.call_api(f"getContent/{page_id}", page_id),
@@ -231,8 +263,8 @@ class Auf1IE(InfoExtractor):
         if category:
             try:
                 metadata = self._metadata(url, page_id=page_id, method="api")
-            except ExtractorError as exc:
-                self.report_warning(exc, page_id)
+            except ExtractorError:
+                self.report_warning("JSON API failed", page_id)
                 metadata = self._metadata(url, page_id=page_id, method="payloadjs")
             peertube_url = self.parse_url(metadata.get("videoUrl"))
             return (
@@ -251,10 +283,13 @@ class Auf1IE(InfoExtractor):
                 playlist_title="AUF1.TV - Alle Videos",
             )
 
-        metadata = self.call_with_retries(
-            lambda: self.call_api(f"getShow/{page_id}", page_id),
-            http_error_map={500: UnsupportedError(url)},
-        )
+        try:
+            metadata = self.call_with_retries(
+                lambda: self.call_api(f"getShow/{page_id}", page_id),
+            )
+        except ExtractorError:
+            self.report_warning("JSON API failed", page_id)
+            metadata = self._metadata(url, page_id=page_id, method="payloadjs")
 
         return self.playlist_from_entries(
             metadata.get("contents"),
