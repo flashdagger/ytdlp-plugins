@@ -155,7 +155,7 @@ class Auf1IE(InfoExtractor):
 
     def call_api(self, endpoint, video_id=None, fatal=True):
         return self._download_json(
-            f"https://auf1.at/api/{endpoint}", video_id=video_id, fatal=fatal
+            f"https://admin.auf1.tv/api/{endpoint}", video_id=video_id, fatal=fatal
         )
 
     def call_with_retries(
