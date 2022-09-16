@@ -30,10 +30,14 @@ class JSHLEX(shlex):
         self.whitespace = ", \t\r\n"
         self.whitespace_split = True
 
-    @classmethod
-    def split(cls, string):
-        lex = cls(string)
-        return list(lex)
+    def __next__(self):
+        value = super().__next__()
+        try:
+            json.loads(value)
+        except json.JSONDecodeError:
+            quote_escaped = value.replace('"', '\\"')
+            value = f'"{quote_escaped}"'
+        return value
 
 
 # pylint: disable=abstract-method
@@ -72,7 +76,7 @@ class Auf1IE(InfoExtractor):
             "expected_warnings": [
                 "Retrying due to too many requests.",
                 "The read operation timed out",
-                "JSON API failed",
+                "JSON API",
             ],
         },
         {  # JSON API without payload.js
@@ -100,7 +104,7 @@ class Auf1IE(InfoExtractor):
             "expected_warnings": [
                 "Retrying due to too many requests.",
                 "The read operation timed out",
-                "JSON API failed",
+                "JSON API",
             ],
         },
         {
@@ -116,7 +120,7 @@ class Auf1IE(InfoExtractor):
             "expected_warnings": [
                 "Retrying due to too many requests.",
                 "The read operation timed out",
-                "JSON API failed",
+                "JSON API",
             ],
         },
         {
@@ -129,7 +133,8 @@ class Auf1IE(InfoExtractor):
             "params": {"skip_download": True},
             "playlist_mincount": 400,
             "expected_warnings": [
-                "Retrying due to too many requests." "JSON API failed",
+                "Retrying due to too many requests.",
+                "JSON API",
             ],
         },
     ]
@@ -155,7 +160,10 @@ class Auf1IE(InfoExtractor):
 
     def call_api(self, endpoint, video_id=None, fatal=True):
         return self._download_json(
-            f"https://admin.auf1.tv/api/{endpoint}", video_id=video_id, fatal=fatal
+            f"https://admin.auf1.tv/api/{endpoint}",
+            video_id=video_id,
+            fatal=fatal,
+            errnote="JSON API",
         )
 
     def call_with_retries(
@@ -231,20 +239,20 @@ class Auf1IE(InfoExtractor):
             payloadjs_url, page_id, note="Downloading payload.js"
         )
 
-        variables = self._search_regex(r"function *\(([^)]*)", payload_js, "variables")
-        values = self._search_regex(
-            r"{ *return *{.+}.*}\((.*)[)]{3}", payload_js, "values"
+        match = re.match(
+            r"""(?x)
+                .*
+                \(function\ *\( (?P<vars>[^)]*) \)
+                \{\ *return\ * (?P<metadata>\{.+}) .*}
+                \( (?P<values>.*) \){3}
+            """,
+            payload_js,
         )
-        metadata = self._search_regex(r"{ *return *({.+}).*}", payload_js, "payloadjs")
-        var_mapping = dict(zip(variables.split(","), JSHLEX.split(values)))
+        if match is None:
+            raise ExtractorError("Failed parsing payload.js")
 
-        for key in var_mapping.keys():
-            value = var_mapping[key]
-            try:
-                json.loads(value)
-            except json.JSONDecodeError:
-                quote_escaped = value.replace('"', '\\"')
-                var_mapping[key] = f'"{quote_escaped}"'
+        variables, metadata, values = match.groups()
+        var_mapping = dict(zip(variables.split(","), JSHLEX(values)))
 
         control_character_mapping = dict.fromkeys(range(32))
         js_string = js_to_json(metadata, vars=var_mapping).translate(
@@ -268,8 +276,8 @@ class Auf1IE(InfoExtractor):
         if category:
             try:
                 metadata = self._metadata(url, page_id=page_id, method="api")
-            except ExtractorError:
-                self.report_warning("JSON API failed", page_id)
+            except ExtractorError as exc:
+                self.report_warning(exc, page_id)
                 metadata = self._metadata(url, page_id=page_id, method="payloadjs")
             peertube_url = self.parse_url(metadata.get("videoUrl"))
             return (
@@ -292,8 +300,8 @@ class Auf1IE(InfoExtractor):
             metadata = self.call_with_retries(
                 lambda: self.call_api(f"getShow/{page_id}", page_id),
             )
-        except ExtractorError:
-            self.report_warning("JSON API failed", page_id)
+        except ExtractorError as exc:
+            self.report_warning(exc, page_id)
             metadata = self._metadata(url, page_id=page_id, method="payloadjs")
 
         return self.playlist_from_entries(
