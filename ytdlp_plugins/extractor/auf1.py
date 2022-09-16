@@ -153,9 +153,10 @@ class Auf1IE(InfoExtractor):
             "id": metadata.get("public_id", "unknown"),
             "url": metadata.get("videoUrl"),
             "title": metadata.get("title"),
-            "description": clean_html(metadata.get("text")),
+            "description": clean_html(traverse_obj(metadata, "text", "preview_text")),
             "duration": parse_duration(metadata.get("duration")),
             "timestamp": parse_iso8601(metadata.get("published_at") or None),
+            "thumbnail": metadata.get("thumbnail_url"),
         }
 
     def call_api(self, endpoint, video_id=None, fatal=True):
@@ -209,6 +210,21 @@ class Auf1IE(InfoExtractor):
 
     def playlist_from_entries(self, all_videos, **kwargs):
         entries = []
+        exceptions = any(
+            self.get_param(name)
+            for name in (
+                "forceurl",
+                "forcejson",
+                "forceformat",
+                "listformats",
+                "dump_single_json",
+            )
+        )
+        if self.get_param("quiet") and self.get_param("simulate") and not exceptions:
+            # we are not interested in the formats which saves us some requests
+            _type = "video"
+        else:
+            _type = "url"
 
         for item in all_videos:
             public_id = item.get("public_id")
@@ -217,7 +233,7 @@ class Auf1IE(InfoExtractor):
             category = traverse_obj(item, ("show", "public_id"), default="video")
             entries.append(
                 {
-                    "_type": "url",
+                    "_type": _type,
                     "ie_key": self.ie_key(),
                     **self.sparse_info(item),
                     "url": f"//auf1.tv/{category}/{public_id}/",
