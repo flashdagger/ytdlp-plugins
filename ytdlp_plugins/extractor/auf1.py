@@ -68,10 +68,11 @@ class Auf1IE(InfoExtractor):
                 "dislike_count": int,
                 "categories": ["News & Politics"],
             },
-            "params": {"skip_download": True, "nocheckcertificate": True},
+            "params": {"skip_download": True},
             "expected_warnings": [
                 "Retrying due to too many requests.",
                 "The read operation timed out",
+                "JSON API failed",
             ],
         },
         {  # JSON API without payload.js
@@ -95,10 +96,11 @@ class Auf1IE(InfoExtractor):
                 "tags": [],
                 "categories": ["News & Politics"],
             },
-            "params": {"skip_download": True, "nocheckcertificate": True},
+            "params": {"skip_download": True},
             "expected_warnings": [
                 "Retrying due to too many requests.",
                 "The read operation timed out",
+                "JSON API failed",
             ],
         },
         {
@@ -114,6 +116,7 @@ class Auf1IE(InfoExtractor):
             "expected_warnings": [
                 "Retrying due to too many requests.",
                 "The read operation timed out",
+                "JSON API failed",
             ],
         },
         {
@@ -125,7 +128,9 @@ class Auf1IE(InfoExtractor):
             },
             "params": {"skip_download": True},
             "playlist_mincount": 400,
-            "expected_warnings": ["Retrying due to too many requests."],
+            "expected_warnings": [
+                "Retrying due to too many requests." "JSON API failed",
+            ],
         },
     ]
 
