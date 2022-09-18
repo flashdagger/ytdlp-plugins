@@ -170,23 +170,31 @@ class Auf1IE(InfoExtractor):
     def call_with_retries(
         self,
         operation,
-        retry_durations_s=(20.0, 5.0, 5.0),
         http_error_map=None,
     ):
         http_error_map = http_error_map or {}
-        max_duration_s = sum(retry_durations_s)
-        start = time.time()
-        for sleep_duration_s in retry_durations_s + (0,):
+        max_duration_s = 30.0
+        sleep_duration_s = 5.0
+        attempt_count = 0
+        while True:
+            start = time.time()
             try:
                 return operation()
             except ExtractorError as exc:
-                time_left = start + max_duration_s - time.time()
-                errorcode = exc.cause.code if isinstance(exc.cause, HTTPError) else None
-                if sleep_duration_s and errorcode == 429 and time_left > 0.0:
-                    self.report_warning(
-                        f"Retrying due to too many requests. "
-                        f"Giving up in {round(time_left):.0f} seconds."
+                attempt_count += 1
+                errorcode = None
+                if isinstance(exc.cause, HTTPError):
+                    errorcode = exc.cause.code
+                    sleep_duration_s = float(
+                        exc.cause.headers.get("retry-after", sleep_duration_s)
                     )
+                if max_duration_s < 0.0:
+                    self.report_warning(f"Giving up after {attempt_count} attempts.")
+                elif errorcode == 429:
+                    self.report_warning(
+                        f"Retrying in {sleep_duration_s:.0f} seconds due to too many requests."
+                    )
+                    max_duration_s -= time.time() - start
                     time.sleep(sleep_duration_s)
                     continue
                 for errors, exception in http_error_map.items():
@@ -205,7 +213,6 @@ class Auf1IE(InfoExtractor):
 
         return self.call_with_retries(
             lambda: self.peertube_extract_url(url),
-            retry_durations_s=(3.0, 2.0),
         )
 
     def playlist_from_entries(self, all_videos, **kwargs):
