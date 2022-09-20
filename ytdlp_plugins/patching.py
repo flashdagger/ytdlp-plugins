@@ -14,7 +14,7 @@ except ImportError:
 
 import yt_dlp
 
-from . import FOUND, OVERRIDDEN
+from . import GLOBALS
 from .utils import tabify, write_json_file
 
 
@@ -42,7 +42,7 @@ def monkey_patch(orig):
 
 
 def calling_plugin_class():
-    plugins = {str(cls) for cls in FOUND.values()}
+    plugins = {str(cls) for cls in GLOBALS.FOUND.values()}
     for frame_info in stack():
         extractor_class = frame_info[0].f_locals.get("ie")
         if str(extractor_class) in plugins:
@@ -53,7 +53,7 @@ def calling_plugin_class():
 @monkey_patch(yt_dlp.YoutubeDL.print_debug_header)
 def plugin_debug_header(self):
     plugin_list = []
-    for name, cls in FOUND.items():
+    for name, cls in GLOBALS.FOUND.items():
         module = getmodule(cls)
         version = getattr(cls, "__version__", None) or getattr(
             module, "__version__", None
@@ -71,11 +71,11 @@ def plugin_debug_header(self):
         )
         for line in tabify(sorted(plugin_list), join_string=" "):
             self.write_debug(" " + line)
-    if OVERRIDDEN:
+    if GLOBALS.OVERRIDDEN:
         self.write_debug("Overridden classes due to name collisions:")
         items = [
             (f"{name!r}", f"from {cls.__module__!r}")
-            for name, cls in OVERRIDDEN.items()
+            for name, cls in GLOBALS.OVERRIDDEN.items()
         ]
         for line in tabify(items):
             self.write_debug(" " + line)
@@ -96,7 +96,7 @@ def bug_reports_message(*args, **kwargs):
 # pylint: disable=invalid-name
 class patch_function_globals(ContextDecorator):
     """
-    context manager which replaces an global capture object of given function
+    context manager which replaces a global capture object of given function
     """
 
     def __init__(

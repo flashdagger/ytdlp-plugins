@@ -15,7 +15,7 @@ from yt_dlp.extractor import gen_extractor_classes
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import preferredencoding, write_string
 
-from ytdlp_plugins import initialize, add_plugins, FOUND
+from ytdlp_plugins import initialize, add_plugins, GLOBALS
 from .utils import md5, unlazify
 
 DEFAULT_PARAMS = {
@@ -124,7 +124,7 @@ def get_testcases():
         test_classes = gen_extractor_classes()
         filter_local = False
     else:
-        test_classes = FOUND.values()
+        test_classes = GLOBALS.FOUND.values()
         filter_local = True
 
     for cls in test_classes:
@@ -291,7 +291,7 @@ class DownloadTestcase(TestCase):
             got_dict, *("webpage_url", "extractor", "extractor_key")
         )
 
-        # Are checkable fields missing from the test case definition?
+        # Are check-able fields missing from the test case definition?
         test_info_dict = dict(
             (
                 key,

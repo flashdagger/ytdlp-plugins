@@ -17,13 +17,12 @@ from zipfile import ZipFile
 import yt_dlp
 
 from ytdlp_plugins import (
-    OVERRIDDEN,
+    GLOBALS,
     PACKAGE_NAME,
     add_plugins,
     directories,
     initialize,
     load_plugins,
-    reset,
     utils,
 )
 from ytdlp_plugins.patching import patch_function_globals, SKIP_VT_MODE, patch_context
@@ -55,7 +54,7 @@ class TestPlugins(unittest.TestCase):
         for module_name in tuple(sys.modules):
             if module_name.startswith("ytdlp_plugins.extractor"):
                 del sys.modules[module_name]
-        plugins_ie = load_plugins("extractor", "IE")
+        plugins_ie = load_plugins(f"{PACKAGE_NAME}.extractor", "IE")
         self.assertIn("ytdlp_plugins.extractor.example", sys.modules.keys())
         self.assertIn("ExamplePluginIE", plugins_ie.keys())
         # don't load modules with underscore prefix
@@ -65,7 +64,7 @@ class TestPlugins(unittest.TestCase):
         )
 
     def test_postprocessor_classes(self):
-        plugins_pp = load_plugins("postprocessor", "PP")
+        plugins_pp = load_plugins(f"{PACKAGE_NAME}.postprocessor", "PP")
         self.assertIn("ExamplePluginPP", plugins_pp.keys())
 
     def test_importing_zipped_module(self):
@@ -81,7 +80,7 @@ class TestPlugins(unittest.TestCase):
                     )
 
             sys.path.append(str(zipmodule_path))  # add zip to search paths
-            reset()
+            GLOBALS.reset()
             add_plugins()
 
             for plugin_type in ("extractor", "postprocessor"):
@@ -92,10 +91,10 @@ class TestPlugins(unittest.TestCase):
                 )
 
     def test_overridden_classes(self):
-        reset()
+        GLOBALS.reset()
         add_plugins()
 
-        overridden_names = set(OVERRIDDEN.keys())
+        overridden_names = set(GLOBALS.OVERRIDDEN.keys())
         self.assertGreaterEqual(len(overridden_names), 2)
         all_names = set(yt_dlp.extractor.__dict__.keys()) | set(
             yt_dlp.postprocessor.__dict__.keys()
@@ -105,7 +104,7 @@ class TestPlugins(unittest.TestCase):
         self.assertFalse(not_in_names, f"missing {not_in_names} in extractor namespace")
 
         all_classes = getattr(yt_dlp.extractor, "_ALL_CLASSES", ())
-        for cls in OVERRIDDEN.values():
+        for cls in GLOBALS.OVERRIDDEN.values():
             self.assertFalse(
                 cls in all_classes,
                 f"Overridden class {cls.__name__!r} still found in _ALL_CLASSES",

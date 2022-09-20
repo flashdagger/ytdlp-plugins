@@ -7,7 +7,7 @@ import sys
 import traceback
 from contextlib import suppress
 from importlib.abc import MetaPathFinder, Loader
-from importlib.machinery import ModuleSpec
+from importlib.machinery import ModuleSpec, PathFinder
 from importlib.util import module_from_spec, find_spec
 from inspect import getmembers, isclass
 from itertools import accumulate
@@ -23,12 +23,32 @@ from .generic import GenericIE
 from .utils import unlazify
 
 __version__ = "2022.08.26"
-
-
-_INITIALIZED = False
-FOUND: Dict[str, InfoExtractor] = {}
-OVERRIDDEN: Dict[str, InfoExtractor] = {}
 PACKAGE_NAME = __name__
+
+
+class GLOBALS:
+    _INITIALIZED = False
+    FOUND: Dict[str, InfoExtractor] = {}
+    OVERRIDDEN: Dict[str, InfoExtractor] = {}
+    SUBPACKAGES = (f"{PACKAGE_NAME}.extractor", f"{PACKAGE_NAME}.postprocessor")
+
+    @classmethod
+    def initialize(cls):
+        if not cls._INITIALIZED:
+            sys.meta_path.insert(
+                0,
+                PluginFinder(*cls.SUBPACKAGES),
+            )
+            cls._INITIALIZED = True
+
+    @classmethod
+    def reset(cls):
+        # reset the import caches
+        PathFinder.invalidate_caches()
+        importlib.invalidate_caches()
+        # update sys.path_importer_cache
+        for package in cls.SUBPACKAGES:
+            PathFinder.find_spec(package)
 
 
 # pylint: disable=abstract-method
@@ -62,15 +82,16 @@ class PluginFinder(MetaPathFinder):
         cache = self._zip_content_cache.setdefault(archive, set())
         path = Path(*parts)
         if not cache:
-            with ZipFile(archive) as fd:
-                for name in fd.namelist():
-                    cache.update(set(Path(name).parents))
+            with suppress(OSError):
+                with ZipFile(archive) as fd:
+                    for name in fd.namelist():
+                        cache.update(set(Path(name).parents))
         return (str(Path(archive, path)),) if path in cache else ()
 
     def search_locations(self, fullname):
         parts = fullname.split(".")
         locations = []
-        for name, importer in sys.path_importer_cache.items():
+        for importer in sys.path_importer_cache.values():
             if isinstance(importer, zipimporter):
                 locations.extend(self.zip_ns_dir(importer.archive, parts))
             elif hasattr(importer, "find_spec"):
@@ -98,20 +119,8 @@ class PluginFinder(MetaPathFinder):
                 del sys.modules[package]
 
 
-# pylint: disable=global-statement
 def initialize():
-    global _INITIALIZED
-
-    if not _INITIALIZED:
-        sys.meta_path.insert(
-            0,
-            PluginFinder(f"{PACKAGE_NAME}.extractor", f"{PACKAGE_NAME}.postprocessor"),
-        )
-        _INITIALIZED = True
-
-
-def reset():
-    importlib.invalidate_caches()  # reset the import caches
+    GLOBALS.initialize()
 
 
 def directories():
@@ -119,8 +128,7 @@ def directories():
     return spec.submodule_search_locations if spec else []
 
 
-def iter_plugin_modules(subpackage):
-    fullname = f"{PACKAGE_NAME}.{subpackage}"
+def iter_plugin_modules(fullname):
     with suppress(ModuleNotFoundError):
         pkg = importlib.import_module(fullname)
         yield from iter_modules(path=pkg.__path__, prefix=f"{fullname}.")
@@ -134,7 +142,7 @@ def detected_collisions(from_dict, to_dict):
 
 
 # noinspection PyBroadException
-def load_plugins(name, suffix, namespace=None):
+def load_plugins(fullname, suffix, namespace=None):
     classes = {}
     namespace = namespace or {}
 
@@ -148,7 +156,7 @@ def load_plugins(name, suffix, namespace=None):
 
         return check_predicate
 
-    for finder, module_name, _is_pkg in iter_plugin_modules(name):
+    for finder, module_name, _is_pkg in iter_plugin_modules(fullname):
         if re.match(r"^(\w+\.)*_", module_name):
             continue
         try:
@@ -166,10 +174,10 @@ def load_plugins(name, suffix, namespace=None):
         sys.modules[module_name] = module
         module_classes = dict(getmembers(module, gen_predicate(module_name)))
 
-        OVERRIDDEN.update(detected_collisions(module_classes, classes))
+        GLOBALS.OVERRIDDEN.update(detected_collisions(module_classes, classes))
         classes.update(module_classes)
 
-    OVERRIDDEN.update(detected_collisions(classes, namespace))
+    GLOBALS.OVERRIDDEN.update(detected_collisions(classes, namespace))
     namespace.update(classes)
 
     return classes
@@ -184,26 +192,26 @@ def add_plugins():
     extractor_map.update(
         {cls.__name__: cls for cls in all_classes if cls.__name__ not in extractor_map}
     )
-    for key in FOUND:
-        if key in OVERRIDDEN:
-            extractor_map[key] = OVERRIDDEN[key]
+    for key in GLOBALS.FOUND:
+        if key in GLOBALS.OVERRIDDEN:
+            extractor_map[key] = GLOBALS.OVERRIDDEN[key]
         elif key in extractor_map:
             del extractor_map[key]
-    FOUND.clear()
-    OVERRIDDEN.clear()
+    GLOBALS.FOUND.clear()
+    GLOBALS.OVERRIDDEN.clear()
 
-    ie_plugins = load_plugins("extractor", "IE", extractor_map)
-    FOUND.update(ie_plugins)
+    ie_plugins = load_plugins(f"{PACKAGE_NAME}.extractor", "IE", extractor_map)
+    GLOBALS.FOUND.update(ie_plugins)
     extractors = getattr(extractor, "extractors", None)
     if extractors is not None:
         extractors.__dict__.update(ie_plugins)
 
-    for cls in OVERRIDDEN.values():
+    for cls in GLOBALS.OVERRIDDEN.values():
         with suppress(ValueError):
             all_classes.remove(cls)
     all_classes[:0] = ie_plugins.values()
 
-    GenericIE.OTHER_EXTRACTORS.extend(FOUND.values())
+    GenericIE.OTHER_EXTRACTORS.extend(GLOBALS.FOUND.values())
     last_extractor = unlazify(all_classes[-1])
     if issubclass(GenericIE, last_extractor):
         setattr(extractor, last_extractor.__name__, GenericIE)
@@ -211,5 +219,7 @@ def add_plugins():
         if extractors:  # pylint: disable=using-constant-test
             extractors.GenericIE = GenericIE
 
-    pp_plugins = load_plugins("postprocessor", "PP", postprocessor.__dict__)
-    FOUND.update(pp_plugins)
+    pp_plugins = load_plugins(
+        f"{PACKAGE_NAME}.postprocessor", "PP", postprocessor.__dict__
+    )
+    GLOBALS.FOUND.update(pp_plugins)
