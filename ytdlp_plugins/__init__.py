@@ -58,25 +58,25 @@ class PluginFinder(MetaPathFinder):
     def partition(name):
         yield from accumulate(name.split("."), lambda a, b: ".".join((a, b)))
 
-    def zip_has_dir(self, archive, path):
-        if archive not in self._zip_content_cache:
+    def zip_ns_dir(self, archive, parts):
+        cache = self._zip_content_cache.setdefault(archive, set())
+        path = Path(*parts)
+        if not cache:
             with ZipFile(archive) as fd:
-                self._zip_content_cache[archive] = [
-                    Path(name) for name in fd.namelist()
-                ]
-        return any(path in file.parents for file in self._zip_content_cache[archive])
+                for name in fd.namelist():
+                    cache.update(set(Path(name).parents))
+        return (str(Path(archive, path)),) if path in cache else ()
 
     def search_locations(self, fullname):
         parts = fullname.split(".")
         locations = []
-        for path in map(Path, dict.fromkeys(sys.path).keys()):
-            candidate = path.joinpath(*parts)
-            if candidate.is_dir():
-                locations.append(str(candidate))
-            elif path.is_file() and path.suffix in {".zip", ".egg", ".whl"}:
-                with suppress(FileNotFoundError):
-                    if self.zip_has_dir(path, Path(*parts)):
-                        locations.append(str(candidate))
+        for name, importer in sys.path_importer_cache.items():
+            if isinstance(importer, zipimporter):
+                locations.extend(self.zip_ns_dir(importer.archive, parts))
+            elif hasattr(importer, "find_spec"):
+                spec = importer.find_spec(fullname)
+                if spec and spec.origin is None:
+                    locations.extend(spec.submodule_search_locations)
         return locations
 
     def find_spec(self, fullname, _path=None, _target=None):
