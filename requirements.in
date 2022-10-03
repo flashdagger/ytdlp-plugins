@@ -1,9 +1,9 @@
 # dev requirements
 -e file:.
 black
-bump2version
+bump2version; platform_python_implementation != 'PyPy'
 mypy; platform_python_implementation != 'PyPy'
-pre-commit
+pre-commit; platform_python_implementation != 'PyPy'
 pyflakes
 pylint
 pytest
