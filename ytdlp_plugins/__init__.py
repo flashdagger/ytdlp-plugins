@@ -96,7 +96,10 @@ class PluginFinder(MetaPathFinder):
                 locations.extend(self.zip_ns_dir(importer.archive, parts))
             elif hasattr(importer, "find_spec"):
                 spec = importer.find_spec(fullname)
-                if spec and spec.origin is None:
+                path = Path(getattr(importer, "path", "."), *fullname.split("."))
+                if spec is None and path.is_absolute() and path.is_dir():
+                    locations.append(str(path))
+                elif spec and spec.origin is None:
                     locations.extend(spec.submodule_search_locations)
         return locations
 
