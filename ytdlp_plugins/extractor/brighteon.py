@@ -336,9 +336,8 @@ class BrighteonIE(InfoExtractor):
             raise UnsupportedError(url)
         page_cache = {1: initial_video_list}
         page_size = len(initial_video_list)
-        max_pages = traverse_obj(
-            data, ("pagination", "pages"), expected_type=int, default=maxsize
-        )
+        pagination = data.get("pagination", data)
+        max_pages = pagination.get("pages", maxsize)
 
         def fetch_entry(index):
             page_idx, offset = divmod(index, page_size)
@@ -364,7 +363,8 @@ class BrighteonIE(InfoExtractor):
         return self.playlist_result(
             entries=OnDemandPagedList(fetch_entry, 1),
             playlist_id=playlist_info.get("id", page_id),
-            playlist_title=playlist_info.get("name"),
+            playlist_title=playlist_info.get("name", page_id),
+            playlist_count=pagination.get("count", "N/A"),
         )
 
     def _playlist_entries(self, playlist_info, url):
@@ -382,6 +382,7 @@ class BrighteonIE(InfoExtractor):
             entries=entries,
             playlist_id=playlist_info.get("playlistId"),
             playlist_title=playlist_info.get("playlistName"),
+            playlist_count=len(entries),
         )
 
     def _real_extract(self, url):
