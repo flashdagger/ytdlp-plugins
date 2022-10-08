@@ -113,7 +113,7 @@ class Auf1IE(InfoExtractor):
             "info_dict": {
                 "id": "nachrichten-auf1",
                 "title": "Nachrichten AUF1",
-                "description": "md5:42259265c58a49eb7b103d3540a06715",
+                "description": "md5:5b1f113270133adfd94f6ae3014e3d6f",
             },
             "params": {"skip_download": True},
             "playlist_mincount": 300,
