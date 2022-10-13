@@ -6,17 +6,17 @@
 #
 -e file:.
     # via -r requirements.in
-astroid==2.12.10
+astroid==2.12.11
     # via pylint
 attrs==22.1.0
     # via pytest
-black==22.8.0
+black==22.10.0
     # via -r requirements.in
 bleach==5.0.1
     # via readme-renderer
 brotli==1.0.9
     # via yt-dlp
-bump2version==1.0.1
+bump2version==1.0.1 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 certifi==2022.9.24
     # via
@@ -45,7 +45,7 @@ execnet==1.9.0
     # via pytest-xdist
 filelock==3.8.0
     # via virtualenv
-identify==2.5.5
+identify==2.5.6
     # via pre-commit
 idna==3.4
     # via requests
@@ -67,9 +67,9 @@ mccabe==0.7.0
     # via pylint
 more-itertools==8.14.0
     # via jaraco-classes
-mutagen==1.45.1
+mutagen==1.46.0
     # via yt-dlp
-mypy==0.981 ; platform_python_implementation != "PyPy"
+mypy==0.982 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 mypy-extensions==0.4.3
     # via
@@ -90,7 +90,7 @@ platformdirs==2.5.2
     #   virtualenv
 pluggy==1.0.0
     # via pytest
-pre-commit==2.20.0
+pre-commit==2.20.0 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 py==1.11.0
     # via
@@ -104,7 +104,7 @@ pygments==2.13.0
     # via
     #   readme-renderer
     #   rich
-pylint==2.15.3
+pylint==2.15.4
     # via -r requirements.in
 pyparsing==3.0.9
     # via packaging
@@ -130,7 +130,7 @@ requests==2.28.1
     # via
     #   requests-toolbelt
     #   twine
-requests-toolbelt==0.9.1
+requests-toolbelt==0.10.0
     # via twine
 rfc3986==2.0.0
     # via twine
@@ -150,7 +150,7 @@ tomlkit==0.11.5
     # via pylint
 twine==4.0.1 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
-typing-extensions==4.3.0
+typing-extensions==4.4.0
     # via
     #   astroid
     #   black
@@ -168,11 +168,11 @@ websockets==10.3
     # via yt-dlp
 wrapt==1.14.1
     # via astroid
-yt-dlp==2022.9.1
+yt-dlp==2022.10.4
     # via ytdlp-plugins
-ytdlp-plugins==2022.9.20
+ytdlp-plugins==2022.10.3
     # via ytdlp-brighteon
-zipp==3.8.1
+zipp==3.9.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
