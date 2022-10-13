@@ -3,6 +3,7 @@ import re
 from contextlib import suppress
 from operator import itemgetter
 from sys import maxsize
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
@@ -18,7 +19,7 @@ from yt_dlp.utils import (
     update_url_query,
     urljoin,
 )
-from ytdlp_plugins.utils import estimate_filesize, ParsedURL
+from ytdlp_plugins.utils import ParsedURL, estimate_filesize
 
 __version__ = "2022.10.03"
 
@@ -86,13 +87,13 @@ class BrighteonIE(InfoExtractor):
         },
         {
             # channel
-            "url": "https://www.brighteon.com/channels/johntheo",
+            "url": "https://www.brighteon.com/channels/brighteontv",
             "info_dict": {
-                "id": "005e4477-e415-4515-b661-48e974f4a26d",
-                "title": "JohnTheo-Author",
+                "id": "123538c1-de87-46d0-a0ad-be8efebbfaa1",
+                "title": "BrighteonTV",
             },
-            "params": {"skip_download": True, "playlistend": 3},
-            "playlist_count": 3,
+            "params": {"skip_download": True, "playlistend": 50},
+            "playlist_count": 50,
         },
         {
             # categories
@@ -101,10 +102,19 @@ class BrighteonIE(InfoExtractor):
             "info_dict": {
                 "id": "4ad59df9-25ce-424d-8ac4-4f92d58322b9",
                 "title": "Health & Medicine",
-                "description": None,
             },
-            "params": {"skip_download": True, "playlistend": 3},
-            "playlist_count": 3,
+            "params": {"skip_download": True, "playlistend": 50},
+            "playlist_count": 50,
+        },
+        {
+            # browse
+            "url": "https://www.brighteon.com/browse/new-videos",
+            "info_dict": {
+                "id": "new-videos",
+                "title": "new-videos",
+            },
+            "params": {"skip_download": True, "playlistend": 50},
+            "playlist_count": 50,
         },
         {
             # test embedded urls
@@ -150,6 +160,20 @@ class BrighteonIE(InfoExtractor):
         if suffix:
             path.extend(suffix.split("."))
         return path
+
+    def _json_api(self, url, video_id):
+        parsed_url = urlparse(url)
+        parsed_qs = parse_qs(parsed_url.query)
+        path = parsed_url.path
+
+        if path.startswith("/channels/") and path.endswith("/videos"):
+            path = path.replace("/videos", "/")
+
+        json_api_url = urlunparse(
+            parsed_url._replace(path="/api-v3" + path, query=urlencode(parsed_qs, True))
+        )
+        json_obj = self._download_json(json_api_url, video_id=video_id)
+        return json_obj
 
     def _json_extract(self, url, video_id, note=None):
         webpage = self._download_webpage(url, video_id=video_id, note=note)
@@ -320,9 +344,12 @@ class BrighteonIE(InfoExtractor):
 
         return entry_info
 
-    def _paged_url_entries(self, page_id, url, start_page=None):
+    def _paged_url_entries(self, page_id, url, start_page=None, use_json_api=True):
         def load_page(page_number):
             page_url = update_url_query(url, {"page": page_number})
+
+            if use_json_api:
+                return self._json_api(page_url, video_id=page_id)
             json_obj = self._json_extract(
                 page_url, video_id=page_id, note=f"Downloading page {page_number}"
             )
@@ -364,7 +391,7 @@ class BrighteonIE(InfoExtractor):
             entries=OnDemandPagedList(fetch_entry, 1),
             playlist_id=playlist_info.get("id", page_id),
             playlist_title=playlist_info.get("name", page_id),
-            playlist_count=pagination.get("count", "N/A"),
+            playlist_count=page_size if start_page else pagination.get("count", "N/A"),
         )
 
     def _playlist_entries(self, playlist_info, url):
@@ -393,7 +420,10 @@ class BrighteonIE(InfoExtractor):
 
         if taxonomy in {"channels", "categories", "browse"}:
             return self._paged_url_entries(
-                video_id, url, start_page=parsed_url.query("page")
+                video_id,
+                url,
+                start_page=parsed_url.query("page"),
+                use_json_api=taxonomy != "browse",
             )
 
         json_obj = self._json_extract(url, video_id=video_id)
