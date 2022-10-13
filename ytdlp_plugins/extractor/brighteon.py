@@ -161,18 +161,20 @@ class BrighteonIE(InfoExtractor):
             path.extend(suffix.split("."))
         return path
 
-    def _json_api(self, url, video_id):
+    def _json_api(self, url, video_id, **kwargs):
         parsed_url = urlparse(url)
         parsed_qs = parse_qs(parsed_url.query)
-        path = parsed_url.path
+        path = parsed_url.path.rstrip("/")
 
         if path.startswith("/channels/") and path.endswith("/videos"):
             path = path.replace("/videos", "/")
+        if path.startswith("/categories/") and not path.endswith("/videos"):
+            path = path + "/videos"
 
         json_api_url = urlunparse(
             parsed_url._replace(path="/api-v3" + path, query=urlencode(parsed_qs, True))
         )
-        json_obj = self._download_json(json_api_url, video_id=video_id)
+        json_obj = self._download_json(json_api_url, video_id=video_id, **kwargs)
         return json_obj
 
     def _json_extract(self, url, video_id, note=None):
@@ -345,14 +347,18 @@ class BrighteonIE(InfoExtractor):
         return entry_info
 
     def _paged_url_entries(self, page_id, url, start_page=None, use_json_api=True):
+        max_pages = None
+
         def load_page(page_number):
             page_url = update_url_query(url, {"page": page_number})
+            note = f"Downloading page {page_number}"
+            if max_pages:
+                note = f"{note}/{max_pages}"
 
             if use_json_api:
-                return self._json_api(page_url, video_id=page_id)
-            json_obj = self._json_extract(
-                page_url, video_id=page_id, note=f"Downloading page {page_number}"
-            )
+                return self._json_api(page_url, video_id=page_id, note=note)
+
+            json_obj = self._json_extract(page_url, video_id=page_id, note=note)
             page_props = traverse_obj(json_obj, self.page_props_path(), default={})
             return page_props.get("data") or page_props
 
