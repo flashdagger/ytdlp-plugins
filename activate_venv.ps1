@@ -32,17 +32,22 @@ $VENV_PATH = Join-Path $CURRENT_PATH 'venv\'; Write-Verbose $VENV_PATH
 $PYTHON_PATH = Join-Path $VENV_PATH 'Scripts\python.exe'; Write-Verbose $PYTHON_PATH
 $PYTHON_ACTIVATE = Join-Path $VENV_PATH 'Scripts\Activate.ps1'; Write-Verbose $PYTHON_ACTIVATE
 
-py -3 $VENV_SCRIPT --min-version 3.6 --path $VENV_PATH;
+if (Get-Command "py.exe" -ErrorAction SilentlyContinue) {
+    py.exe -3 $VENV_SCRIPT --min-version 3.6 --path $VENV_PATH;
+} else {
+   $Errors += "System Python executable not found"
+}
+
 If (-Not $?) {
-    $Errors += "Error: System Python executable not found"
+    $Errors += "Script returned $LASTEXITCODE"
 }
 
 If (-Not (Test-Path -Path $PYTHON_ACTIVATE)) {
-    $Errors += "Error: Missing $PYTHON_ACTIVATE"
+    $Errors += "Missing $PYTHON_ACTIVATE"
 }
 
 If ($Errors) {
-    $Errors | ForEach { Write-Error $_ }
+    $Errors | ForEach { $Host.UI.WriteErrorLine("Error: $_") }
     If (IsNonInteractive) {
         pause
     }
