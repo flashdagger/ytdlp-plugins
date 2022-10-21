@@ -1,14 +1,12 @@
 # coding: utf-8
 import re
 from contextlib import suppress
-from operator import itemgetter
 from sys import maxsize
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     ExtractorError,
-    HEADRequest,
     OnDemandPagedList,
     UnsupportedError,
     get_element_by_id,
@@ -19,7 +17,8 @@ from yt_dlp.utils import (
     update_url_query,
     urljoin,
 )
-from ytdlp_plugins.utils import ParsedURL, estimate_filesize
+from ytdlp_plugins.probe import headprobe_media
+from ytdlp_plugins.utils import ParsedURL
 
 __version__ = "2022.10.13.post1"
 
@@ -225,7 +224,8 @@ class BrighteonIE(InfoExtractor):
 
         for source in sources:
             try:
-                url, typ = itemgetter("src", "type")(source)
+                url = source["src"]
+                typ = source.get("type", url[-3:])
             except KeyError:
                 continue
             if url.endswith(".m3u8"):
@@ -255,7 +255,7 @@ class BrighteonIE(InfoExtractor):
                     fmt["manifest_stream_number"] = 0
             else:
                 media_formats = ()
-                self.report_warning(f"unknown video format {typ!r}")
+                self.report_warning(f"unknown media format {typ!r}")
             formats.extend(media_formats)
 
         for fmt in formats:
@@ -264,25 +264,19 @@ class BrighteonIE(InfoExtractor):
 
         return formats
 
-    def _estimate_filesize(self, formats, duration):
-        estimate_filesize(formats, duration)
+    def _update_formats(self, formats):
         for fmt in formats:
-            if not fmt.get("format_note", "").startswith("DASH video"):
+            if not (
+                fmt.get("format_note", "").startswith("DASH video")
+                or fmt.get("acodec") is None
+            ):
                 continue
             if fmt.get("height"):
                 fmt["fps"] = 30 if fmt["height"] >= 540 else 15
-            del fmt["filesize_approx"]
             if not self.get_param("listformats"):
                 continue
-            response = self._request_webpage(
-                HEADRequest(fmt["url"]),
-                note="Getting file size",
-                video_id=None,
-                fatal=False,
-            )
-            if not response:
-                continue
-            fmt["filesize"] = int_or_none(response.headers.get("Content-Length"))
+            info = headprobe_media(self, fmt["url"])[0]
+            fmt.update(info)
 
     def _entry_from_info(self, video_info, channel_info, from_playlist=False):
         video_id = video_info["id"]
@@ -309,9 +303,14 @@ class BrighteonIE(InfoExtractor):
         else:
             _type = "video"
             formats = self._download_formats(
-                video_info.get("source"), video_id=video_id
+                video_info.get("source", ()), video_id=video_id
             )
-            self._estimate_filesize(formats, duration)
+            if video_info.get("audio"):
+                formats.append(
+                    {"format_id": "audio", "url": video_info["audio"], "vcodec": "none"}
+                )
+            if self.get_param("check_formats") is not False:
+                self._update_formats(formats)
             self._sort_formats(formats)
             self._auto_merge_formats(formats)
 
