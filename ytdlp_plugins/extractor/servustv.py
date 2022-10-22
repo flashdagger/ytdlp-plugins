@@ -196,10 +196,10 @@ class ServusTVIE(InfoExtractor):
         },
         {
             # block page playlist
-            "url": "https://www.servustv.com/sport/p/sport-livestreams-bei-servustv-on/222987/",
+            "url": "https://www.servustv.com/sport/p/motorsport/325/",
             "info_dict": {
-                "id": "sport-livestreams-bei-servustv-on",
-                "title": "Sport-Livestreams bei ServusTV On",
+                "id": "motorsport",
+                "title": "Motorsport",
             },
             "playlist_mincount": 0,
             "params": {
