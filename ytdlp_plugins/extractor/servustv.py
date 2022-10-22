@@ -135,6 +135,7 @@ class ServusTVIE(InfoExtractor):
             "info_dict": {
                 "id": "corona-auf-der-suche-nach-der-wahrheit-teil-3-die-themen",
                 "title": "Corona – auf der Suche nach der Wahrheit, Teil 3: Die Themen",
+                "description": None,
             },
             "playlist": [
                 {
@@ -165,7 +166,7 @@ class ServusTVIE(InfoExtractor):
                     },
                 },
             ],
-            "playlist_mincount": 2,
+            "playlist_mincount": 3,
             "params": {
                 "geo_bypass_country": "DE",
                 "nocheckcertificate": True,
@@ -200,6 +201,7 @@ class ServusTVIE(InfoExtractor):
             "info_dict": {
                 "id": "motorsport",
                 "title": "Motorsport",
+                "description": None,
             },
             "playlist_mincount": 0,
             "params": {
@@ -446,17 +448,36 @@ class ServusTVIE(InfoExtractor):
 
         raise UnsupportedError(url)
 
-    @staticmethod
-    def _urls_from_blocks(blocks):
-        flat_blocks = []
-        for block in blocks:
-            inner_blocks = block.get("innerBlocks")
-            if inner_blocks and isinstance(inner_blocks, list):
-                flat_blocks.extend(inner_blocks)
-            else:
-                flat_blocks.append(block)
-        links = (traverse_obj(block, ("post", "link")) for block in flat_blocks)
-        return [url for url in links if url]
+    def _entries_from_blocks(self, blocks):
+        """return url results or multiple playlists"""
+        categories = {}
+
+        def flatten(_blocks, depth=0):
+            for _block in _blocks:
+                post = _block.get("post", {})
+                if "/v/" in post.get("link", ""):
+                    link = post["link"]
+                    category = post.get("stv_category_name")
+                    links = categories.setdefault(f"{category}", [])
+                    if link not in links:
+                        links.append(link)
+                flatten(_block.get("innerBlocks", ()), depth=depth + 1)
+
+        flatten(blocks)
+        if len(categories) == 1:
+            yield from (
+                self.url_result(url, ie=self.ie_key())
+                for url in categories.popitem()[1]
+            )
+        else:
+            for name, urls in categories.items():
+                info = self.playlist_from_matches(
+                    urls,
+                    playlist_title=name,
+                    extractor=self.IE_NAME,
+                    extractor_key=self.ie_key(),
+                )
+                yield info
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
@@ -498,28 +519,20 @@ class ServusTVIE(InfoExtractor):
         if live_schedule:
             return self._live_stream_from_schedule(live_schedule)
 
-        # create playlist from blocks
-        fallback = traverse_obj(
-            json_obj, "props/pageProps/fallback".split("/"), default={}
-        )
-        filters = {item["currentFilter"]: item for item in fallback.values()}
-        all_videos = traverse_obj(filters, "all-videos/items".split("/"), default=[])
-
+        # create playlist from block data
         embed_url = traverse_obj(
             page_data, "stv_embedded_video/link".split("/"), default=None
         )
-        urls = [embed_url] if embed_url else []
-        urls.extend(self._urls_from_blocks(page_data.get("blocks", [])))
-        urls.extend((item["link"] for item in all_videos))
-        if urls:
-            return self.playlist_from_matches(
-                urls,
+        entries = [self.url_result(embed_url, ie=self.ie_key())] if embed_url else []
+        entries.extend(self._entries_from_blocks(page_data.get("blocks", ())))
+        if entries:
+            return self.playlist_result(
+                entries,
                 playlist_id=page_data.get("slug"),
                 playlist_title=traverse_obj(
                     page_data, ("title", "rendered"), default=page_data.get("slug")
                 ),
-                description=page_data.get("stv_short_description"),
-                ie=self.ie_key(),
+                playlist_description=page_data.get("stv_short_description"),
             )
 
         # finally, create playlist from query
