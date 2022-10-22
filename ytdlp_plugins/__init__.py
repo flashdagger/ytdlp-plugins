@@ -126,10 +126,6 @@ class PluginFinder(MetaPathFinder):
                 del sys.modules[package]
 
 
-def initialize():
-    GLOBALS.initialize()
-
-
 def directories():
     spec = find_spec(PACKAGE_NAME)
     return spec.submodule_search_locations if spec else []
@@ -194,6 +190,7 @@ def add_plugins():
     # pylint: disable=import-outside-toplevel
     from yt_dlp import extractor, postprocessor
 
+    GLOBALS.initialize()
     all_classes = getattr(extractor, "_ALL_CLASSES", [])
     extractor_map = extractor.__dict__
     extractor_map.update(

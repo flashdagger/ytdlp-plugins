@@ -15,7 +15,7 @@ from yt_dlp.extractor import gen_extractor_classes
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import preferredencoding, write_string
 
-from ytdlp_plugins import initialize, add_plugins, GLOBALS
+from ytdlp_plugins import add_plugins, GLOBALS
 from .utils import md5, unlazify
 
 DEFAULT_PARAMS = {
@@ -117,7 +117,6 @@ def get_class_testcases(cls):
 
 
 def get_testcases():
-    initialize()
     add_plugins()
     project_plugins = Path.cwd() / "ytdlp_plugins"
     if "--all" in sys.argv or "test_all" in os.environ:

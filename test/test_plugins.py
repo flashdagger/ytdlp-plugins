@@ -21,7 +21,6 @@ from ytdlp_plugins import (
     PACKAGE_NAME,
     add_plugins,
     directories,
-    initialize,
     load_plugins,
     utils,
 )
@@ -29,7 +28,7 @@ from ytdlp_plugins.patching import patch_function_globals, SKIP_VT_MODE, patch_c
 
 ROOT_DIR = Path(__file__).parents[1].absolute()
 
-initialize()
+GLOBALS.initialize()
 
 
 class TestPlugins(unittest.TestCase):
