@@ -293,6 +293,7 @@ class ServusTVIE(InfoExtractor):
         return formats, subtitles
 
     def _entry_by_id(self, video_id, video_url=None, is_live=False):
+        live_status = "is_live" if is_live else "not_live"
         info = self._download_json(
             self._API_URL,
             query={"videoId": video_id.upper(), "timeZone": self.timezone},
@@ -315,6 +316,8 @@ class ServusTVIE(InfoExtractor):
         )
 
         if errors and not info.get("videoUrl"):
+            if "NOT_YET_AVAILABLE" in errors:
+                live_status = "is_upcoming"
             if "GEO_BLOCKED" in errors:
                 countries = None
                 blocked_countries = info.get("blockedCountries")
@@ -326,8 +329,8 @@ class ServusTVIE(InfoExtractor):
         duration = info.get("duration")
         if is_live:
             duration = None
-        elif not duration:
-            is_live = True
+        elif not duration and live_status == "not_live":
+            live_status = "is_live"
         formats, subtitles = self._download_formats(info, video_id)
         self._auto_merge_formats(formats)
 
@@ -349,7 +352,7 @@ class ServusTVIE(InfoExtractor):
             "duration": duration,
             "timestamp": parse_iso8601(info.get("currentSunrise")),
             "release_timestamp": parse_iso8601(available_from),
-            "is_live": is_live,
+            "live_status": live_status,
             "categories": [info["label"]] if info.get("label") else [],
             "age_limit": int(
                 self._search_regex(
