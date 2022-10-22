@@ -86,22 +86,26 @@ class PluginFinder(MetaPathFinder):
                 with ZipFile(archive) as fd:
                     for name in fd.namelist():
                         cache.update(set(Path(name).parents))
-        return (str(Path(archive, path)),) if path in cache else ()
+        return (Path(archive, path),) if path in cache else ()
 
     def search_locations(self, fullname):
         parts = fullname.split(".")
         locations = []
         for importer in sys.path_importer_cache.values():
             if isinstance(importer, zipimporter):
-                locations.extend(self.zip_ns_dir(importer.archive, parts))
+                locations.extend(
+                    self.zip_ns_dir(Path(importer.archive).absolute(), parts)
+                )
             elif hasattr(importer, "find_spec"):
                 spec = importer.find_spec(fullname)
                 path = Path(getattr(importer, "path", "."), *fullname.split("."))
                 if spec is None and path.is_absolute() and path.is_dir():
-                    locations.append(str(path))
+                    locations.append(path)
                 elif spec and spec.origin is None:
-                    locations.extend(spec.submodule_search_locations)
-        return locations
+                    locations.extend(
+                        Path(loc) for loc in spec.submodule_search_locations
+                    )
+        return [str(path) for path in dict.fromkeys(locations)]
 
     def find_spec(self, fullname, _path=None, _target=None):
         if fullname not in self.packages:
