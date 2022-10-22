@@ -22,7 +22,7 @@ class ServusTVIE(InfoExtractor):
     IE_NAME = "servustv"
     _VALID_URL = r"""(?x)
                     https?://
-                        (?:www\.)?(?:servustv|pm-wissen).com/
+                        (?:www\.)?(?:servustv|pm-wissen)\.com/
                         (?:
                             videos | (?: [\w-]+/(?: v | [abp]/[\w-]+ ) )
                         )
