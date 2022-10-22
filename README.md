@@ -5,7 +5,7 @@
 
 The following plugin packages are currently available:
 * [ytdlp-auf1](https://pypi.org/project/ytdlp-auf1/)
-* [ytdlp-bittube](https://pypi.org/project/ytdlp-bittube/)
+* [ytdlp-bittube](https://pypi.org/project/ytdlp-bittube/) *(service is inoperative)*
 * [ytdlp-brighteon](https://pypi.org/project/ytdlp-brighteon/)
 * [ytdlp-dtube](https://pypi.org/project/ytdlp-dtube/)
 * [ytdlp-servustv](https://pypi.org/project/ytdlp-servustv/)
@@ -17,18 +17,36 @@ You can install ytdlp-plugins via pip:
 * Use [PyPI package](https://pypi.org/project/ytdlp-plugins): 
 
   `python3 -m pip install --upgrade ytdlp-plugins`
-* Install from Github branch: 
+* Install from GitHub branch: 
 
   `python3 -m pip install -U https://github.com/flashdagger/ytdlp-plugins/archive/refs/heads/master.zip`
 
 Note that on some systems, you may need to use `py` or `python` instead of `python3`
 
-## running example
-ytdlp-plugins enables all plugins and forwards all parameters to yt-dlp.
+## running from command-line
+On the command-line line simply use `ytdlp-plugins` executable instead `yt-dlp`.
+This enables all plugins and forwards all parameters to yt-dlp.
 
-You will get a detailed overview by running in verbose mode:
+You will get a detailed overview of installed plugins by running in verbose mode:
 
 `ytdlp-plugins -v`
+
+
+## embedding in your code
+
+```python
+import ytdlp_plugins
+from yt_dlp import YoutubeDL
+
+# add found plugin extractors to yt-dlp
+ytdlp_plugins.add_plugins()
+
+URLS = ['https://www.servustv.com/allgemein/p/jetzt-live/119753/']
+with YoutubeDL() as ydl:
+  ydl.download(URLS)
+```
+
+For more details see [embedding yt-dlp](https://github.com/yt-dlp/yt-dlp#embedding-yt-dlp)
 
 
 ## running tests
