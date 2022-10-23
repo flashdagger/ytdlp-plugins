@@ -24,7 +24,7 @@ class ServusTVIE(InfoExtractor):
                     https?://
                         (?:www\.)?(?:servustv|pm-wissen)\.com/
                         (?:
-                            videos | (?: [\w-]+/(?: v | [abp]/[\w-]+ ) )
+                            videos | (?: [\w-]+/(?: v | [abkp]/[\w-]+ ) )
                         )
                         /(?P<id>[A-Za-z0-9-]+)
                     """
@@ -123,7 +123,6 @@ class ServusTVIE(InfoExtractor):
             "playlist_mincount": 9,
             "params": {
                 "geo_bypass_country": "AT",
-                "nocheckcertificate": True,
                 "format": "bestvideo",
                 "skip_download": True,
             },
@@ -135,7 +134,11 @@ class ServusTVIE(InfoExtractor):
             "info_dict": {
                 "id": "corona-auf-der-suche-nach-der-wahrheit-teil-3-die-themen",
                 "title": "Corona – auf der Suche nach der Wahrheit, Teil 3: Die Themen",
-                "description": None,
+                "description": " Auch in Teil drei der Doku-Reihe begibt sich "
+                "Prof. Dr. Dr. Haditsch, renommierter Wissenschaftler, Arzt und "
+                "Virologe auf eine Reise um die Welt und sucht dabei Antworten auf "
+                "spannende Fragen rund um das Thema Corona. Das sind die Themen."
+                "\u00a0",
             },
             "playlist": [
                 {
@@ -169,7 +172,6 @@ class ServusTVIE(InfoExtractor):
             "playlist_mincount": 3,
             "params": {
                 "geo_bypass_country": "DE",
-                "nocheckcertificate": True,
                 "format": "bestvideo",
                 "skip_download": True,
             },
@@ -201,12 +203,13 @@ class ServusTVIE(InfoExtractor):
             "info_dict": {
                 "id": "motorsport",
                 "title": "Motorsport",
-                "description": None,
+                "description": "Alle kostenlosen Motorsport-Livestreams von ServusTV. "
+                "MotoGP LIVE, Formel 1 LIVE, die WRC LIVE. "
+                "Alle Highlight-Videos und Termine.",
             },
             "playlist_mincount": 0,
             "params": {
                 "geo_bypass_country": "DE",
-                "nocheckcertificate": True,
                 "format": "bestvideo",
                 "skip_download": True,
             },
@@ -386,25 +389,22 @@ class ServusTVIE(InfoExtractor):
                 item["aa_id"].lower(), video_url=video_url, is_live=True
             )
 
-    def _paged_playlist_by_query(
-        self, query_type, query_id, extra_query=(), extractor=None
-    ):
-        query = {
-            query_type: query_id,
+    def _paged_playlist_by_query(self, query, extractor=None):
+        _video_id = "-".join(next(iter(query.items())))
+        json_query = {
+            **query,
             "geo_override": self.country_code,
             "post_type": "media_asset",
             "filter_playability": "true",
             "per_page": self.PAGE_SIZE,
         }
-        assert "per_page" not in extra_query
-        query.update(extra_query)
 
         def fetch_page(page_number):
-            query.update({"page": page_number + 1})
+            json_query.update({"page": page_number + 1})
             info = self._download_json(
                 self._QUERY_API_URL,
-                query=query,
-                video_id=f"{query_type}-{query_id}",
+                query=json_query,
+                video_id=_video_id,
                 note=f"Downloading entries "
                 f"{page_number * self.PAGE_SIZE + 1}-{(page_number + 1) * self.PAGE_SIZE}",
             )
@@ -432,21 +432,28 @@ class ServusTVIE(InfoExtractor):
 
         return title
 
+    def _playlist_meta(self, page_data, webpage):
+        default = page_data.get("slug")
+        return {
+            "playlist_id": default,
+            "playlist_title": traverse_obj(page_data, ("title", "rendered"))
+            or self._og_search_title(webpage)
+            or default,
+            "playlist_description": traverse_obj(
+                page_data, "stv_short_description", "stv_teaser_description"
+            )
+            or self._og_search_description(webpage)
+            or default,
+        }
+
     @staticmethod
-    def taxonomy(json_obj, page_id, url):
-        asset_paths = (
-            ("source", "media_asset", str(page_id), "categories"),
-            # ("source", "page", str(page_id), "asset_content_color"),
+    def _filter_query(json_obj, name="all-videos"):
+        ild = traverse_obj(
+            json_obj, "props/pageProps/initialLibData".split("/"), default={}
         )
-
-        for path in asset_paths:
-            asset_ids = traverse_obj(json_obj, path, default=())
-            query_type = path[-1]
-            query_id = asset_ids and asset_ids[0]
-            if query_id:
-                return query_type, query_id
-
-        raise UnsupportedError(url)
+        for flt in ild.get("filters", ()):
+            if flt.get("value") == name:
+                return ParsedURL(flt["url"]).query()
 
     def _entries_from_blocks(self, blocks):
         """return url results or multiple playlists"""
@@ -519,6 +526,14 @@ class ServusTVIE(InfoExtractor):
         if live_schedule:
             return self._live_stream_from_schedule(live_schedule)
 
+        # create playlist from query
+        query = self._filter_query(json_obj)
+        if query:
+            return self.playlist_result(
+                self._paged_playlist_by_query(query),
+                **self._playlist_meta(page_data, webpage),
+            )
+
         # create playlist from block data
         embed_url = traverse_obj(
             page_data, "stv_embedded_video/link".split("/"), default=None
@@ -528,26 +543,10 @@ class ServusTVIE(InfoExtractor):
         if entries:
             return self.playlist_result(
                 entries,
-                playlist_id=page_data.get("slug"),
-                playlist_title=traverse_obj(
-                    page_data, ("title", "rendered"), default=page_data.get("slug")
-                ),
-                playlist_description=page_data.get("stv_short_description"),
+                **self._playlist_meta(page_data, webpage),
             )
 
-        # finally, create playlist from query
-        page_id = page_data.get("id")
-        query_type, query_id = self.taxonomy(json_obj, page_id, url)
-        return self.playlist_result(
-            self._paged_playlist_by_query(
-                query_type=query_type,
-                query_id=query_id,
-                extra_query={"order": "desc", "orderby": "rbmh_playability"},
-            ),
-            playlist_id=str(page_id),
-            playlist_title=self._og_search_title(webpage, default=None),
-            playlist_description=self._og_search_description(webpage, default=None),
-        )
+        raise UnsupportedError(url)
 
 
 class ServusSearchIE(ServusTVIE):
@@ -581,9 +580,8 @@ class ServusSearchIE(ServusTVIE):
 
         return self.playlist_result(
             self._paged_playlist_by_query(
-                query_type="search",
-                query_id=search_term,
-                extra_query={
+                query={
+                    "search": search_term,
                     "f[primary_type_group]": "all-videos",
                     "orderby": "rbmh_score_search",
                 },
