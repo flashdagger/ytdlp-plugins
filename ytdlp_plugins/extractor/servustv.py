@@ -1,7 +1,7 @@
 # coding: utf-8
 import re
 from operator import itemgetter
-from urllib.parse import unquote_plus
+from urllib.parse import quote_plus, urlunparse
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
@@ -22,7 +22,7 @@ class ServusTVIE(InfoExtractor):
     IE_NAME = "servustv"
     _VALID_URL = r"""(?x)
                     https?://
-                        (?:www\.)?(?:servustv|pm-wissen)\.com/
+                        (?:www\.)?servustv\.com/
                         (?:
                             videos | (?: [\w-]+/(?: v | [abkp]/[\w-]+ ) )
                         )
@@ -34,7 +34,6 @@ class ServusTVIE(InfoExtractor):
     _GEO_BYPASS = False
 
     _API_URL = "https://api-player.redbull.com/stv/servus-tv"
-    _QUERY_API_URL = "https://backend.servustv.com/wp-json/rbmh/v2/query-filters/query/"
     _LOGO = "https://presse.servustv.com/Content/76166/cfbc6a68-fd77-46d6-8149-7f84f76efe5c/"
     _LIVE_URLS = {
         "AT": "https://dms.redbull.tv/v4/destination/stv/stv-linear"
@@ -177,8 +176,29 @@ class ServusTVIE(InfoExtractor):
             },
         },
         {
-            # live stream
+            # main live stream
             "url": "https://www.servustv.com/allgemein/p/jetzt-live/119753/",
+            "info_dict": {
+                "id": str,
+                "ext": "mp4",
+                "title": str,
+                "description": str,
+                "duration": None,
+                "timestamp": (type(None), int),
+                "upload_date": (type(None), str),
+                "is_live": True,
+                "age_limit": (type(None), int),
+                "thumbnail": (type(None), str),
+            },
+            "params": {
+                "skip_download": True,
+                "outtmpl": "livestream.%(ext)s",
+                "format": "bestvideo/best",
+            },
+        },
+        {
+            # topic live stream
+            "url": "https://www.servustv.com/natur/k/natur-kanal/269299/",
             "info_dict": {
                 "id": str,
                 "ext": "mp4",
@@ -215,29 +235,12 @@ class ServusTVIE(InfoExtractor):
             },
         },
         {
-            # test embedded links from 3rd party sites
-            "url": "https://www.pm-wissen.com/umwelt/v/aa-24mus4g2w2112/",
-            "info_dict": {
-                "id": "aa-24mus4g2w2112",
-                "ext": "mp4",
-                "title": "Meer ohne Plastik?",
-                "description": str,
-                "duration": 418,
-                "timestamp": int,
-                "upload_date": str,
-                "is_live": False,
-                "thumbnail": r"re:^https?://.*\.jpg",
-            },
-            "params": {
-                "skip_download": True,
-                "format": "bestvideo/best",
-            },
-        },
-        {
             "url": "https://www.servustv.com/allgemein/v/aagevnv3syv5kuu8cpfq/",
             "only_matching": True,
         },
     ]
+    JSON_OBJ_ID = "__NEXT_DATA__"
+    SEARCH_KEY = "searchTerm"
 
     def __init__(self, downloader=None):
         super().__init__(downloader=downloader)
@@ -305,10 +308,12 @@ class ServusTVIE(InfoExtractor):
             video_id=video_id,
             fatal=False,
             expected_status=(400, 404, 500),
-        ) or {"message": "Bad JSON Response"}
+        ) or {"error": "Server Error", "message": "Bad JSON Response"}
 
-        if "message" in info:
-            raise ExtractorError(info["message"], expected=True)
+        if "error" in info:
+            raise ExtractorError(
+                ": ".join((info["error"], info["message"])), expected=True
+            )
 
         if video_url:
             info["videoUrl"] = video_url
@@ -389,10 +394,13 @@ class ServusTVIE(InfoExtractor):
                 item["aa_id"].lower(), video_url=video_url, is_live=True
             )
 
-    def _paged_playlist_by_query(self, query, extractor=None):
-        _video_id = "-".join(next(iter(query.items())))
+    def _paged_playlist_by_query(self, url, qid):
+        parsed_url = ParsedURL(url)
+        # pylint: disable=protected-access
+        query_api_url = urlunparse(parsed_url._parts._replace(query="", fragment=""))
+
         json_query = {
-            **query,
+            **parsed_url.query(),
             "geo_override": self.country_code,
             "post_type": "media_asset",
             "filter_playability": "true",
@@ -402,9 +410,9 @@ class ServusTVIE(InfoExtractor):
         def fetch_page(page_number):
             json_query.update({"page": page_number + 1})
             info = self._download_json(
-                self._QUERY_API_URL,
+                query_api_url,
                 query=json_query,
-                video_id=_video_id,
+                video_id=qid,
                 note=f"Downloading entries "
                 f"{page_number * self.PAGE_SIZE + 1}-{(page_number + 1) * self.PAGE_SIZE}",
             )
@@ -412,14 +420,13 @@ class ServusTVIE(InfoExtractor):
             for item in info["posts"]:
                 if not traverse_obj(item, ("stv_duration", "raw")):
                     continue
-                video_id, title, url = itemgetter("slug", "stv_short_title", "link")(
-                    item
-                )
+                video_id, video_title, video_url = itemgetter(
+                    "slug", "stv_short_title", "link"
+                )(item)
                 yield self.url_result(
-                    url,
-                    ie=extractor or self.ie_key(),
+                    video_url,
                     video_id=video_id,
-                    video_title=title,
+                    video_title=video_title,
                 )
 
         return OnDemandPagedList(fetch_page, self.PAGE_SIZE)
@@ -433,27 +440,45 @@ class ServusTVIE(InfoExtractor):
         return title
 
     def _playlist_meta(self, page_data, webpage):
-        default = page_data.get("slug")
+        search_term = page_data.get(self.SEARCH_KEY)
+
         return {
-            "playlist_id": default,
+            "playlist_id": page_data.get("slug")
+            or search_term
+            and quote_plus(search_term),
             "playlist_title": traverse_obj(page_data, ("title", "rendered"))
-            or self._og_search_title(webpage)
-            or default,
+            or self._og_search_title(webpage, default=None)
+            or page_data.get("slug")
+            or search_term
+            and f"search: {search_term!r}",
             "playlist_description": traverse_obj(
                 page_data, "stv_short_description", "stv_teaser_description"
             )
-            or self._og_search_description(webpage)
-            or default,
+            or self._og_search_description(webpage, default=None),
         }
 
     @staticmethod
-    def _filter_query(json_obj, name="all-videos"):
-        ild = traverse_obj(
-            json_obj, "props/pageProps/initialLibData".split("/"), default={}
+    def _page_data(json_obj):
+        for item in ("data", "post", "page"):
+            page_data = traverse_obj(
+                json_obj, f"props/pageProps/{item}".split("/"), default={}
+            )
+            if page_data:
+                break
+        return page_data
+
+    def _filter_query(self, json_obj, name="all-videos"):
+        data = traverse_obj(
+            json_obj,
+            "props/pageProps/initialLibData".split("/"),
+            "props/pageProps/data".split("/"),
+            default={},
         )
-        for flt in ild.get("filters", ()):
+        for flt in data.get("filters", ()):
             if flt.get("value") == name:
-                return ParsedURL(flt["url"]).query()
+                return flt["url"]
+
+        return None
 
     def _entries_from_blocks(self, blocks):
         """return url results or multiple playlists"""
@@ -504,7 +529,11 @@ class ServusTVIE(InfoExtractor):
         webpage = self._download_webpage(url, video_id=video_id)
         try:
             json_obj = self._parse_json(
-                get_element_by_id("__NEXT_DATA__", webpage), video_id
+                get_element_by_id(
+                    self.JSON_OBJ_ID,
+                    webpage,
+                ),
+                video_id,
             )
         except TypeError as exc:
             raise ExtractorError("Cannot extract metadata.") from exc
@@ -514,12 +543,7 @@ class ServusTVIE(InfoExtractor):
                 json_obj, "props/pageProps/geo".split("/"), default=None
             )
 
-        for item in ("data", "post", "page"):
-            page_data = traverse_obj(
-                json_obj, f"props/pageProps/{item}".split("/"), default={}
-            )
-            if page_data:
-                break
+        page_data = self._page_data(json_obj)
 
         # find livestreams
         live_schedule = page_data.get("stv_live_player_schedule")
@@ -527,19 +551,20 @@ class ServusTVIE(InfoExtractor):
             return self._live_stream_from_schedule(live_schedule)
 
         # create playlist from query
-        query = self._filter_query(json_obj)
-        if query:
-            return self.playlist_result(
-                self._paged_playlist_by_query(query),
-                **self._playlist_meta(page_data, webpage),
+        qid = "all-videos"
+        filter_url = self._filter_query(json_obj, name=qid)
+        if filter_url:
+            entries = self._paged_playlist_by_query(filter_url, qid=qid)
+        else:
+            # create playlist from block data
+            embed_url = traverse_obj(
+                page_data, "stv_embedded_video/link".split("/"), default=None
             )
+            entries = (
+                [self.url_result(embed_url, ie=self.ie_key())] if embed_url else []
+            )
+            entries.extend(self._entries_from_blocks(page_data.get("blocks", ())))
 
-        # create playlist from block data
-        embed_url = traverse_obj(
-            page_data, "stv_embedded_video/link".split("/"), default=None
-        )
-        entries = [self.url_result(embed_url, ie=self.ie_key())] if embed_url else []
-        entries.extend(self._entries_from_blocks(page_data.get("blocks", ())))
         if entries:
             return self.playlist_result(
                 entries,
@@ -574,19 +599,81 @@ class ServusSearchIE(ServusTVIE):
         }
     ]
 
-    def _real_extract(self, url):
-        search_id = self._match_id(url)
-        search_term = unquote_plus(search_id)
 
-        return self.playlist_result(
-            self._paged_playlist_by_query(
-                query={
-                    "search": search_term,
-                    "f[primary_type_group]": "all-videos",
-                    "orderby": "rbmh_score_search",
-                },
-                extractor=ServusTVIE.ie_key(),
-            ),
-            playlist_id=search_id,
-            playlist_title=f"search: '{search_term}'",
+class PmWissenIE(ServusTVIE):
+    IE_NAME = "pm-wissen"
+    _VALID_URL = r"""(?x)
+                    https?://
+                        (?:www\.)?(?:pm-wissen)\.com/
+                        (?:
+                            videos | (?: [\w-]+/(?: v | [p]/[\w-]+ ) )
+                        )
+                        /(?P<id>[A-Za-z0-9-]+)
+                    """
+    _TESTS = [
+        {
+            # test embedded links from 3rd party sites
+            "url": "https://www.pm-wissen.com/umwelt/v/aa-24mus4g2w2112/",
+            "info_dict": {
+                "id": "aa-24mus4g2w2112",
+                "ext": "mp4",
+                "title": "Meer ohne Plastik?",
+                "description": str,
+                "duration": 418,
+                "timestamp": int,
+                "upload_date": str,
+                "is_live": False,
+                "thumbnail": r"re:^https?://.*\.jpg",
+            },
+            "params": {
+                "skip_download": True,
+                "format": "bestvideo/best",
+            },
+        },
+    ]
+    JSON_OBJ_ID = "__FRONTITY_CONNECT_STATE__"
+    SEARCH_KEY = "searchQuery"
+
+    @staticmethod
+    def _page_data(json_obj):
+        for item in ("page", "data"):
+            page_data = traverse_obj(json_obj, f"source/{item}".split("/"), default={})
+            if page_data:
+                page_data = next(iter(page_data.values()))
+                break
+
+        return page_data
+
+    def _filter_query(self, json_obj, name="all-videos"):
+        link = traverse_obj(json_obj, ("router", "link"), default="")
+        data = traverse_obj(
+            json_obj,
+            ("source", "data", link),
+            default={},
         )
+        for flt in data.get("filters", ()):
+            if flt.get("value") == name:
+                return flt["url"]
+
+        page_data = self._page_data(json_obj)
+        category = page_data.get("categories", ())
+        if category:
+            return (
+                "https://backend.pm-wissen.com/wp-json/rbmh/v2/query-filters/query/?"
+                f"categories={category[0]}&f[primary_type_group]=all-videos&filter_bundles=true&"
+                "filter_non_visible_types=true&geo_override=DE&orderby=rbmh_playability&"
+                "page=3&per_page=12&post_type=media_asset&query_filters=primary_type_group"
+            )
+
+        return None
+
+
+class PmWissenSearchIE(PmWissenIE):
+    IE_NAME = "pm-wissen:search"
+    _VALID_URL = r"""(?x)
+                    https?://
+                        (?:www\.)?pm-wissen.com
+                        /search
+                        /(?P<id>[^/?#]+)
+                        (?:/all-videos/\d+)?/?$
+                    """
