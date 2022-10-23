@@ -43,11 +43,11 @@ class GLOBALS:
 
     @classmethod
     def reset(cls):
-        # reset the import caches
-        PathFinder.invalidate_caches()
-        importlib.invalidate_caches()
         # update sys.path_importer_cache
+        importlib.invalidate_caches()
         for package in cls.SUBPACKAGES:
+            if package in sys.modules:
+                del sys.modules[package]
             PathFinder.find_spec(package)
 
 
@@ -121,9 +121,6 @@ class PluginFinder(MetaPathFinder):
 
     def invalidate_caches(self):
         self._zip_content_cache.clear()
-        for package in self.packages:
-            if package in sys.modules:
-                del sys.modules[package]
 
 
 def directories():
