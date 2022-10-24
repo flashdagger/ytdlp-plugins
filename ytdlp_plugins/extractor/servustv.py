@@ -1,6 +1,6 @@
 # coding: utf-8
 import re
-from operator import itemgetter
+from typing import Dict
 from urllib.parse import quote_plus, urlunparse
 
 from yt_dlp.extractor.common import InfoExtractor
@@ -10,8 +10,10 @@ from yt_dlp.utils import (
     OnDemandPagedList,
     UnsupportedError,
     get_element_by_id,
+    int_or_none,
     parse_iso8601,
     traverse_obj,
+    unescapeHTML,
 )
 from ytdlp_plugins.utils import ParsedURL
 
@@ -148,7 +150,7 @@ class ServusTVIE(InfoExtractor):
                 {
                     "info_dict": {
                         "id": "aa-27juub3a91w11",
-                        "title": "Corona-Doku: Teil 1",
+                        "title": "Teil 1: Corona – auf der Suche nach der Wahrheit",
                         "description": "md5:b8de3e9d911bb2cdc0422cf720d795b5",
                         "timestamp": int,
                         "upload_date": "20210505",
@@ -157,7 +159,7 @@ class ServusTVIE(InfoExtractor):
                 {
                     "info_dict": {
                         "id": "aa-28a3dbyxh1w11",
-                        "title": "Corona-Doku: Teil 2",
+                        "title": "Teil 2: Corona – auf der Suche nach der Wahrheit",
                         "description": "md5:9904e42bb1b99c731e651ed2276a87e6",
                         "timestamp": int,
                         "upload_date": "20210801",
@@ -250,6 +252,25 @@ class ServusTVIE(InfoExtractor):
             self.country_override = geo_bypass_country.upper()
             self.to_screen(f"Set countrycode to {self.country_code!r}")
         super().initialize()
+
+    def _og_search_title(self, html, **kwargs):
+        site_name = self._og_search_property("site_name", html, default=None)
+        title = super()._og_search_title(html, **kwargs)
+        if site_name and title:
+            title = title.replace(f" - {site_name}", "", 1)
+
+        return title
+
+    def _playlist_meta(self, page_data, webpage):
+        return {
+            "playlist_id": page_data.get("slug"),
+            "playlist_title": traverse_obj(page_data, ("title", "rendered"))
+            or self._og_search_title(webpage, default=None),
+            "playlist_description": traverse_obj(
+                page_data, "stv_short_description", "stv_teaser_description"
+            )
+            or self._og_search_description(webpage, default=None),
+        }
 
     def _auto_merge_formats(self, formats):
         requested_format = self.get_param("format")
@@ -370,6 +391,24 @@ class ServusTVIE(InfoExtractor):
             "subtitles": subtitles,
         }
 
+    def _url_entry_from_post(self, post, **kwargs):
+        duration = int_or_none(traverse_obj(post, ("stv_duration", "raw")))
+        return self.url_result(
+            post["link"],
+            video_id=post.get("slug"),
+            video_title=unescapeHTML(
+                traverse_obj(
+                    post,
+                    ("title", "rendered"),
+                    "stv_short_title",
+                    "stv_teaser_title",
+                )
+            ),
+            description=traverse_obj(post, "stv_teaser_description"),
+            duration=duration and duration * 0.001,
+            **kwargs,
+        )
+
     def _live_stream_from_schedule(self, schedule):
         if self.country_code in self._LIVE_URLS:
             video_url = self._LIVE_URLS[self.country_code]
@@ -411,38 +450,40 @@ class ServusTVIE(InfoExtractor):
                 f"{page_number * self.PAGE_SIZE + 1}-{(page_number + 1) * self.PAGE_SIZE}",
             )
 
-            for item in info["posts"]:
-                if not traverse_obj(item, ("stv_duration", "raw")):
-                    continue
-                video_id, video_title, video_url = itemgetter(
-                    "slug", "stv_short_title", "link"
-                )(item)
-                yield self.url_result(
-                    video_url,
-                    video_id=video_id,
-                    video_title=video_title,
-                )
+            for post in info["posts"]:
+                yield self._url_entry_from_post(post)
 
         return OnDemandPagedList(fetch_page, self.PAGE_SIZE)
 
-    def _og_search_title(self, html, **kwargs):
-        site_name = self._og_search_property("site_name", html, default=None)
-        title = super()._og_search_title(html, **kwargs)
-        if site_name and title:
-            title = title.replace(f" - {site_name}", "", 1)
+    def _entries_from_blocks(self, blocks):
+        """return url results or multiple playlists"""
+        categories: Dict[str, Dict[str, Dict]] = {}
 
-        return title
+        def flatten(_blocks, depth=0):
+            for _block in _blocks:
+                post = _block.get("post", {})
+                if "/v/" in post.get("link", ""):
+                    category = post.get("stv_category_name")
+                    entries = categories.setdefault(str(category), {})
+                    entry = self._url_entry_from_post(
+                        post, url_transparent=True, _block=category
+                    )
+                    entries[entry["id"]] = entry
+                flatten(_block.get("innerBlocks", ()), depth=depth + 1)
 
-    def _playlist_meta(self, page_data, webpage):
-        return {
-            "playlist_id": page_data.get("slug"),
-            "playlist_title": traverse_obj(page_data, ("title", "rendered"))
-            or self._og_search_title(webpage, default=None),
-            "playlist_description": traverse_obj(
-                page_data, "stv_short_description", "stv_teaser_description"
-            )
-            or self._og_search_description(webpage, default=None),
-        }
+        flatten(blocks)
+        if len(categories) == 1:
+            yield from categories.popitem()[1].values()
+        else:
+            for name, entry_map in categories.items():
+                info = self.playlist_result(
+                    list(entry_map.values()),
+                    playlist_id=name.lower().replace(" ", "_"),
+                    playlist_title=name,
+                    extractor=self.IE_NAME,
+                    extractor_key=self.ie_key(),
+                )
+                yield info
 
     @staticmethod
     def _page_data(json_obj):
@@ -466,39 +507,6 @@ class ServusTVIE(InfoExtractor):
                 return flt["url"]
 
         return None
-
-    def _entries_from_blocks(self, blocks):
-        """return url results or multiple playlists"""
-        categories = {}
-
-        def flatten(_blocks, depth=0):
-            for _block in _blocks:
-                post = _block.get("post", {})
-                if "/v/" in post.get("link", ""):
-                    link = post["link"]
-                    category = post.get("stv_category_name")
-                    links = categories.setdefault(f"{category}", [])
-                    if link not in links:
-                        links.append(link)
-                flatten(_block.get("innerBlocks", ()), depth=depth + 1)
-
-        flatten(blocks)
-        if len(categories) == 1:
-            yield from (
-                self.url_result(url, ie=self.ie_key())
-                for url in categories.popitem()[1]
-            )
-        else:
-            for name, urls in categories.items():
-                info = self.playlist_from_matches(
-                    urls,
-                    playlist_id=name.lower().replace(" ", "_"),
-                    playlist_title=name,
-                    extractor=self.IE_NAME,
-                    extractor_key=self.ie_key(),
-                    video_kwargs=dict(url_transparent=True, _block=name),
-                )
-                yield info
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
@@ -546,18 +554,18 @@ class ServusTVIE(InfoExtractor):
             entries = self._paged_playlist_by_query(filter_url, qid=qid)
         else:
             # create playlist from block data
-            embed_url = traverse_obj(
-                page_data, "stv_embedded_video/link".split("/"), default=None
-            )
-            entries = (
-                [self.url_result(embed_url, ie=self.ie_key())] if embed_url else []
-            )
+            entries = []
+            embedded_video = page_data.get("stv_embedded_video")
+            if embedded_video:
+                entries.append(self._url_entry_from_post(embedded_video))
             entries.extend(self._entries_from_blocks(page_data.get("blocks", ())))
+            entries = entries or None
 
-        if entries:
+        if entries is not None:
             return self.playlist_result(
                 entries,
                 **self._playlist_meta(page_data, webpage),
+                playlist_count=len(entries) if isinstance(entries, list) else "N/A",
             )
 
         raise UnsupportedError(url)
