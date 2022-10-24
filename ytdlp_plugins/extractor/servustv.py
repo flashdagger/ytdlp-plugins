@@ -292,6 +292,23 @@ class ServusTVIE(InfoExtractor):
                 requested_format
             )
 
+    def _hls_duration(self, formats):
+        for fmt in formats:
+            if not fmt["url"].endswith(".m3u8"):
+                return None
+            m3u8_doc = self._download_webpage(
+                fmt["url"],
+                None,
+                note="Probing HLS stream duration",
+                fatal=False,
+            )
+            matches = re.findall(
+                r"(?m)^#EXT(?:INF:(\d*\.?\d+),|-X-ENDLIST)", m3u8_doc or ""
+            )
+            if matches and matches[-1] == "":
+                return sum(map(float, matches[:-1]))
+            return None
+
     def _download_formats(self, video_url, video_id):
         if not video_url:
             return [], {}
@@ -355,16 +372,16 @@ class ServusTVIE(InfoExtractor):
                 raise GeoRestrictedError(errormsg, countries=countries)
             self.raise_no_formats(errormsg, expected=True)
 
+        formats, subtitles = self._download_formats(video_url, video_id)
+        self._auto_merge_formats(formats)
+
+        program_info = self.program_info(info)
         duration = info.get("duration")
         if is_live:
             duration = None
         elif not duration and live_status == "not_live":
-            live_status = "post_live" if info.get("videoId") in video_url else "is_live"
-        program_info = self.program_info(info)
-
-        formats, subtitles = self._download_formats(video_url, video_id)
-        self._sort_formats(formats)
-        self._auto_merge_formats(formats)
+            duration = self._hls_duration(formats)
+            live_status = "was_live" if duration else "is_live"
 
         return {
             "id": video_id,
