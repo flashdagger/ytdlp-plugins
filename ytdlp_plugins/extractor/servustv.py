@@ -280,7 +280,6 @@ class ServusTVIE(InfoExtractor):
             formats, subtitles = self._extract_m3u8_formats_and_subtitles(
                 info["videoUrl"],
                 video_id=None,
-                entry_protocol="m3u8",
                 errnote="Stream not available",
             )
         except ExtractorError as exc:
@@ -333,7 +332,9 @@ class ServusTVIE(InfoExtractor):
         if is_live:
             duration = None
         elif not duration and live_status == "not_live":
-            live_status = "is_live"
+            live_status = (
+                "post_live" if info.get("videoId") in info["videoUrl"] else "is_live"
+            )
         formats, subtitles = self._download_formats(info, video_id)
         self._auto_merge_formats(formats)
 
