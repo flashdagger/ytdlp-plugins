@@ -495,6 +495,7 @@ class ServusTVIE(InfoExtractor):
                     playlist_title=name,
                     extractor=self.IE_NAME,
                     extractor_key=self.ie_key(),
+                    video_kwargs=dict(url_transparent=True, _block=name),
                 )
                 yield info
 
