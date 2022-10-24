@@ -292,13 +292,13 @@ class ServusTVIE(InfoExtractor):
                 requested_format
             )
 
-    def _download_formats(self, info, video_id):
-        if not info.get("videoUrl"):
+    def _download_formats(self, video_url, video_id):
+        if not video_url:
             return [], {}
 
         try:
             formats, subtitles = self._extract_m3u8_formats_and_subtitles(
-                info["videoUrl"],
+                video_url,
                 video_id=None,
                 errnote="Stream not available",
             )
@@ -312,8 +312,19 @@ class ServusTVIE(InfoExtractor):
 
         return formats, subtitles
 
+    @staticmethod
+    def program_info(info) -> Dict:
+        program_info = {"series": info.get("label"), "chapter": info.get("chapter")}
+        match = re.match(r"\D+(\d+)", info.get("season", ""))
+        if match:
+            program_info["season_number"] = int(match[1])
+        match = re.match(r"Episode\s+(\d+)(?:\s+-(.*))?", info.get("chapter", ""))
+        if match:
+            program_info["episode_number"] = int(match[1])
+            program_info["chapter"] = match[2] and match[2].strip()
+        return program_info
+
     def _entry_by_id(self, video_id, video_url=None, is_live=False):
-        live_status = "is_live" if is_live else "not_live"
         info = self._download_json(
             self._API_URL,
             query={"videoId": video_id.upper(), "timeZone": self.timezone},
@@ -327,17 +338,13 @@ class ServusTVIE(InfoExtractor):
                 ": ".join((info["error"], info["message"])), expected=True
             )
 
-        if video_url:
-            info["videoUrl"] = video_url
-        errors = ", ".join(info.get("playabilityErrors", ()))
-        errormsg = f'{info.get("title", "Unknown")} - {errors}'
-        available_from = traverse_obj(
-            info,
-            ("playabilityErrorDetails", "NOT_YET_AVAILABLE", "availableFrom"),
-            default=None,
-        )
+        if video_url is None:
+            video_url = info.get("videoUrl")
 
-        if errors and not info.get("videoUrl"):
+        live_status = "is_live" if is_live else "not_live"
+        errors = ", ".join(info.get("playabilityErrors", ()))
+        if errors and not video_url:
+            errormsg = f'{info.get("title", "Unknown")} - {errors}'
             if "NOT_YET_AVAILABLE" in errors:
                 live_status = "is_upcoming"
             if "GEO_BLOCKED" in errors:
@@ -352,20 +359,12 @@ class ServusTVIE(InfoExtractor):
         if is_live:
             duration = None
         elif not duration and live_status == "not_live":
-            live_status = (
-                "post_live" if info.get("videoId") in info["videoUrl"] else "is_live"
-            )
-        formats, subtitles = self._download_formats(info, video_id)
-        self._auto_merge_formats(formats)
+            live_status = "post_live" if info.get("videoId") in video_url else "is_live"
+        program_info = self.program_info(info)
 
-        program_info = {"series": info.get("label"), "chapter": info.get("chapter")}
-        match = re.match(r"\D+(\d+)", info.get("season", ""))
-        if match:
-            program_info["season_number"] = int(match[1])
-        match = re.match(r"Episode\s+(\d+)(?:\s+-(.*))?", info.get("chapter", ""))
-        if match:
-            program_info["episode_number"] = int(match[1])
-            program_info["chapter"] = match[2] and match[2].strip()
+        formats, subtitles = self._download_formats(video_url, video_id)
+        self._sort_formats(formats)
+        self._auto_merge_formats(formats)
 
         return {
             "id": video_id,
@@ -375,7 +374,13 @@ class ServusTVIE(InfoExtractor):
             "thumbnail": info.get("poster", self._LOGO),
             "duration": duration,
             "timestamp": parse_iso8601(info.get("currentSunrise")),
-            "release_timestamp": parse_iso8601(available_from),
+            "release_timestamp": parse_iso8601(
+                traverse_obj(
+                    info,
+                    ("playabilityErrorDetails", "NOT_YET_AVAILABLE", "availableFrom"),
+                    default=None,
+                )
+            ),
             "live_status": live_status,
             "categories": [info["label"]] if info.get("label") else [],
             "age_limit": int(
