@@ -121,11 +121,11 @@ class ServusTVIE(InfoExtractor):
                     },
                 },
             ],
-            "playlist_mincount": 9,
             "params": {
                 "geo_bypass_country": "AT",
                 "format": "bestvideo",
                 "skip_download": True,
+                "playlist_items": ":4",
             },
         },
         {
@@ -166,7 +166,6 @@ class ServusTVIE(InfoExtractor):
                     },
                 },
             ],
-            "playlist_mincount": 3,
             "params": {
                 "geo_bypass_country": "DE",
                 "format": "bestvideo",
@@ -223,7 +222,7 @@ class ServusTVIE(InfoExtractor):
                 "title": "Motorsport",
                 "description": "md5:cc8e904daecaa697fcf03af3edb3c743",
             },
-            "playlist_mincount": 0,
+            "playlist_mincount": 2,
             "params": {
                 "geo_bypass_country": "DE",
                 "format": "bestvideo",
@@ -495,18 +494,18 @@ class ServusTVIE(InfoExtractor):
                 break
         return page_data
 
-    def _filter_query(self, json_obj, name="all-videos"):
+    def _filter_query(self, json_obj, name="all-videos") -> Dict:
         data = traverse_obj(
             json_obj,
             "props/pageProps/initialLibData".split("/"),
             "props/pageProps/data".split("/"),
             default={},
         )
-        for flt in data.get("filters", ()):
-            if flt.get("value") == name:
-                return flt["url"]
+        for filter_info in data.get("filters", ()):
+            if filter_info.get("value") == name:
+                return filter_info
 
-        return None
+        return {}
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
@@ -549,26 +548,25 @@ class ServusTVIE(InfoExtractor):
 
         # create playlist from query
         qid = "all-videos"
-        filter_url = self._filter_query(json_obj, name=qid)
-        if filter_url:
-            entries = self._paged_playlist_by_query(filter_url, qid=qid)
-        else:
-            # create playlist from block data
-            entries = []
-            embedded_video = page_data.get("stv_embedded_video")
-            if embedded_video:
-                entries.append(self._url_entry_from_post(embedded_video))
-            entries.extend(self._entries_from_blocks(page_data.get("blocks", ())))
-            entries = entries or None
-
-        if entries is not None:
+        filter_info = self._filter_query(json_obj, name=qid)
+        if filter_info:
             return self.playlist_result(
-                entries,
+                self._paged_playlist_by_query(filter_info["url"], qid=qid),
                 **self._playlist_meta(page_data, webpage),
-                playlist_count=len(entries) if isinstance(entries, list) else "N/A",
+                playlist_count=filter_info.get("count", "N/A"),
             )
 
-        raise UnsupportedError(url)
+        # create playlist from block data
+        embedded_video = page_data.get("stv_embedded_video")
+        entries = [self._url_entry_from_post(embedded_video)] if embedded_video else []
+        entries.extend(self._entries_from_blocks(page_data.get("blocks", ())))
+        if not entries:
+            raise UnsupportedError(url)
+
+        return self.playlist_result(
+            entries,
+            **self._playlist_meta(page_data, webpage),
+        )
 
 
 class ServusSearchIE(ServusTVIE):
@@ -586,7 +584,7 @@ class ServusSearchIE(ServusTVIE):
             # search playlist
             "url": "https://www.servustv.com/search/hubert+staller/",
             "info_dict": {
-                "id": "hubert+staller",
+                "id": "search_hubert+staller",
                 "title": "search: 'hubert staller'",
                 "description": None,
             },
@@ -597,14 +595,11 @@ class ServusSearchIE(ServusTVIE):
     ]
 
     def _playlist_meta(self, page_data, webpage):
-        search_term = page_data.get("searchTerm")
+        search_term = page_data.get("searchTerm", "[searchTerm]")
 
         return {
-            "playlist_id": search_term and quote_plus(search_term),
-            "playlist_title": search_term
-            and f"search: {search_term!r}"
-            or self._og_search_title(webpage, default=None),
-            "playlist_description": self._og_search_description(webpage, default=None),
+            "playlist_id": f"search_{quote_plus(search_term)}",
+            "playlist_title": f"search: {search_term!r}",
         }
 
 
@@ -670,28 +665,28 @@ class PmWissenIE(ServusTVIE):
 
         return page_data
 
-    def _filter_query(self, json_obj, name="all-videos"):
+    def _filter_query(self, json_obj, name="all-videos") -> Dict:
         link = traverse_obj(json_obj, ("router", "link"), default="")
         data = traverse_obj(
             json_obj,
             ("source", "data", link),
             default={},
         )
-        for flt in data.get("filters", ()):
-            if flt.get("value") == name:
-                return flt["url"]
+        for filter_info in data.get("filters", ()):
+            if filter_info.get("value") == name:
+                return filter_info
 
         page_data = self._page_data(json_obj)
         category = page_data.get("categories", ())
         if category:
-            return (
-                "https://backend.pm-wissen.com/wp-json/rbmh/v2/query-filters/query/?"
+            return {
+                "url": "https://backend.pm-wissen.com/wp-json/rbmh/v2/query-filters/query/?"
                 f"categories={category[0]}&f[primary_type_group]=all-videos&filter_bundles=true&"
                 "filter_non_visible_types=true&geo_override=DE&orderby=rbmh_playability&"
                 "page=3&per_page=12&post_type=media_asset&query_filters=primary_type_group"
-            )
+            }
 
-        return None
+        return {}
 
 
 class PmWissenSearchIE(PmWissenIE):
@@ -706,23 +701,20 @@ class PmWissenSearchIE(PmWissenIE):
     _TESTS = [
         {
             # search playlist
-            "url": "https://www.pm-wissen.com/search/solarzellen/",
+            "url": "https://www.pm-wissen.com/search/weltall/",
             "info_dict": {
-                "id": "solarzellen",
-                "title": "search: 'solarzellen'",
-                "description": None,
+                "id": "search_weltall",
+                "title": "search: 'weltall'",
             },
             "params": {"skip_download": True, "geo_bypass": False},
-            "playlist_mincount": 1,
+            "playlist_mincount": 21,
         }
     ]
 
     def _playlist_meta(self, page_data, webpage):
-        search_query = page_data.get("searchQuery")
+        search_query = page_data.get("searchQuery", "[searchQuery]")
 
         return {
-            "playlist_id": search_query and quote_plus(search_query),
-            "playlist_title": search_query
-            and f"search: {search_query!r}"
-            or self._og_search_title(webpage, default=None),
+            "playlist_id": f"search_{quote_plus(search_query)}",
+            "playlist_title": f"search: {search_query!r}",
         }
