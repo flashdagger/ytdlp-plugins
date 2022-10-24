@@ -133,11 +133,7 @@ class ServusTVIE(InfoExtractor):
             "info_dict": {
                 "id": "corona-auf-der-suche-nach-der-wahrheit-teil-3-die-themen",
                 "title": "Corona – auf der Suche nach der Wahrheit, Teil 3: Die Themen",
-                "description": " Auch in Teil drei der Doku-Reihe begibt sich "
-                "Prof. Dr. Dr. Haditsch, renommierter Wissenschaftler, Arzt und "
-                "Virologe auf eine Reise um die Welt und sucht dabei Antworten auf "
-                "spannende Fragen rund um das Thema Corona. Das sind die Themen."
-                "\u00a0",
+                "description": "md5:a8a9c163eaf76f5ead9efac244e54935",
             },
             "playlist": [
                 {
@@ -223,9 +219,7 @@ class ServusTVIE(InfoExtractor):
             "info_dict": {
                 "id": "motorsport",
                 "title": "Motorsport",
-                "description": "Alle kostenlosen Motorsport-Livestreams von ServusTV. "
-                "MotoGP LIVE, Formel 1 LIVE, die WRC LIVE. "
-                "Alle Highlight-Videos und Termine.",
+                "description": "md5:cc8e904daecaa697fcf03af3edb3c743",
             },
             "playlist_mincount": 0,
             "params": {
@@ -240,7 +234,6 @@ class ServusTVIE(InfoExtractor):
         },
     ]
     JSON_OBJ_ID = "__NEXT_DATA__"
-    SEARCH_KEY = "searchTerm"
 
     def __init__(self, downloader=None):
         super().__init__(downloader=downloader)
@@ -440,17 +433,10 @@ class ServusTVIE(InfoExtractor):
         return title
 
     def _playlist_meta(self, page_data, webpage):
-        search_term = page_data.get(self.SEARCH_KEY)
-
         return {
-            "playlist_id": page_data.get("slug")
-            or search_term
-            and quote_plus(search_term),
+            "playlist_id": page_data.get("slug"),
             "playlist_title": traverse_obj(page_data, ("title", "rendered"))
-            or self._og_search_title(webpage, default=None)
-            or page_data.get("slug")
-            or search_term
-            and f"search: {search_term!r}",
+            or self._og_search_title(webpage, default=None),
             "playlist_description": traverse_obj(
                 page_data, "stv_short_description", "stv_teaser_description"
             )
@@ -505,6 +491,7 @@ class ServusTVIE(InfoExtractor):
             for name, urls in categories.items():
                 info = self.playlist_from_matches(
                     urls,
+                    playlist_id=name.lower().replace(" ", "_"),
                     playlist_title=name,
                     extractor=self.IE_NAME,
                     extractor_key=self.ie_key(),
@@ -599,6 +586,17 @@ class ServusSearchIE(ServusTVIE):
         }
     ]
 
+    def _playlist_meta(self, page_data, webpage):
+        search_term = page_data.get("searchTerm")
+
+        return {
+            "playlist_id": search_term and quote_plus(search_term),
+            "playlist_title": search_term
+            and f"search: {search_term!r}"
+            or self._og_search_title(webpage, default=None),
+            "playlist_description": self._og_search_description(webpage, default=None),
+        }
+
 
 class PmWissenIE(ServusTVIE):
     IE_NAME = "pm-wissen"
@@ -625,14 +623,32 @@ class PmWissenIE(ServusTVIE):
                 "is_live": False,
                 "thumbnail": r"re:^https?://.*\.jpg",
             },
-            "params": {
-                "skip_download": True,
-                "format": "bestvideo/best",
+            "params": {"skip_download": True, "format": "bestvideo"},
+        },
+        {
+            # topic playlist
+            "url": "https://www.pm-wissen.com/mediathek/p/redewendungen-mediathek/11908/",
+            "info_dict": {
+                "id": "redewendungen-mediathek",
+                "title": "Redewendungen Mediathek",
+                "description": "Alle Videos zum Thema Redewendungen",
             },
+            "playlist_mincount": 22,
+            "params": {"skip_download": True},
+        },
+        {
+            # playlist from blocks (fails on older yt-dlp versions)
+            "url": "https://www.pm-wissen.com/mediathek/p/highlights-mediathek/11900/",
+            "info_dict": {
+                "id": "highlights-mediathek",
+                "title": "Mediathek",
+                "description": "md5:2260ac68a6ee376912beb4c73e3d5b33",
+            },
+            "playlist_mincount": 12,
+            "params": {"skip_download": True},
         },
     ]
     JSON_OBJ_ID = "__FRONTITY_CONNECT_STATE__"
-    SEARCH_KEY = "searchQuery"
 
     @staticmethod
     def _page_data(json_obj):
@@ -677,3 +693,26 @@ class PmWissenSearchIE(PmWissenIE):
                         /(?P<id>[^/?#]+)
                         (?:/all-videos/\d+)?/?$
                     """
+    _TESTS = [
+        {
+            # search playlist
+            "url": "https://www.pm-wissen.com/search/solarzellen/",
+            "info_dict": {
+                "id": "solarzellen",
+                "title": "search: 'solarzellen'",
+                "description": None,
+            },
+            "params": {"skip_download": True, "geo_bypass": False},
+            "playlist_mincount": 1,
+        }
+    ]
+
+    def _playlist_meta(self, page_data, webpage):
+        search_query = page_data.get("searchQuery")
+
+        return {
+            "playlist_id": search_query and quote_plus(search_query),
+            "playlist_title": search_query
+            and f"search: {search_query!r}"
+            or self._og_search_title(webpage, default=None),
+        }
