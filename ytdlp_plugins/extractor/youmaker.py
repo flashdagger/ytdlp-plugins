@@ -308,7 +308,10 @@ class YoumakerIE(InfoExtractor):
 
         subtitles = {}
         for item in subs_list:
-            lang, url = itemgetter("language_code", "url")(item)
+            url = item.get("url")
+            if not url:
+                continue
+            lang = item.get("language_code", "xx")
             subtitles.setdefault(lang, []).append({"url": f"{self._asset_url}/{url}"})
 
         return subtitles
