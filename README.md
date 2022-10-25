@@ -1,6 +1,14 @@
 # servustv.com support for yt-dlp
 
-* support for live stream, topic playlists and searches
+* supported domains: [servustv.com](https://servustv.com) and [pm-wissen.com](https://pm-wissen.com)
+* supported live channels:
+  * [Hauptkanal](https://www.servustv.com/allgemein/p/jetzt-live/119753/) 
+  * [Wetterpanorama](https://www.servustv.com/aktuelles/v/aa9bgcvsvf7sq8y4sm14/) 
+  * [Kanal: Natur](https://www.servustv.com/natur/k/natur-kanal/269299/)
+  * [Kanal: Wissen](https://www.servustv.com/wissen/k/wissen-kanal/269302/)
+* playlist from topics (e.g. [Servus Nachrichten](https://www.servustv.com/aktuelles/b/servus-nachrichten/aa-1y5rjcd1h2111/)
+  or [Motorsport](https://www.servustv.com/sport/p/motorsport/325/))
+* playlist from searches (e.g. [search term 'Spielfilme'](https://www.servustv.com/search/spielfilme/))
 
 ## installation
 
@@ -9,7 +17,7 @@ You can install ytdlp-servustv via pip:
 * Use [PyPI package](https://pypi.org/project/yt-dlp):
 
   `python3 -m pip install --upgrade ytdlp-servustv`
-* Install from Github branch:
+* Install from GitHub branch:
 
   `python3 -m pip install -U https://github.com/flashdagger/ytdlp-plugins/archive/refs/heads/servustv.zip`
 
