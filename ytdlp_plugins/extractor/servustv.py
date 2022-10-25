@@ -430,13 +430,20 @@ class ServusTVIE(InfoExtractor):
             **kwargs,
         )
 
-    def _live_stream_from_schedule(self, schedule):
+    def _live_stream_from_schedule(self, schedule, stream_id):
         if self.country_code in self._LIVE_URLS:
             video_url = self._LIVE_URLS[self.country_code]
         else:
             video_url = self._LIVE_URLS["DE"].replace(
                 "/de_DE/", f"/de_{self.country_code}/"
             )
+
+        if not stream_id or stream_id.startswith("stvlive"):
+            pass
+        elif stream_id in {"nature", "science"}:
+            video_url = video_url.replace("/stv-linear/", f"/{stream_id}/")
+        else:
+            raise ExtractorError(f"Unsupported live stream {stream_id!r}")
 
         for item in sorted(
             schedule, key=lambda x: x.get("is_live", False), reverse=True
@@ -566,7 +573,9 @@ class ServusTVIE(InfoExtractor):
         # find livestreams
         live_schedule = page_data.get("stv_live_player_schedule")
         if live_schedule:
-            return self._live_stream_from_schedule(live_schedule)
+            return self._live_stream_from_schedule(
+                live_schedule, page_data.get("stv_linear_stream_id")
+            )
 
         # create playlist from query
         qid = "all-videos"
