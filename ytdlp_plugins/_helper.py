@@ -124,7 +124,7 @@ def get_testcases():
         filter_local = False
     else:
         test_classes = GLOBALS.FOUND.values()
-        filter_local = True
+        filter_local = "--extern" not in sys.argv
 
     for cls in test_classes:
         module_file = Path(getfile(cls))

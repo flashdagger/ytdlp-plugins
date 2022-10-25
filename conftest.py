@@ -4,3 +4,4 @@
 
 def pytest_addoption(parser):
     parser.addoption("--all", action="store_true", default=False)
+    parser.addoption("--extern", action="store_true", default=False)
