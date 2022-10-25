@@ -198,7 +198,7 @@ class ServusTVIE(InfoExtractor):
             "url": "https://www.servustv.com/natur/k/natur-kanal/269299/",
             "info_dict": {
                 "id": str,
-                "ext": "mp4",
+                "ext": "m4a",
                 "title": str,
                 "description": str,
                 "duration": None,
@@ -207,11 +207,12 @@ class ServusTVIE(InfoExtractor):
                 "is_live": True,
                 "age_limit": (type(None), int),
                 "thumbnail": (type(None), str),
+                "format_id": r"re:audio-(en|de)$",
             },
             "params": {
                 "skip_download": True,
                 "outtmpl": "livestream.%(ext)s",
-                "format": "bestvideo/best",
+                "format": "bestaudio",
             },
         },
         {
