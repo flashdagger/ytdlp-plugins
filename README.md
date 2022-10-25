@@ -6,6 +6,8 @@
   * [Wetterpanorama](https://www.servustv.com/aktuelles/v/aa9bgcvsvf7sq8y4sm14/) 
   * [Kanal: Natur](https://www.servustv.com/natur/k/natur-kanal/269299/)
   * [Kanal: Wissen](https://www.servustv.com/wissen/k/wissen-kanal/269302/)
+  * [Kanal: Sport](https://www.servustv.com/sport/k/sport-kanal/269300/)
+  * [Kanal: Wintersport](https://www.servustv.com/sport/k/wintersport-kanal/269301/)
 * playlist from topics (e.g. [Servus Nachrichten](https://www.servustv.com/aktuelles/b/servus-nachrichten/aa-1y5rjcd1h2111/)
   or [Motorsport](https://www.servustv.com/sport/p/motorsport/325/))
 * playlist from searches (e.g. [search term 'Spielfilme'](https://www.servustv.com/search/spielfilme/))

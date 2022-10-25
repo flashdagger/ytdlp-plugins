@@ -443,7 +443,7 @@ class ServusTVIE(InfoExtractor):
 
         if not stream_id or stream_id.startswith("stvlive"):
             pass
-        elif stream_id in {"nature", "science"}:
+        elif stream_id in {"nature", "science", "sports", "wintersport"}:
             video_url = video_url.replace("/stv-linear/", f"/{stream_id}/")
         else:
             raise ExtractorError(f"Unsupported live stream {stream_id!r}")
