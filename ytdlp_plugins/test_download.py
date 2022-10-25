@@ -8,24 +8,25 @@ import socket
 import sys
 from contextlib import suppress
 from functools import reduce
-from itertools import groupby, count
+from http.client import BadStatusLine
+from itertools import count, groupby
 from math import log10
-from operator import itemgetter, getitem
+from operator import getitem, itemgetter
 from pathlib import Path
 from types import CodeType
-from typing import Dict, Any, Callable, Optional, Tuple, Set, List
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from unittest import skipIf
+from urllib.error import HTTPError, URLError
 
 import yt_dlp.extractor
-from yt_dlp.compat import compat_http_client, compat_urllib_error, compat_HTTPError
 from yt_dlp.utils import (
     DownloadError,
     ExtractorError,
-    format_bytes,
     UnavailableVideoError,
+    format_bytes,
 )
 
-from ._helper import expect_warnings, get_params, get_testcases, DownloadTestcase
+from ._helper import DownloadTestcase, expect_warnings, get_params, get_testcases
 from .ast_utils import get_test_lineno
 from .patching import SKIP_VT_MODE, patch_decorator
 from .utils import md5
@@ -183,11 +184,11 @@ class TestExtractor(DownloadTestcase):
         except (DownloadError, ExtractorError) as err:
             # Check if the exception is not a network related one
             if not err.exc_info[0] in (
-                compat_urllib_error.URLError,
+                URLError,
                 socket.timeout,
                 UnavailableVideoError,
-                compat_http_client.BadStatusLine,
-            ) or (err.exc_info[0] == compat_HTTPError and err.exc_info[1].code == 503):
+                BadStatusLine,
+            ) or (err.exc_info[0] == HTTPError and err.exc_info[1].code == 503):
                 raise
 
         return None
