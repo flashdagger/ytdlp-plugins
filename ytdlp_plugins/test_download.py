@@ -199,12 +199,14 @@ class TestExtractor(DownloadTestcase):
 
         if not (is_playlist or self.data.params.get("skip_download", False)):
             self.assertTrue(tc_filename.exists(), msg=f"Missing file {tc_filename}")
-            self.assertTrue(
-                tc_filename in self.data.finished_hook_called,
-                (tc_filename, self.data.finished_hook_called),
-            )
+            no_merge = "+" not in info_dict["format_id"]
+            if no_merge:
+                self.assertTrue(
+                    tc_filename in self.data.finished_hook_called,
+                    f"finished hook not called for expected file {tc_filename!s}",
+                )
             expected_minsize = test_case.get("file_minsize", 10000)
-            if expected_minsize is not None:
+            if expected_minsize:
                 if self.data.ydl.params.get("test"):
                     expected_minsize = max(expected_minsize, 10000)
                 got_fsize = os.path.getsize(tc_filename)

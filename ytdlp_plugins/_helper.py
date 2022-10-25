@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-
 import operator
 import os
 import re
 import sys
 import warnings
+from contextlib import suppress
 from inspect import getfile
 from pathlib import Path
 from typing import Any, Dict
@@ -15,7 +15,8 @@ from yt_dlp.extractor import gen_extractor_classes
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import preferredencoding, write_string
 
-from ytdlp_plugins import add_plugins, GLOBALS
+from ytdlp_plugins import GLOBALS, add_plugins
+
 from .utils import md5, unlazify
 
 DEFAULT_PARAMS = {
@@ -145,22 +146,32 @@ class DownloadTestcase(TestCase):
 
     def assert_field_is_present(self, expr: Any, *fields: str) -> None:
         if isinstance(expr, dict):
-            fields = tuple(field for field in fields if not bool(expr.get(field)))
-            expr = not bool(fields)
+            fields = tuple(field for field in fields if field not in expr)
+            expr = not fields
 
         if not expr:
             fields_str = ", ".join((repr(field) for field in fields))
-            msg = f"Missing field {fields_str}"
+            plural_s = "s" if len(fields) > 1 else ""
+            msg = f"Missing field{plural_s} {fields_str}"
             raise self.failureException(msg)
 
     def expect_value(self, got, expected, field):
+        check_types = False
+        with suppress(AssertionError, TypeError):
+            assert isinstance(expected, tuple)
+            _expected = []
+            for item in expected:
+                if item is None:
+                    _expected.append(type(None))
+                else:
+                    assert isinstance(item, type)
+                    _expected.append(item)
+            expected = tuple(_expected)
+            check_types = True
+
         if isinstance(expected, str):
             self.expect_string(got, expected, field)
-        elif (
-            isinstance(expected, type)
-            or isinstance(expected, tuple)
-            and all(isinstance(obj, type) for obj in expected)
-        ):
+        elif isinstance(expected, type) or check_types:
             self.assert_field_is_valid(
                 isinstance(got, expected),
                 field,
@@ -283,7 +294,7 @@ class DownloadTestcase(TestCase):
         if got_dict.get("_type") not in ("playlist", "multi_video"):
             mandatory_fields = ["id", "title"]
             if expected_dict.get("ext"):
-                mandatory_fields.extend(("url", "ext"))
+                mandatory_fields.append("ext")
             self.assert_field_is_present(got_dict, *mandatory_fields)
         # Check for mandatory fields that are automatically set by YoutubeDL
         self.assert_field_is_present(
