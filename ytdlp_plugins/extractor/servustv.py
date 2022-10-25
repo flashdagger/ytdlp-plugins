@@ -326,6 +326,8 @@ class ServusTVIE(InfoExtractor):
         for fmt in formats:
             if "height" in fmt:
                 fmt["format_id"] = f"{fmt['height']}p"
+            if fmt.get("vcodec") == "none" and fmt.get("language"):
+                fmt["format_id"] = f"audio-{fmt['language']}"
 
         return formats, subtitles
 
