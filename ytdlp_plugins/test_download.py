@@ -16,7 +16,7 @@ from pathlib import Path
 from types import CodeType
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from unittest import skipIf
-from urllib.error import HTTPError, URLError
+from urllib.error import HTTPError
 
 import yt_dlp.extractor
 from yt_dlp.utils import (
@@ -184,7 +184,7 @@ class TestExtractor(DownloadTestcase):
         except (DownloadError, ExtractorError) as err:
             # Check if the exception is not a network related one
             if not err.exc_info[0] in (
-                URLError,
+                # URLError,
                 socket.timeout,
                 UnavailableVideoError,
                 BadStatusLine,
