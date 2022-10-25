@@ -22,7 +22,7 @@ from yt_dlp.extractor.common import InfoExtractor
 from .generic import GenericIE
 from .utils import unlazify
 
-__version__ = "2022.10.03"
+__version__ = "2022.10.25"
 PACKAGE_NAME = __name__
 
 
