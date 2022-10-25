@@ -461,6 +461,7 @@ class ServusTVIE(InfoExtractor):
     def _paged_playlist_by_query(self, url, qid):
         parsed_url = ParsedURL(url)
         # pylint: disable=protected-access
+        # noinspection PyProtectedMember
         query_api_url = urlunparse(parsed_url._parts._replace(query="", fragment=""))
 
         json_query = {
