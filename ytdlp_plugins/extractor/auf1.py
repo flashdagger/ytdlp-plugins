@@ -217,22 +217,6 @@ class Auf1IE(InfoExtractor):
 
     def playlist_from_entries(self, all_videos, **kwargs):
         entries = []
-        exceptions = any(
-            self.get_param(name)
-            for name in (
-                "forceurl",
-                "forcejson",
-                "forceformat",
-                "listformats",
-                "dump_single_json",
-            )
-        )
-        if self.get_param("quiet") and self.get_param("simulate") and not exceptions:
-            # we are not interested in the formats which saves us some requests
-            _type = "video"
-        else:
-            _type = "url"
-
         for item in all_videos:
             public_id = item.get("public_id")
             if not public_id:
@@ -240,7 +224,7 @@ class Auf1IE(InfoExtractor):
             category = traverse_obj(item, ("show", "public_id"), default="video")
             entries.append(
                 {
-                    "_type": _type,
+                    "_type": "url",
                     "ie_key": self.ie_key(),
                     **self.sparse_info(item),
                     "url": f"//auf1.tv/{category}/{public_id}/",
