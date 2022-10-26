@@ -20,7 +20,7 @@ from typing import Any
 
 HASH_ALGO = "md5"
 CURRENT_PATH = Path(__file__).parent.absolute()
-REQ_TXT = CURRENT_PATH / "requirements.txt"
+REQ_TXT = (CURRENT_PATH / "requirements.txt").relative_to(Path.cwd())
 REQ_IN = CURRENT_PATH / "requirements.in"
 WINDOWS = sys.platform.startswith("win")
 LINUX = sys.platform.startswith("linux")
@@ -203,7 +203,8 @@ def sync(venv_path: Path):
             )
         elif has_changed:
             LOG.info(
-                "%s was modified. You can run 'pip-compile' to update.", REQ_IN.name
+                f"%s was modified. You can run 'pip-compile --output-file={REQ_TXT}' to update.",
+                REQ_IN.name,
             )
 
     with content_check(REQ_TXT, path=venv_path) as has_changed:
