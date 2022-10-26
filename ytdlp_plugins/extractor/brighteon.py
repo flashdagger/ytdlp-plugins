@@ -260,14 +260,11 @@ class BrighteonIE(InfoExtractor):
 
     def _update_formats(self, formats):
         for fmt in formats:
-            if not (
-                fmt.get("format_note", "").startswith("DASH video")
-                or fmt.get("acodec") is None
-            ):
-                continue
             if fmt.get("height"):
                 fmt["fps"] = 30 if fmt["height"] >= 540 else 15
-            if not self.get_param("listformats"):
+            if self.get_param("check_formats") is False or not (
+                fmt.get("format_note", "").startswith("DASH video")
+            ):
                 continue
             info = headprobe_media(self, fmt["url"])[0]
             fmt.update(info)
@@ -287,10 +284,16 @@ class BrighteonIE(InfoExtractor):
             )
             if video_info.get("audio"):
                 formats.append(
-                    {"format_id": "audio", "url": video_info["audio"], "vcodec": "none"}
+                    {
+                        "format_id": "audio",
+                        "url": video_info["audio"],
+                        "vcodec": "none",
+                        "acodec": "aac",
+                        "tbr": 192,  # estimation for filesize_approx
+                        "asr": 48000,
+                    }
                 )
-            if self.get_param("check_formats") is not False:
-                self._update_formats(formats)
+            self._update_formats(formats)
             self._sort_formats(formats)
             self._auto_merge_formats(formats)
 
