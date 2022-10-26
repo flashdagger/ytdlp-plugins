@@ -283,21 +283,7 @@ class BrighteonIE(InfoExtractor):
         url = f"{self._BASE_URL}/{video_id}"
         duration = parse_duration(video_info.get("duration"))
 
-        exceptions = any(
-            self.get_param(name)
-            for name in (
-                "forceurl",
-                "forcejson",
-                "forceformat",
-                "listformats",
-                "dump_single_json",
-            )
-        )
-        if self.get_param("quiet") and self.get_param("simulate") and not exceptions:
-            # we are not interested in the formats which saves us some requests
-            _type = "video"
-            formats = None
-        elif from_playlist:
+        if from_playlist:
             _type = "url"
             formats = None
         else:
