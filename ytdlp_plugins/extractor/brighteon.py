@@ -9,6 +9,7 @@ from yt_dlp.utils import (
     ExtractorError,
     OnDemandPagedList,
     UnsupportedError,
+    clean_html,
     get_element_by_id,
     int_or_none,
     parse_duration,
@@ -38,41 +39,37 @@ class BrighteonIE(InfoExtractor):
 
     _TESTS = [
         {
-            "url": "https://www.brighteon.com/9e12fa99-a6fb-41e9-9ed9-c2aa0a166a1a",
+            "url": "https://www.brighteon.com/4f2586ec-66ac-4db7-ac72-efb5f0473406",
+            "md5": "9a6a3ce5c3391eccb71f995f530209d5",
             "info_dict": {
-                "id": "9e12fa99-a6fb-41e9-9ed9-c2aa0a166a1a",
-                "title": "Christopher James joins Mike Adams to discuss Common Law and corporate "
-                '"personhood" global enslavement',
-                "ext": "mp4",
-                "description": "md5:a35cb44d7c50d673ce48e6cd661e74ac",
-                "timestamp": 1635894109,
-                "upload_date": "20211102",
-                "duration": 2895.0,
-                "channel": "Health Ranger Report",
-                "channel_id": "8c536b2f-e9a1-4e4c-a422-3867d0e472e4",
-                "channel_url": "https://www.brighteon.com/channels/hrreport",
+                "id": "4f2586ec-66ac-4db7-ac72-efb5f0473406",
+                "title": "10/26/2022 Let's Talk America: Dr. Alan Keyes ft. Dennis Pyle",
+                "ext": "mp3",
+                "description": 'Watch "Let\'s Talk America" Live on Brighteon.tv '
+                "every weekday from 2:00 pm - 3:00 pm estSupport "
+                "Let's Talk America by visiting or donating at https://iamtv.us/",
+                "timestamp": 1666814967,
+                "upload_date": "20221026",
+                "duration": 3033.0,
+                "channel": "BrighteonTV",
+                "channel_id": "123538c1-de87-46d0-a0ad-be8efebbfaa1",
+                "channel_url": "https://www.brighteon.com/channels/brighteontv",
                 "tags": [
-                    "mike adams",
-                    "health ranger",
                     "current events",
-                    "interview",
-                    "america",
-                    "humanity",
-                    "brighteon",
-                    "common law",
-                    "law",
-                    "hrr",
-                    "natural news",
-                    "expert",
-                    "personhood",
-                    "conversations",
-                    "christopher james",
+                    "bible",
+                    "declaration of independence",
+                    "scripture",
+                    "american politics",
+                    "constitutional rights",
+                    "conservative patriot",
+                    "lets talk america",
+                    "dr alan keyes",
                 ],
                 "thumbnail": "re:https?://[a-z]+.brighteon.com/(?:[a-z-]+/)+[a-f0-9-]+",
                 "view_count": int,
                 "like_count": int,
             },
-            "params": {"skip_download": True},
+            "params": {"check_formats": False, "format": "audio"},
         },
         {
             # playlist
@@ -81,7 +78,6 @@ class BrighteonIE(InfoExtractor):
                 "id": "21824dea-3564-40af-a972-d014b987261b",
                 "title": "U.S. Senate Impeachment Trial",
             },
-            "params": {"skip_download": True},
             "playlist_mincount": 10,
         },
         {
@@ -91,8 +87,7 @@ class BrighteonIE(InfoExtractor):
                 "id": "123538c1-de87-46d0-a0ad-be8efebbfaa1",
                 "title": "BrighteonTV",
             },
-            "params": {"skip_download": True, "playlistend": 50},
-            "playlist_count": 50,
+            "playlist_mincount": 50,
         },
         {
             # categories
@@ -102,8 +97,7 @@ class BrighteonIE(InfoExtractor):
                 "id": "4ad59df9-25ce-424d-8ac4-4f92d58322b9",
                 "title": "Health & Medicine",
             },
-            "params": {"skip_download": True, "playlistend": 50},
-            "playlist_count": 50,
+            "playlist_mincount": 50,
         },
         {
             # browse
@@ -112,8 +106,7 @@ class BrighteonIE(InfoExtractor):
                 "id": "new-videos",
                 "title": "new-videos",
             },
-            "params": {"skip_download": True, "playlistend": 50},
-            "playlist_count": 50,
+            "playlist_mincount": 50,
         },
         {
             # test embedded urls
@@ -170,6 +163,7 @@ class BrighteonIE(InfoExtractor):
         if path.startswith("/categories/") and not path.endswith("/videos"):
             path = path + "/videos"
 
+        # noinspection PyProtectedMember
         json_api_url = urlunparse(
             parsed_url._replace(path="/api-v3" + path, query=urlencode(parsed_qs, True))
         )
@@ -312,7 +306,7 @@ class BrighteonIE(InfoExtractor):
             "url": url,
             "id": video_id,
             "title": video_info.get("name"),
-            "description": video_info.get("description"),
+            "description": clean_html(video_info.get("description")),
             "timestamp": parse_iso8601(video_info.get("createdAt")),
             "duration": duration,
             "channel": video_info.get("channelName"),
