@@ -45,6 +45,7 @@ class YoumakerIE(InfoExtractor):
                 r"e92d56c8-249f-4f61-b7d0-75c4e05ecb4f",
                 "tags": ["qanon", "trump", "usa", "maga"],
                 "categories": ["News"],
+                "live_status": "not_live",
                 "subtitles": {
                     "en": [
                         {
@@ -68,6 +69,7 @@ class YoumakerIE(InfoExtractor):
                 "upload_date": "20211001",
                 "uploader": "user_71885a31e113614751e14bba45d3bdcfd10d3f08",
                 "timestamp": 1633055950,
+                "live_status": "not_live",
                 "subtitles": {
                     "en": [
                         {
@@ -133,6 +135,7 @@ class YoumakerIE(InfoExtractor):
                         "uploader": str,
                         "upload_date": str,
                         "timestamp": int,
+                        "live_status": "not_live",
                     },
                 }
             ],
@@ -158,6 +161,7 @@ class YoumakerIE(InfoExtractor):
                         "uploader": str,
                         "upload_date": str,
                         "timestamp": int,
+                        "live_status": "not_live",
                     },
                 }
             ],
@@ -322,7 +326,8 @@ class YoumakerIE(InfoExtractor):
         for count, candidate_url in enumerate(self._try_server_urls(playlist_url)):
             if count > 0:
                 self.report_warning(
-                    f"Missing m3u8 info. Trying alternative server ({count})"
+                    f"Missing m3u8 info. Trying alternative server ({count})",
+                    video_id=video_uid,
                 )
             formats, playlist_subtitles = self._extract_m3u8_formats_and_subtitles(
                 self._fix_url(candidate_url),
@@ -363,17 +368,16 @@ class YoumakerIE(InfoExtractor):
             else None
         )
 
-        is_live = False
-        was_live = False
+        live_status = "was_live" if info.get("live") else "not_live"
         release_timestamp = None
         playlist_url = traverse_obj(
-            video_info, ["videoAssets", "Stream"], expected_type=str
+            video_info, ("videoAssets", "Stream"), expected_type=str
         )
         if info.get("live") and playlist_url is None:
             live_info = (
                 self._download_json(
                     self._live_url(video_uid, "status"),
-                    video_uid,
+                    video_id=video_uid,
                     note="Checking live status",
                     errnote="Live status not available",
                     fatal=False,
@@ -381,15 +385,18 @@ class YoumakerIE(InfoExtractor):
                 or {}
             )
 
-            is_live = True
-            was_live = traverse_obj(live_info, ("data", "status")) == "end"
-            storage_path = traverse_obj(live_info, ("data", "storage_path"))
+            live_status = (
+                "post_live"
+                if traverse_obj(live_info, ("data", "status")) == "end"
+                else "is_live"
+            )
             release_timestamp = parse_iso8601(
                 traverse_obj(live_info, ("data", "start_time"))
             ) or parse_iso8601(info.get("scheduled_time"))
 
-            if was_live and storage_path:
-                is_live = False
+            storage_path = traverse_obj(live_info, ("data", "storage_path"))
+            if live_status == "post_live" and storage_path:
+                live_status = "was_live"
                 playlist_url = (
                     f"{self._asset_url}/{storage_path}/{video_uid}/playlist.m3u8"
                 )
@@ -400,22 +407,22 @@ class YoumakerIE(InfoExtractor):
         duration = video_info.get("duration")
         estimate_filesize(formats, duration)
 
-        if is_live and not formats:
+        if live_status != "not_live" and not formats:
+            if live_status == "is_live":
+                live_status = "is_upcoming"
             errmsg = (
                 "This live event has ended."
-                if was_live
+                if live_status in {"was_live", "post_live"}
                 else "This live event has not started yet."
             )
-            self.raise_no_formats(errmsg, expected=True)
+            self.raise_no_formats(errmsg, expected=True, video_id=video_uid)
 
         return {
             "id": video_uid,
             "title": title,
             "description": info.get("description"),
             "formats": formats,
-            "is_live": is_live,
-            "was_live": was_live,
-            "live_status": "is_upcoming" if is_live and not formats else None,
+            "live_status": live_status,
             "timestamp": parse_iso8601(info.get("uploaded_at")),
             "release_timestamp": release_timestamp,
             "uploader": info.get("uploaded_by"),
