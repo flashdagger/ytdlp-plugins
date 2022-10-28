@@ -2,6 +2,7 @@
 import json
 import re
 from datetime import datetime, timedelta
+from itertools import count
 from urllib.parse import unquote_plus
 
 from yt_dlp.extractor.common import InfoExtractor
@@ -289,13 +290,17 @@ class DTubeIE(InfoExtractor):
                 files.setdefault(provider, {}).setdefault("vid", {})[resolution] = value
         return files
 
-    def avalon_api(self, endpoint, video_id):
-        result = self._download_json(
-            f"https://avalon.d.tube/{endpoint}",
-            video_id,
+    def avalon_api(self, endpoint, video_id, **kwargs):
+        options = dict(
             note="Downloading avalon metadata",
             errnote="Unable to download avalon metadata",
             fatal=False,
+        )
+        options.update(kwargs)
+        result = self._download_json(
+            f"https://avalon.d.tube/{endpoint}",
+            video_id,
+            **options,
         )
 
         return result
@@ -342,24 +347,7 @@ class DTubeIE(InfoExtractor):
         else:
             redirect_url = None
 
-        exceptions = any(
-            self.get_param(name)
-            for name in (
-                "forceurl",
-                "forcejson",
-                "forceformat",
-                "listformats",
-                "dump_single_json",
-            )
-        )
-        if redirect_url:
-            _type = "url"
-            formats = None
-        elif self.get_param("quiet") and self.get_param("simulate") and not exceptions:
-            # we are not interested in the formats which saves us some requests
-            _type = "video"
-            formats = None
-        elif from_playlist:
+        if from_playlist or redirect_url:
             _type = "url"
             formats = None
         else:
@@ -425,9 +413,11 @@ class DTubeUserIE(DTubeIE):
         page_size = 50
         last_id = None
 
-        while True:
+        for page in count(1):
             result = self.avalon_api(
-                f"{endpoint}/{last_id}" if last_id else endpoint, user_id
+                f"{endpoint}/{last_id}" if last_id else endpoint,
+                user_id,
+                note=f"Downloading page {page}",
             )
             start_idx = 1 if result and result[0]["_id"] == last_id else 0
 
