@@ -19,7 +19,7 @@ from yt_dlp.utils import (
 )
 from ytdlp_plugins.probe import probe_media
 
-__version__ = "2022.08.26"
+__version__ = "2022.10.28"
 
 
 # pylint: disable=abstract-method
