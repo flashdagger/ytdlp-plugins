@@ -21,7 +21,7 @@ from yt_dlp.utils import (
 from ytdlp_plugins.probe import headprobe_media
 from ytdlp_plugins.utils import ParsedURL
 
-__version__ = "2022.10.13.post1"
+__version__ = "2022.10.28"
 
 
 # pylint: disable=abstract-method
