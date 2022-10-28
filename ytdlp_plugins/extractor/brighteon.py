@@ -34,6 +34,16 @@ class BrighteonIE(InfoExtractor):
                         (?:(?P<taxonomy>browse|channels|categories|watch)/)?
                         (?P<id>[a-zA-z0-9-]+)
                     """
+    _EMBED_URL_RE = (
+        re.compile(
+            r"""(?x)
+                <iframe[^>]+src="
+                (?P<url>https?://(?:[a-z][\da-z]+\.)?
+                brighteon\.com/embed/[\da-zA-Z-]+)
+                [^"]*"
+            """
+        ),
+    )
     _BASE_URL = "https://www.brighteon.com"
     _MPEG_TS = True
 
@@ -115,7 +125,11 @@ class BrighteonIE(InfoExtractor):
             "info_dict": {
                 "id": "2020-05-20-plandemic-video-super-viral-brighteon-facebook-banning-"
                 "cleansing-content-wuhan-coronavirus",
-                "title": str,
+                "title": "After “Plandemic” video goes super viral on Brighteon.com, "
+                "Facebook bans all Brighteon links, regardless of content",
+                "description": str,
+                "timestamp": (int, float),
+                "upload_date": str,
             },
             "playlist_mincount": 1,
             "playlist": [
@@ -133,18 +147,6 @@ class BrighteonIE(InfoExtractor):
             ],
         },
     ]
-
-    @staticmethod
-    def _extract_urls(webpage):
-        return re.findall(
-            r"""(?x)
-                <iframe[^>]+src="
-                (?P<url>https?://(?:[a-z][\da-z]+\.)?
-                brighteon\.com/embed/[\da-zA-Z-]+)
-                [^"]*"
-                """,
-            webpage,
-        )
 
     @staticmethod
     def page_props_path(suffix=None):
