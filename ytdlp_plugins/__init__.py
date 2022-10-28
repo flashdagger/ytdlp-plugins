@@ -6,9 +6,9 @@ import re
 import sys
 import traceback
 from contextlib import suppress
-from importlib.abc import MetaPathFinder, Loader
+from importlib.abc import Loader, MetaPathFinder
 from importlib.machinery import ModuleSpec, PathFinder
-from importlib.util import module_from_spec, find_spec
+from importlib.util import find_spec, module_from_spec
 from inspect import getmembers, isclass
 from itertools import accumulate
 from pathlib import Path
@@ -18,9 +18,6 @@ from zipfile import ZipFile
 from zipimport import zipimporter
 
 from yt_dlp.extractor.common import InfoExtractor
-
-from .generic import GenericIE
-from .utils import unlazify
 
 __version__ = "2022.10.25"
 PACKAGE_NAME = __name__
@@ -211,14 +208,6 @@ def add_plugins():
         with suppress(ValueError):
             all_classes.remove(cls)
     all_classes[:0] = ie_plugins.values()
-
-    GenericIE.OTHER_EXTRACTORS.extend(GLOBALS.FOUND.values())
-    last_extractor = unlazify(all_classes[-1])
-    if issubclass(GenericIE, last_extractor):
-        setattr(extractor, last_extractor.__name__, GenericIE)
-        all_classes[-1] = GenericIE
-        if extractors:  # pylint: disable=using-constant-test
-            extractors.GenericIE = GenericIE
 
     pp_plugins = load_plugins(
         f"{PACKAGE_NAME}.postprocessor", "PP", postprocessor.__dict__
