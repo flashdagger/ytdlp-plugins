@@ -7,6 +7,7 @@ from urllib.parse import unquote_plus
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
+    ExtractorError,
     LazyList,
     OnDemandPagedList,
     float_or_none,
@@ -233,6 +234,10 @@ class DTubeIE(InfoExtractor):
 
         content = traverse_obj(result, ("result", "content", video_id), default={})
         metadata = json.loads(content.get("json_metadata", "{}"))
+        if not metadata.get("video"):
+            raise ExtractorError(
+                "Steemit metadata not availabe", video_id=video_id, expected=True
+            )
 
         return {
             "_id": video_id,
