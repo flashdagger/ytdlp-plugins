@@ -2,7 +2,13 @@ import re
 from typing import Dict, Any
 
 from yt_dlp.postprocessor import FFmpegPostProcessor
-from yt_dlp.utils import HEADRequest, determine_ext, int_or_none, traverse_obj
+from yt_dlp.utils import (
+    HEADRequest,
+    determine_ext,
+    int_or_none,
+    traverse_obj,
+    YoutubeDLError,
+)
 
 
 # pylint: disable=too-few-public-methods
@@ -131,9 +137,9 @@ def parse_streams(metadata):
     }
 
 
-def ffprobe_media(self, media_url, options=(), timeout_s=2.0):
+def ffprobe_media(self, media_url, options=(), timeout_s=2.0, **kwargs):
     # Invoking ffprobe to determine resolution
-    self.to_screen("Checking media with ffprobe")
+    self.to_screen(kwargs.get("note") or "Checking media with ffprobe")
     timeout_us = self.get_param("socket_timeout") or timeout_s
     metadata = GLOBALS.FFMPEG.get_metadata_object(
         media_url,
@@ -148,9 +154,12 @@ def ffprobe_media(self, media_url, options=(), timeout_s=2.0):
         ),
     )
     GLOBALS.LAST_METADATA = metadata
-    err_msg = traverse_obj(metadata, ("error", "string"))
-    if err_msg:
-        self.report_warning(f"ffprobe failed: {err_msg}")
+    err_cause = traverse_obj(metadata, ("error", "string"))
+    if err_cause:
+        err_msg = ": ".join((kwargs.get("errnote", "ffprobe error"), err_cause))
+        if kwargs.get("fatal"):
+            raise YoutubeDLError(err_msg)
+        self.report_warning(err_msg)
         return []
 
     ffprobe_formats = []
@@ -198,14 +207,18 @@ def ffprobe_media(self, media_url, options=(), timeout_s=2.0):
     return ffprobe_formats
 
 
-def headprobe_media(self, media_url):
+def headprobe_media(self, media_url, **kwargs):
     # pylint: disable=protected-access
-    response = self._request_webpage(
-        HEADRequest(media_url),
+    options = dict(
         video_id=None,
         note="Checking media url",
         errnote="Media error",
         fatal=False,
+    )
+    options.update(kwargs)
+    response = self._request_webpage(
+        HEADRequest(media_url),
+        **options,
     )
     format_info = {
         "url": media_url,
@@ -223,10 +236,10 @@ def headprobe_media(self, media_url):
     return [format_info]
 
 
-def probe_media(self, media_url):
+def probe_media(self, media_url, failfast=False, **kwargs):
     if GLOBALS.FFMPEG.probe_available:
-        probed_formats = ffprobe_media(self, media_url)
-        if probed_formats:
+        probed_formats = ffprobe_media(self, media_url, **kwargs)
+        if probed_formats or failfast:
             return probed_formats
 
-    return headprobe_media(self, media_url)
+    return headprobe_media(self, media_url, **kwargs)
