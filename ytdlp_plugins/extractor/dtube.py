@@ -6,10 +6,7 @@ from itertools import count
 from urllib.parse import unquote_plus
 
 from yt_dlp.extractor.common import InfoExtractor
-from yt_dlp.postprocessor import FFmpegPostProcessor
 from yt_dlp.utils import (
-    ExtractorError,
-    HEADRequest,
     LazyList,
     OnDemandPagedList,
     float_or_none,
@@ -19,6 +16,7 @@ from yt_dlp.utils import (
     traverse_obj,
     update_url_query,
 )
+from ytdlp_plugins.probe import probe_media
 
 __version__ = "2022.08.26"
 
@@ -83,7 +81,7 @@ class DTubeIE(InfoExtractor):
                 "ext": "mp4",
                 "thumbnail": "https://snap1.d.tube/ipfs/"
                 "QmWYECptp7XKVEUk4tBf9R6d5XaRUo6Hcow6abtuy1Q3Vt",
-                "duration": None,
+                "duration": 181,
                 "uploader_id": "reeta0119",
                 "upload_date": "20200306",
                 "timestamp": 1583519894.482,
@@ -104,7 +102,7 @@ class DTubeIE(InfoExtractor):
                 "thumbnail": "https://ipfs.cahlen.org/ipfs/"
                 "QmW9PQUeZAZZ2zryMp5kEVQqpKjJpHNGGUShmojcsW4zQZ",
                 "tags": ["dtube", "life"],
-                "duration": 1120,
+                "duration": 1119,
                 "uploader_id": "cahlen",
                 "upload_date": "20220220",
                 "timestamp": 1645382061.0,
@@ -151,89 +149,6 @@ class DTubeIE(InfoExtractor):
         },
     ]
 
-    def __init__(self, downloader=None):
-        super().__init__(downloader)
-        self.ffmpeg = FFmpegPostProcessor(downloader)
-
-    def ffprobe_format(self, media_url):
-        # Invoking ffprobe to determine resolution
-        self.to_screen("Checking format with ffprobe")
-        timeout = self.get_param("socket_timeout")
-        timeout = int(timeout * 1e6) if timeout else 2000000
-        metadata = self.ffmpeg.get_metadata_object(
-            media_url,
-            opts=(
-                "-fflags",
-                "+ignidx",
-                "-timeout",
-                str(timeout),
-                "-headers",
-                "referer: https://emb.d.tube/\r\n",
-            ),
-        )
-        if not metadata:
-            return None
-
-        v_stream = {}
-        a_stream = {}
-        for stream in metadata["streams"]:
-            if not v_stream and stream["codec_type"] == "video":
-                v_stream.update(stream)
-            elif not a_stream and stream["codec_type"] == "audio":
-                a_stream.update(stream)
-
-        extension_map = {
-            "matroska": "mkv",
-            "mp4": "mp4",
-        }
-        extensions = metadata["format"]["format_name"].split(",")
-        for ext in extensions:
-            if ext in extension_map:
-                extension = extension_map[ext]
-                break
-        else:
-            extension = extensions[0]
-
-        fps = None
-        if "r_frame_rate" in v_stream:
-            match = re.match(r"(\d+)(?:/(\d+))?", v_stream["r_frame_rate"])
-            if match:
-                nom, den = match.groups()
-                fps = round(int(nom) / int(den or 1))
-
-        return {
-            "url": media_url,
-            "ext": extension,
-            "container": extension,
-            "vcodec": v_stream.get("codec_name"),
-            "acodec": a_stream.get("codec_name"),
-            "fps": fps,
-            "asr": int_or_none(a_stream.get("sample_rate")),
-            "tbr": int_or_none(metadata["format"].get("bit_rate"), scale=1000),
-            "vbr": int_or_none(v_stream.get("bit_rate"), scale=1000) or 0,
-            "abr": int_or_none(a_stream.get("bit_rate"), scale=1000) or 0,
-            "height": int_or_none(v_stream.get("height")),
-            "width": int_or_none(v_stream.get("width")),
-            "filesize": int_or_none(metadata["format"].get("size")),
-        }
-
-    def http_format(self, media_url):
-        try:
-            head_response = self._request_webpage(
-                HEADRequest(media_url),
-                None,
-                note="Checking format",
-                headers={"referer": "https://emb.d.tube/"},
-            )
-        except ExtractorError:
-            return None
-
-        return {
-            "url": media_url,
-            "filesize": int_or_none(head_response.headers["Content-Length"]),
-            "ext": head_response.headers["Content-Type"].split("/")[-1],
-        }
-
     def formats(self, files):
         # pylint: disable=undefined-loop-variable
         for provider, default_gateways in self.GATEWAY_URLS.items():
@@ -242,8 +157,6 @@ class DTubeIE(InfoExtractor):
         else:
             return []
 
-        formats = []
-        media_format = {}
         gateway = files[provider].get("gw", "").rstrip("/")
         if gateway and not re.match(r".*/(?:btfs|ipfs)$", gateway):
             gateway = f"{gateway}/{provider}"
@@ -256,25 +169,23 @@ class DTubeIE(InfoExtractor):
         if gateway and gateway not in loop_gateways:
             loop_gateways.insert(0, gateway)
 
+        formats = []
         for format_id, content_id in sorted(files[provider].get("vid", {}).items()):
             for gateway in list(loop_gateways):
+                self.write_debug(f"checking media via gateway {gateway!r}")
                 media_url = f"{gateway}/{content_id}"
-                media_format = (
-                    self.ffprobe_format(media_url)
-                    if self.ffmpeg.probe_available
-                    else self.http_format(media_url)
-                )
-                if media_format:
-                    media_format["format_id"] = format_id
+                probed_format, *_ = probe_media(self, media_url)
+                if "filesize" in probed_format:
+                    media_format = {**probed_format, "format_id": format_id}
                     break
-                if len(loop_gateways) > 1:
-                    loop_gateways.remove(gateway)
-                media_format = {"url": media_url, "ext": "mp4", "format_id": format_id}
-                self.write_debug(f"gateway {gateway!r} timed out")
+                loop_gateways.remove(gateway)
+            else:
+                media_format = None
 
-            formats.append(media_format)
+            if media_format:
+                formats.append(media_format)
+
         self._sort_formats(formats)
-
         return formats
 
     @staticmethod
@@ -368,8 +279,7 @@ class DTubeIE(InfoExtractor):
             "description": info.get("desc") or info.get("description"),
             "thumbnail": info.get("thumbnailUrl"),
             "tags": tags,
-            "duration": float(info.get("duration") or 0)
-            or None
+            "duration": float_or_none(info.get("duration"))
             or int_or_none(info.get("dur"))
             or parse_duration(info.get("dur")),
             "timestamp": float_or_none(result.get("ts"), scale=1000),
