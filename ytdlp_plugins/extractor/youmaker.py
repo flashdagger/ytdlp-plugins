@@ -119,26 +119,17 @@ class YoumakerIE(InfoExtractor):
             # test embedded videos from another site
             "url": "https://www.epochtimes.de/feuilleton/buecher/"
             "corona-impfung-was-aerzte-und-patienten-unbedingt-wissen-sollten-a3619532.html",
-            "playlist_mincount": 1,
+            "md5": "fd1f0a675332c58d18202e45e89a2d3a",
             "info_dict": {
-                "id": "corona-impfung-was-aerzte-und-patienten-unbedingt-wissen-sollten-a3619532",
-                "title": "„Corona-Impfung – Was Ärzte und Patienten unbedingt wissen sollten“",
+                "id": "203108a4-b4c9-4a65-ac2e-dceac7e4e462",
+                "ext": "mp4",
+                "title": "contains:Corona-Impfung",
+                "description": "contains:Epoch Times",
+                "uploader": str,
+                "upload_date": str,
+                "timestamp": int,
+                "live_status": "not_live",
             },
-            "playlist": [
-                {
-                    "md5": "fd1f0a675332c58d18202e45e89a2d3a",
-                    "info_dict": {
-                        "id": "203108a4-b4c9-4a65-ac2e-dceac7e4e462",
-                        "ext": "mp4",
-                        "title": "contains:Corona-Impfung",
-                        "description": "contains:Epoch Times",
-                        "uploader": str,
-                        "upload_date": str,
-                        "timestamp": int,
-                        "live_status": "not_live",
-                    },
-                }
-            ],
             "params": {"skip_download": True},
         },
         {
@@ -149,6 +140,9 @@ class YoumakerIE(InfoExtractor):
             "info_dict": {
                 "id": "metoda-kpch-ogolnoswiatowa-agenda-komunistycznej-partii-chin-film",
                 "title": "startswith:Metoda KPCh",
+                "description": str,
+                "timestamp": (float, int),
+                "upload_date": str,
             },
             "playlist": [
                 {
@@ -165,6 +159,24 @@ class YoumakerIE(InfoExtractor):
                     },
                 }
             ],
+            "params": {"skip_download": True},
+        },
+        {
+            # test embedded videos from another site
+            "url": "https://www.theepochtimes.com/"
+            "dick-morris-discusses-his-book-the-return-trumps-big-2024-comeback_4819205.html",
+            "info_dict": {
+                "id": "9489f994-2a20-4812-b233-ac0e5c345632",
+                "ext": "mp4",
+                "title": "LIVE: Dick Morris Discusses His Book "
+                "'The Return: Trump’s Big 2024 Comeback'",
+                "description": str,
+                "uploader": str,
+                "upload_date": "20221025",
+                "timestamp": 1666738800,
+                "duration": 4257,
+                "live_status": "was_live",
+            },
             "params": {"skip_download": True},
         },
         {"url": "https://www.youmaker.com/embed/Dnnrq0lw8062/", "only_matching": True},
@@ -185,8 +197,8 @@ class YoumakerIE(InfoExtractor):
         self._category_map = None
         self._cache = {}
 
-    @staticmethod
-    def _extract_urls(webpage):
+    @classmethod
+    def _extract_embed_urls(cls, url, webpage):
         uids = re.findall(
             r"""(?x)
                 <(?:iframe|script|video)[^>]+src="
@@ -196,7 +208,7 @@ class YoumakerIE(InfoExtractor):
                 """,
             webpage,
         )
-        return [f"https://youmaker.com/v/{uid}" for uid in uids]
+        return (f"https://youmaker.com/v/{uid}" for uid in uids)
 
     def _fix_url(self, url):
         if url.startswith("//"):
@@ -539,3 +551,12 @@ class YoumakerIE(InfoExtractor):
             return func(**match.groupdict())
 
         raise UnsupportedError(url)
+
+
+# disable the Epoch extractor
+class EpochIE(InfoExtractor):
+    _ENABLED = False
+
+    @classmethod
+    def suitable(cls, url):
+        return False
