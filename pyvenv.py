@@ -20,7 +20,7 @@ from typing import Any
 
 HASH_ALGO = "md5"
 CURRENT_PATH = Path(__file__).parent.absolute()
-REQ_TXT = CURRENT_PATH / "requirements.txt"
+REQ_TXT = (CURRENT_PATH / "requirements.txt").relative_to(Path.cwd())
 REQ_IN = CURRENT_PATH / "requirements.in"
 WINDOWS = sys.platform.startswith("win")
 LINUX = sys.platform.startswith("linux")
@@ -109,7 +109,7 @@ def assert_precommit():
 def check_config(path):
     config = path / "pyvenv.cfg"
     if config.exists():
-        mapping = dict()
+        mapping = {}
         for line in config.read_text().splitlines():
             if "=" not in line:
                 continue
@@ -196,19 +196,20 @@ def sync(venv_path: Path):
 
     with content_check(REQ_IN, path=venv_path) as has_changed:
         if not REQ_TXT.exists():
-            LOG.info("Creating requirements.txt (this might take a while)")
+            LOG.info("Creating %s (this might take a while)", REQ_TXT.name)
             safe_call(
-                [str(pip_compile), "--quiet"],
+                [str(pip_compile), "--output-file", str(REQ_TXT), "--quiet"],
                 cwd=CURRENT_PATH,
             )
         elif has_changed:
             LOG.info(
-                "%s was modified. You can run 'pip-compile' to update.", REQ_IN.name
+                f"%s was modified. You can run 'pip-compile --output-file={REQ_TXT}' to update.",
+                REQ_IN.name,
             )
 
     with content_check(REQ_TXT, path=venv_path) as has_changed:
         if has_changed:
-            safe_call([str(pip_sync)], cwd=CURRENT_PATH)
+            safe_call([str(pip_sync), str(REQ_TXT)], cwd=CURRENT_PATH)
             LOG.info("Packages are up to date.")
 
     if (
@@ -275,6 +276,12 @@ def create_parser():
         "--path", metavar="<path>", help="directory of the virtual env", default=None
     )
     parser.add_argument(
+        "-r",
+        metavar="<requirements file>",
+        help="use given requirements file",
+        default=REQ_TXT.name,
+    )
+    parser.add_argument(
         "--run",
         nargs=argparse.REMAINDER,
         help="execute command in virtual environmant",
@@ -299,10 +306,12 @@ def parse_args(args):
 
 def main() -> int:
     """main entry point for console script"""
+    global REQ_TXT
 
     args = parse_args(sys.argv[1:])
     GLOBALS.min_version = args.min_version
     setup_logging("INFO")
+    REQ_TXT = REQ_TXT.with_name(args.r)
     return activate(args)
 
 
