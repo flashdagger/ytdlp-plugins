@@ -2,10 +2,8 @@
 import json
 import re
 from datetime import datetime, timedelta
+from urllib.parse import unquote_plus
 
-from yt_dlp.compat import (
-    compat_urllib_parse_unquote_plus,
-)
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.postprocessor import FFmpegPostProcessor
 from yt_dlp.utils import (
@@ -13,19 +11,19 @@ from yt_dlp.utils import (
     HEADRequest,
     LazyList,
     OnDemandPagedList,
+    float_or_none,
     int_or_none,
     parse_duration,
+    parse_iso8601,
     traverse_obj,
     update_url_query,
-    float_or_none,
-    parse_iso8601,
 )
 
 __version__ = "2022.08.26"
 
 
 # pylint: disable=abstract-method
-class DTube2IE(InfoExtractor):
+class DTubeIE(InfoExtractor):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?v/
@@ -404,7 +402,7 @@ class DTube2IE(InfoExtractor):
         return self.entry_from_avalon_result(result)
 
 
-class DTubeUserIE(DTube2IE):
+class DTubeUserIE(DTubeIE):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?c/
@@ -499,7 +497,7 @@ class DTubeQueryIE(DTubeUserIE):
         )
 
 
-class DTubeSearchIE(DTube2IE):
+class DTubeSearchIE(DTubeIE):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?[st]/
@@ -529,7 +527,7 @@ class DTubeSearchIE(DTube2IE):
     def _real_extract(self, url):
         page_size = 30
         search_term_quoted = self._match_id(url)
-        search_term = compat_urllib_parse_unquote_plus(search_term_quoted)
+        search_term = unquote_plus(search_term_quoted)
 
         if "/t/" in url:
             # tag search
@@ -547,7 +545,7 @@ class DTubeSearchIE(DTube2IE):
             result = self._download_json(
                 update_url_query(
                     "https://search.d.tube/avalon.contents/_search",
-                    dict(payload, **{"size": page_size, "from": offset}),
+                    {**payload, "size": page_size, "from": offset},
                 ),
                 search_term,
                 note=f"Downloading entries from offset {offset:3}",
