@@ -19,7 +19,7 @@ from yt_dlp.utils import (
     js_to_json,
 )
 
-__version__ = "2022.09.16"
+__version__ = "2022.10.28"
 
 
 class JSHLEX(shlex):
