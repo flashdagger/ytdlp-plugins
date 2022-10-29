@@ -101,8 +101,7 @@ class BrighteonIE(InfoExtractor):
         },
         {
             # categories
-            "url": "https://www.brighteon.com/categories/"
-            "4ad59df9-25ce-424d-8ac4-4f92d58322b9/videos",
+            "url": "https://www.brighteon.com/categories/4ad59df9-25ce-424d-8ac4-4f92d58322b9/videos",
             "info_dict": {
                 "id": "4ad59df9-25ce-424d-8ac4-4f92d58322b9",
                 "title": "Health & Medicine",
@@ -290,7 +289,7 @@ class BrighteonIE(InfoExtractor):
                         "format_id": "audio",
                         "url": video_info["audio"],
                         "vcodec": "none",
-                        "acodec": "aac",
+                        "acodec": "mp4a.40.2",
                         "tbr": 192,  # estimation for filesize_approx
                         "asr": 48000,
                     }
