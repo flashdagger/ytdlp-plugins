@@ -429,6 +429,17 @@ class YoumakerIE(InfoExtractor):
             )
             self.raise_no_formats(errmsg, expected=True, video_id=video_uid)
 
+        if live_status in {"is_live", "is_upcomng", "post_live"}:
+            live_count_info = self._call_api(
+                video_uid,
+                "live/count",
+                what="live count",
+                fatal=False,
+                query={"id": video_uid},
+            )
+        else:
+            live_count_info = None
+
         return {
             "id": video_uid,
             "title": title,
@@ -446,6 +457,7 @@ class YoumakerIE(InfoExtractor):
             "channel_url": channel_url,
             "thumbnail": info.get("thumbmail_path"),
             "view_count": info.get("click"),
+            "concurrent_view_count": traverse_obj(live_count_info, "liveCount"),
             "subtitles": playlist_subtitles
             or self.extract_subtitles(info.get("system_id")),
         }
