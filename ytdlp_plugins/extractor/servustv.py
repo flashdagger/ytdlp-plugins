@@ -558,11 +558,7 @@ class ServusTVIE(InfoExtractor):
         webpage = self._download_webpage(url, video_id=video_id)
         try:
             json_obj = self._parse_json(
-                get_element_by_id(
-                    self.JSON_OBJ_ID,
-                    webpage,
-                ),
-                video_id,
+                get_element_by_id(self.JSON_OBJ_ID, webpage), video_id
             )
         except TypeError as exc:
             raise ExtractorError("Cannot extract metadata.") from exc
