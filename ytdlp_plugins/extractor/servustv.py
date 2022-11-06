@@ -1,6 +1,6 @@
 # coding: utf-8
 import re
-from typing import Dict
+from typing import Dict, Tuple
 from urllib.parse import quote_plus, urlunparse
 
 from yt_dlp.extractor.common import InfoExtractor
@@ -473,7 +473,7 @@ class ServusTVIE(InfoExtractor):
             **parsed_url.query(),
             "geo_override": self.country_code,
             "post_type": "media_asset",
-            "filter_playability": "true",
+            # "filter_playability": "true",
             "per_page": self.PAGE_SIZE,
         }
 
@@ -532,7 +532,7 @@ class ServusTVIE(InfoExtractor):
                 break
         return page_data
 
-    def _filter_query(self, json_obj, name="all-videos") -> Dict:
+    def _filter_query(self, json_obj, *names: str) -> Tuple[str, Dict]:
         data = traverse_obj(
             json_obj,
             "props/pageProps/initialLibData".split("/"),
@@ -540,10 +540,11 @@ class ServusTVIE(InfoExtractor):
             default={},
         )
         for filter_info in data.get("filters", ()):
-            if filter_info.get("value") == name:
-                return filter_info
+            name = filter_info.get("value", "none")
+            if name in names:
+                return name, filter_info
 
-        return {}
+        return "none", {}
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
@@ -583,8 +584,7 @@ class ServusTVIE(InfoExtractor):
             )
 
         # create playlist from query
-        qid = "all-videos"
-        filter_info = self._filter_query(json_obj, name=qid)
+        qid, filter_info = self._filter_query(json_obj, "all-videos", "upcoming")
         if filter_info:
             return self.playlist_result(
                 self._paged_playlist_by_query(filter_info["url"], qid=qid),
@@ -701,7 +701,7 @@ class PmWissenIE(ServusTVIE):
 
         return page_data
 
-    def _filter_query(self, json_obj, name="all-videos") -> Dict:
+    def _filter_query(self, json_obj, *names: str) -> Tuple[str, Dict]:
         link = traverse_obj(json_obj, ("router", "link"), default="")
         data = traverse_obj(
             json_obj,
@@ -709,20 +709,21 @@ class PmWissenIE(ServusTVIE):
             default={},
         )
         for filter_info in data.get("filters", ()):
-            if filter_info.get("value") == name:
-                return filter_info
+            name = filter_info.get("value", "none")
+            if name in names:
+                return name, filter_info
 
         page_data = self._page_data(json_obj)
         category = page_data.get("categories", ())
         if category:
-            return {
+            return category[0], {
                 "url": "https://backend.pm-wissen.com/wp-json/rbmh/v2/query-filters/query/?"
                 f"categories={category[0]}&f[primary_type_group]=all-videos&filter_bundles=true&"
                 "filter_non_visible_types=true&geo_override=DE&orderby=rbmh_playability&"
                 "page=3&per_page=12&post_type=media_asset&query_filters=primary_type_group"
             }
 
-        return {}
+        return "none", {}
 
 
 class PmWissenSearchIE(PmWissenIE):
