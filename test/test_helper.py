@@ -24,6 +24,12 @@ class TestDownloadTestcase(DownloadTestcase):
     def test_string_fail(self):
         test_cases = (
             ("default", "foo", "bar", r" : expected"),
+            (
+                "long_default",
+                "This is a long sentence.",
+                "this is a long sentence",
+                r" : Mismatch in field",
+            ),
             ("startswith", "startswith:foo", "bar", r" : .+ does not start with"),
             ("regex", r"re:\d+", "foo", r" : .+ does not match"),
             ("contains", "contains:foo", "bar", r" : .+ does not contain"),

@@ -279,8 +279,10 @@ class DownloadTestcase(TestCase):
                 field,
                 msg_tmpl.format(expected_int, len(got)),
             )
-        else:
+        elif len(expected) <= 16:
             self.expect_field(got, expected, field)
+        else:
+            self.assertEqual(expected, got, f"Mismatch in field {field!r}")
 
     def expect_dict(self, got_dict, expected_dict: Dict[str, Any]):
         self.assertIsInstance(got_dict, dict)
