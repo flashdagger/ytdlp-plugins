@@ -10,6 +10,10 @@ Test by executing the extractor:
 
 `ytdlp-plugins -v <url>`
 
+or just run the unit tests:
+
+`python -m unittest`
+
 ## create the package
 Edit `setup.cfg` according to your needs. 
 For details see https://setuptools.pypa.io/en/latest/userguide/declarative_config.html
@@ -21,4 +25,7 @@ python -m pip install -U setuptools wheel
 python setup.py bdist_wheel
 ```
 
-Celebrate 🥳 !!!
+If the build is succesful your package can be found in `build/<name>-<version>-py3-none-any.whl`.
+You can then install it with `pip` or upload to [PyPI](https://pypi.org).
+
+For more information about packaging see https://packaging.python.org/en/latest/tutorials/packaging-projects/.
