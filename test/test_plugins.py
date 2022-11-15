@@ -162,6 +162,11 @@ class TestPlugins(unittest.TestCase):
         self.assertNotIn(
             orig_bug_report, str(obj), "Bug report message is not suppressed"
         )
+        self.assertIn(
+            "please report this issue on https://github.com/flashdagger/ytdlp-plugins",
+            str(obj),
+            "Custom bug report message (IE_BUG_REPORT) is not emitted",
+        )
 
     @SKIP_VT_MODE
     def test_orig_bug_report_message(self):

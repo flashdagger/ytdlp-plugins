@@ -89,7 +89,7 @@ def bug_reports_message(*args, **kwargs):
     if cls is None:
         return bug_reports_message.__original__(*args, **kwargs)
     with suppress(AttributeError):
-        return "; " + cls().BUG_REPORT
+        return "; " + cls().IE_BUG_REPORT
     return ""
 
 

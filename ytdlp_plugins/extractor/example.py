@@ -51,7 +51,7 @@ class FailingPluginIE(InfoExtractor):
 
     __version__ = "2021.11.05"
     _WORKING = True
-    BUG_REPORT = (
+    IE_BUG_REPORT = (
         "please report this issue on https://github.com/flashdagger/ytdlp-plugins"
     )
     _VALID_URL = r"^failingplugin:(?P<id>\w+)"
