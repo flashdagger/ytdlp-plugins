@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+__all__ = ["ExamplePluginIE", "FailingPluginIE"]
+
 
 from yt_dlp.extractor.common import InfoExtractor
-from yt_dlp.utils import determine_ext, ExtractorError
-from ytdlp_plugins.probe import probe_media
+from yt_dlp.utils import ExtractorError, determine_ext
 
+from ytdlp_plugins.probe import probe_media
 
 # ℹ️ Instructions on making extractors can be found at:
 # 🔗 https://github.com/yt-dlp/yt-dlp/blob/master/CONTRIBUTING.md#adding-support-for-a-new-site
+
+
+class PrivatePluginIE(InfoExtractor):
+    _VALID_URL = r"^privateplugin:(?P<id>\w+)"
 
 
 class DummyPluginIE(InfoExtractor):

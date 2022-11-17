@@ -170,8 +170,18 @@ def load_plugins(fullname, suffix, namespace=None):
             continue
 
         sys.modules[module_name] = module
-        module_classes = dict(getmembers(module, gen_predicate(module_name)))
-
+        if hasattr(module, "__all__"):
+            module_classes = {
+                name: obj
+                for name, obj in getmembers(module, gen_predicate(module_name))
+                if name in getattr(module, "__all__")
+            }
+        else:
+            module_classes = {
+                name: obj
+                for name, obj in getmembers(module, gen_predicate(module_name))
+                if not name.startswith("_")
+            }
         GLOBALS.OVERRIDDEN.update(detected_collisions(module_classes, classes))
         classes.update(module_classes)
 

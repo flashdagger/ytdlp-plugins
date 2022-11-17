@@ -57,6 +57,7 @@ class TestPlugins(unittest.TestCase):
         plugins_ie = load_plugins(f"{PACKAGE_NAME}.extractor", "IE")
         self.assertIn("ytdlp_plugins.extractor.example", sys.modules.keys())
         self.assertIn("ExamplePluginIE", plugins_ie.keys())
+        self.assertNotIn("PrivatePluginIE", plugins_ie.keys())
         # don't load modules with underscore prefix
         self.assertFalse(
             "ytdlp_plugins.extractor._ignore" in sys.modules.keys(),
