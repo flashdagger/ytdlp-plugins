@@ -134,8 +134,7 @@ class YoumakerIE(InfoExtractor):
         },
         {
             # test embedded videos from another site
-            "url": "https://epochtimes.pl/metoda-kpch-ogolnoswiatowa-agenda-"
-            "komunistycznej-partii-chin-film/",
+            "url": "https://epochtimes.pl/metoda-kpch-ogolnoswiatowa-agenda-komunistycznej-partii-chin-film/",
             "playlist_mincount": 1,
             "info_dict": {
                 "id": "metoda-kpch-ogolnoswiatowa-agenda-komunistycznej-partii-chin-film",
@@ -355,7 +354,6 @@ class YoumakerIE(InfoExtractor):
         format_mapping = {item["url"]: item for item in formats}
         formats = list(format_mapping.values())
 
-        self._sort_formats(formats)
         for item in formats:
             height = try_get(item, itemgetter("height"), int)
             if height:
