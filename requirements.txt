@@ -6,7 +6,7 @@
 #
 -e file:.
     # via -r requirements.in
-astroid==2.12.12
+astroid==2.12.13
     # via pylint
 attrs==22.1.0
     # via pytest
@@ -41,17 +41,17 @@ distlib==0.3.6
     # via virtualenv
 docutils==0.19
     # via readme-renderer
-exceptiongroup==1.0.0rc9
+exceptiongroup==1.0.4
     # via pytest
 execnet==1.9.0
     # via pytest-xdist
 filelock==3.8.0
     # via virtualenv
-identify==2.5.7
+identify==2.5.9
     # via pre-commit
 idna==3.4
     # via requests
-importlib-metadata==5.0.0
+importlib-metadata==5.1.0
     # via
     #   keyring
     #   twine
@@ -61,9 +61,9 @@ isort==5.10.1
     # via pylint
 jaraco-classes==3.2.3
     # via keyring
-keyring==23.9.3
+keyring==23.11.0
     # via twine
-lazy-object-proxy==1.7.1
+lazy-object-proxy==1.8.0
     # via astroid
 mccabe==0.7.0
     # via pylint
@@ -71,7 +71,7 @@ more-itertools==9.0.0
     # via jaraco-classes
 mutagen==1.46.0
     # via yt-dlp
-mypy==0.982 ; platform_python_implementation != "PyPy"
+mypy==0.991 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 mypy-extensions==0.4.3
     # via
@@ -81,11 +81,11 @@ nodeenv==1.7.0
     # via pre-commit
 packaging==21.3
     # via pytest
-pathspec==0.10.1
+pathspec==0.10.2
     # via black
 pkginfo==1.8.3
     # via twine
-platformdirs==2.5.2
+platformdirs==2.5.4
     # via
     #   black
     #   pylint
@@ -94,15 +94,15 @@ pluggy==1.0.0
     # via pytest
 pre-commit==2.20.0 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
-pycryptodomex==3.15.0
+pycryptodomex==3.16.0
     # via yt-dlp
-pyflakes==2.5.0
+pyflakes==3.0.1
     # via -r requirements.in
 pygments==2.13.0
     # via
     #   readme-renderer
     #   rich
-pylint==2.15.5 ; platform_python_implementation != "PyPy"
+pylint==2.15.6 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 pyparsing==3.0.9
     # via packaging
@@ -111,7 +111,7 @@ pytest==7.2.0
     #   -r requirements.in
     #   pytest-subtests
     #   pytest-xdist
-pytest-subtests==0.8.0
+pytest-subtests==0.9.0
     # via -r requirements.in
 pytest-xdist==3.0.2
     # via -r requirements.in
@@ -119,7 +119,7 @@ pywin32-ctypes==0.2.0
     # via keyring
 pyyaml==6.0
     # via pre-commit
-readme-renderer==37.2
+readme-renderer==37.3
     # via twine
 requests==2.28.1
     # via
@@ -141,7 +141,7 @@ tomli==2.0.1
     #   mypy
     #   pylint
     #   pytest
-tomlkit==0.11.5
+tomlkit==0.11.6
     # via pylint
 twine==4.0.1 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
@@ -151,11 +151,11 @@ typing-extensions==4.4.0
     #   black
     #   mypy
     #   pylint
-urllib3==1.26.12
+urllib3==1.26.13
     # via
     #   requests
     #   twine
-virtualenv==20.16.6
+virtualenv==20.17.0
     # via pre-commit
 webencodings==0.5.1
     # via bleach
@@ -163,11 +163,11 @@ websockets==10.4
     # via yt-dlp
 wrapt==1.14.1
     # via astroid
-yt-dlp==2022.10.4
+yt-dlp==2022.11.11
     # via ytdlp-plugins
-ytdlp-plugins==2022.10.25
+ytdlp-plugins==2022.11.15
     # via ytdlp-auf1
-zipp==3.10.0
+zipp==3.11.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
