@@ -2,6 +2,7 @@
 import json
 import re
 import time
+from contextlib import suppress
 from shlex import shlex
 from urllib.error import HTTPError
 
@@ -9,14 +10,15 @@ from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.extractor.peertube import PeerTubeIE
 from yt_dlp.utils import (
     ExtractorError,
-    parse_iso8601,
-    parse_duration,
-    clean_html,
-    traverse_obj,
+    OnDemandPagedList,
     UnsupportedError,
-    urljoin,
     base_url,
+    clean_html,
     js_to_json,
+    parse_duration,
+    parse_iso8601,
+    traverse_obj,
+    urljoin,
 )
 
 __version__ = "2022.10.28"
@@ -54,8 +56,7 @@ class Auf1IE(InfoExtractor):
     peertube_extract_url = None
     _TESTS = [
         {
-            "url": "https://auf1.tv/nachrichten-auf1/"
-            "ampelkoalition-eine-abrissbirne-fuer-deutschland/",
+            "url": "https://auf1.tv/nachrichten-auf1/ampelkoalition-eine-abrissbirne-fuer-deutschland/",
             "info_dict": {
                 "id": "rKjpWNnocoARnj4pQMRKXQ",
                 "title": "Ampelkoalition: Eine Abrissbirne für Deutschland?",
@@ -115,8 +116,7 @@ class Auf1IE(InfoExtractor):
                 "title": "Nachrichten AUF1",
                 "description": "md5:5b1f113270133adfd94f6ae3014e3d6f",
             },
-            "params": {"skip_download": True},
-            "playlist_mincount": 300,
+            "playlist_mincount": 100,
             "expected_warnings": [
                 "Retrying due to too many requests.",
                 "The read operation timed out",
@@ -130,8 +130,7 @@ class Auf1IE(InfoExtractor):
                 "id": "all_videos",
                 "title": "AUF1.TV - Alle Videos",
             },
-            "params": {"skip_download": True},
-            "playlist_mincount": 400,
+            "playlist_mincount": 200,
             "expected_warnings": [
                 "Retrying due to too many requests.",
                 "JSON API",
@@ -317,3 +316,138 @@ class Auf1IE(InfoExtractor):
             playlist_title=metadata.get("name"),
             description=clean_html(metadata.get("description")),
         )
+
+
+# pylint: disable=abstract-method
+class Auf1RadioIE(InfoExtractor):
+    IE_NAME = "auf1:radio"
+    _VALID_URL = r"""(?x)
+                    https?://
+                        (?:www\.)?
+                        auf1\.radio
+                        (?: / 
+                            (?P<category>[^/]+/)?
+                            (?P<id>[^/]+)
+                        )?
+                        /?
+                    """
+
+    _TESTS = [
+        {
+            "url": "https://auf1.radio/nachrichten-auf1/worte-der-hoffnung-ein-sammelband-der-mut-macht/",
+            "md5": "3a0d00dd473f46b387678621420fad8e",
+            "info_dict": {
+                "id": "worte-der-hoffnung-ein-sammelband-der-mut-macht",
+                "ext": "mp3",
+                "title": "Worte der Hoffnung: Ein Sammelband, der Mut macht",
+                "description": "md5:3102f277e87e1baafc7f09242b66a071",
+                "duration": 70,
+                "timestamp": 1669539605,
+                "upload_date": "20221127",
+                "thumbnail": "re:https://auf1.*.jpg",
+            },
+        },
+        {
+            # playlist for category
+            "url": "https://auf1.radio/nachrichten-auf1/",
+            "info_dict": {
+                "id": "nachrichten-auf1",
+                "title": "Nachrichten AUF1",
+            },
+            "playlist_mincount": 50,
+        },
+        {
+            # playlist for all media
+            "url": "https://auf1.radio/",
+            "info_dict": {
+                "id": "all",
+                "title": "all",
+            },
+            "playlist_mincount": 50,
+        },
+    ]
+
+    MP3_FORMAT = {
+        "ext": "mp3",
+        "acodec": "mp3",
+        "vcodec": "none",
+        "asr": 48000,
+        "tbr": 64,
+        "abr": 64,
+        "format": "MP2/3 (MPEG audio layer 2/3)",
+    }
+
+    def call_api(self, endpoint, **kwargs):
+        kwargs.setdefault("errnote", "JSON API")
+        return self._download_json(
+            f"https://auf1.radio/api/{endpoint}",
+            **kwargs,
+        )
+
+    def formats(self, url: str, duration):
+        format_info = {"url": url}
+        if url.endswith(".mp3"):
+            format_info.update(self.MP3_FORMAT)
+            if duration:
+                format_info["filesize_approx"] = duration * 8000
+        return [format_info]
+
+    def entry_from_info(self, info, media_id):
+        return {
+            "id": info.get("content_public_id", media_id),
+            "title": info["title"],
+            "description": info.get("summary"),
+            "duration": info.get("duration"),
+            "timestamp": parse_iso8601(info.get("created_at")),
+            "thumbnail": info.get("thumbnail")
+            and f"https://auf1.tv/images/{info['thumbnail']}",
+            "formats": self.formats(info.get("audio_url"), info.get("duration")),
+        }
+
+    def entries_from_playlist(self, playlist_id):
+        endpoint = "" if playlist_id == "all" else "getShow/"
+
+        def fetch(page, _last_page):
+            page_note = (
+                f"{page+1}/{_last_page}" if isinstance(_last_page, int) else page + 1
+            )
+            return self.call_api(
+                f"{endpoint}{playlist_id}",
+                query={"page": page + 1},
+                video_id=playlist_id,
+                note=f"Downloading page {page_note}",
+            )
+
+        first_page = fetch(0, None)
+        last_page = first_page.get("last_page", "NA")
+        page_size = first_page.get("per_page", len(first_page.get("data", ())))
+        playlist_title = playlist_id
+        with suppress(KeyError, IndexError):
+            if playlist_id != "all":
+                playlist_title = first_page["data"][0]["show_name"]
+
+        def load_page(index):
+            info = fetch(index, last_page) if index > 0 else first_page
+            for media_info in info["data"]:
+                audiofile = media_info.get("audiofile")
+                if audiofile:
+                    media_info["audio_url"] = f"https://auf1.radio/storage/{audiofile}"
+                yield self.entry_from_info(media_info, playlist_id)
+
+        return self.playlist_result(
+            entries=OnDemandPagedList(load_page, page_size),
+            playlist_id=playlist_id,
+            playlist_title=playlist_title,
+            playlist_count=first_page.get("total", "NA"),
+        )
+
+    def _real_extract(self, url):
+        category, page_id = self._match_valid_url(url).groups()
+
+        if category:
+            info = self.call_api(f"get/{page_id}", video_id=page_id)
+            if not info:
+                raise ExtractorError("not available")
+            return self.entry_from_info(info, page_id)
+
+        return self.entries_from_playlist(page_id or "all")
