@@ -4,7 +4,6 @@
 import json
 import os
 import re
-import socket
 import sys
 from contextlib import suppress
 from functools import reduce
@@ -185,7 +184,7 @@ class TestExtractor(DownloadTestcase):
             # Check if the exception is not a network related one
             if not err.exc_info[0] in (
                 # URLError,
-                socket.timeout,
+                # socket.timeout,
                 UnavailableVideoError,
                 BadStatusLine,
             ) or (err.exc_info[0] == HTTPError and err.exc_info[1].code == 503):

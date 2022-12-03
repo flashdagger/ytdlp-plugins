@@ -282,7 +282,13 @@ class DownloadTestcase(TestCase):
         elif len(expected) <= 16:
             self.expect_field(got, expected, field)
         else:
-            self.assertEqual(expected, got, f"Mismatch in field {field!r}")
+            exp_short = expected
+            max_len = 64
+            if len(exp_short) > max_len:
+                exp_short = "".join((expected[: max_len - 5], "[...]"))
+            self.assertEqual(
+                expected, got, f"Mismatch in field {field!r}, expected {exp_short!r}"
+            )
 
     def expect_dict(self, got_dict, expected_dict: Dict[str, Any]):
         self.assertIsInstance(got_dict, dict)
