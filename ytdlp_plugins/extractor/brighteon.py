@@ -119,24 +119,21 @@ class BrighteonIE(InfoExtractor):
         },
         {
             # test embedded urls
-            "url": "https://healthfreedom.news/2020-05-20-plandemic-video-super-viral-brighteon-"
-            "facebook-banning-cleansing-content-wuhan-coronavirus.html",
+            "url": "https://sonsoflibertymedia.com/one-thing-that-the-officials-forgot-to-tell-you-about-the-vaccines-the-truth-video/",
             "info_dict": {
-                "id": "2020-05-20-plandemic-video-super-viral-brighteon-facebook-banning-"
-                "cleansing-content-wuhan-coronavirus",
-                "title": "After “Plandemic” video goes super viral on Brighteon.com, "
-                "Facebook bans all Brighteon links, regardless of content",
-                "description": str,
-                "timestamp": (int, float),
-                "upload_date": str,
+                "id": "one-thing-that-the-officials-forgot-to-tell-you-about-the-vaccines-the-truth-video",
+                "title": 'One Thing That The "Officials" Forgot To Tell You About The Vaccines, The Truth (Video) \u00bb Sons of Liberty Media',
+                "description": "md5:128ed10e870c40216b0d26bb227029f4",
+                "thumbnail": "https://sonsoflibertymedia.com/wp-content/uploads/2021/04/liars.jpg",
+                "age_limit": 0,
             },
-            "playlist_mincount": 1,
+            "params": {"playlistitems": "1"},
             "playlist": [
                 {
-                    "md5": "66c73716a5cf4299cb9c7ba9969b11ff",
+                    "md5": "53e2dea64b626eb057bf01bb4a1d1f4a",
                     "info_dict": {
-                        "id": "45c1558c-4163-4961-9f92-11c7c4c1af21",
-                        "title": "PlanDEMIC - Jesus Social Edition",
+                        "id": "d0263fb5-45cc-4ef7-af6b-57b5484abf93",
+                        "title": "The Same Ones Selling You The Virus, Are The Same Ones Selling You The Vaccines - Just Watch Them!",
                         "ext": "mp4",
                         "description": str,
                         "timestamp": int,
