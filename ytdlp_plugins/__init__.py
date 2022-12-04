@@ -157,12 +157,13 @@ def load_plugins(fullname, suffix, namespace=None):
         if re.match(r"^(\w+\.)*_", module_name):
             continue
         try:
-            if isinstance(finder, zipimporter):
-                module = finder.load_module(module_name)
-            else:
+            try:
                 spec = finder.find_spec(module_name)
                 module = module_from_spec(spec)
                 spec.loader.exec_module(module)
+            except AttributeError:
+                # zipimporter instances have .find_spec() for python >= 3.10
+                module = finder.load_module(module_name)
         except Exception:  # pylint: disable=broad-except
             print(f"Error while importing module '{module_name}'", file=sys.stderr)
             traceback.print_exc(limit=-1)

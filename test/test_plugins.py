@@ -6,7 +6,7 @@
 import importlib
 import sys
 import unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, suppress
 from inspect import getclosurevars
 from io import StringIO
 from pathlib import Path
@@ -27,6 +27,7 @@ from ytdlp_plugins import (
 from ytdlp_plugins.patching import patch_function_globals, SKIP_VT_MODE, patch_context
 
 ROOT_DIR = Path(__file__).parents[1].absolute()
+TEST_DIR = Path(__file__).parent.absolute()
 
 GLOBALS.initialize()
 
@@ -65,6 +66,18 @@ class TestPlugins(unittest.TestCase):
     def test_postprocessor_classes(self):
         plugins_pp = load_plugins(f"{PACKAGE_NAME}.postprocessor", "PP")
         self.assertIn("ExamplePluginPP", plugins_pp.keys())
+
+    def test_importing_wheel_package(self):
+        wheel_paths = set(TEST_DIR.rglob("*.whl"))
+        sys.path.extend(map(str, wheel_paths))
+
+        GLOBALS.reset()
+        add_plugins()
+        for fullname, module in sys.modules.items():
+            with suppress(AttributeError):
+                wheel_paths = wheel_paths - set(Path(module.__file__).parents)
+
+        self.assertSetEqual(wheel_paths, set(), "Could not load modules from wheel")
 
     def test_importing_zipped_module(self):
         """
