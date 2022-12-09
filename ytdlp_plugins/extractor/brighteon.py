@@ -295,7 +295,6 @@ class BrighteonIE(InfoExtractor):
                     }
                 )
             self._update_formats(formats)
-            self._sort_formats(formats)
             self._auto_merge_formats(formats)
 
         # merge channel_info items into video_info
@@ -569,7 +568,6 @@ class BrighteonRadioIE(BrighteonIE):
         for fmt in formats:
             fmt["height"] = fmt["width"] = None
             fmt["vcodec"] = "none"
-        self._sort_formats(formats)
         ffmpeg_args = self.get_param("external_downloader_args")
         if isinstance(ffmpeg_args, dict):
             ffmpeg_args.setdefault("ffmpeg_o", []).append("-vn")
