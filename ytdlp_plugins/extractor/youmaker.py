@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 import re
 from operator import itemgetter
+from urllib.parse import urlparse
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
@@ -9,10 +10,9 @@ from yt_dlp.utils import (
     OnDemandPagedList,
     UnsupportedError,
     parse_iso8601,
-    try_get,
+    sanitize_url,
     traverse_obj,
 )
-from ytdlp_plugins.utils import estimate_filesize, ParsedURL
 
 __version__ = "2022.10.28"
 
@@ -192,7 +192,6 @@ class YoumakerIE(InfoExtractor):
     def __init__(self, downloader=None):
         """Constructor. Receives an optional downloader."""
         super().__init__(downloader=downloader)
-        self._protocol = "https"
         self._category_map = None
         self._cache = {}
 
@@ -209,23 +208,21 @@ class YoumakerIE(InfoExtractor):
         )
         return (f"https://youmaker.com/v/{uid}" for uid in uids)
 
-    def _fix_url(self, url):
-        if url.startswith("//"):
-            return f"{self._protocol}:{url}"
-        return url
-
     @property
     def _base_url(self):
-        return self._fix_url("//www.youmaker.com")
+        return sanitize_url("//www.youmaker.com", scheme="https")
 
     @property
     def _asset_url(self):
         # as this url might change in the future
         # it needs to be extracted from some js magic...
-        return self._fix_url("//vs.youmaker.com/assets")
+        return sanitize_url("//vs.youmaker.com/assets", scheme="https")
 
-    def _live_url(self, video_id, endpoint="playlist.m3u8"):
-        return self._fix_url(f"//live2.youmaker.com/{video_id}/{endpoint}")
+    @staticmethod
+    def _live_url(video_id, endpoint="playlist.m3u8"):
+        return sanitize_url(
+            f"//live2.youmaker.com/{video_id}/{endpoint}", scheme="https"
+        )
 
     @staticmethod
     def _try_server_urls(url):
@@ -266,8 +263,8 @@ class YoumakerIE(InfoExtractor):
         if info is False:
             return None
 
-        status = try_get(info, itemgetter("status"), str)
-        data = try_get(info, itemgetter("data"), (list, dict))
+        status = traverse_obj(info, "status", str)
+        data = traverse_obj(info, "data", (list, dict))
 
         if status != "ok":
             msg = f'{what} - {status or "Bad JSON response"}'
@@ -344,7 +341,7 @@ class YoumakerIE(InfoExtractor):
                     video_id=video_uid,
                 )
             formats, playlist_subtitles = self._extract_m3u8_formats_and_subtitles(
-                self._fix_url(candidate_url),
+                sanitize_url(candidate_url, scheme="https"),
                 video_uid,
                 ext="mp4",
                 errnote=False,
@@ -358,7 +355,7 @@ class YoumakerIE(InfoExtractor):
         formats = list(format_mapping.values())
 
         for item in formats:
-            height = try_get(item, itemgetter("height"), int)
+            height = traverse_obj(item, "height", int)
             if height:
                 item["format_id"] = f"{height}p"
 
@@ -418,7 +415,6 @@ class YoumakerIE(InfoExtractor):
 
         formats, playlist_subtitles = self.handle_formats(playlist_url, video_uid)
         duration = video_info.get("duration")
-        estimate_filesize(formats, duration)
 
         if live_status != "not_live" and not formats:
             if live_status == "is_live":
@@ -538,9 +534,6 @@ class YoumakerIE(InfoExtractor):
         )
 
     def _real_extract(self, url):
-        parsed_url = ParsedURL(url)
-        self._protocol = parsed_url.scheme
-
         dispatch = (
             (r"/(?:v|video|embed)/(?P<uid>[a-zA-z0-9-]+)", self._video_entry_by_id),
             (
@@ -553,8 +546,9 @@ class YoumakerIE(InfoExtractor):
             ),
         )
 
+        url_path = urlparse(url).path
         for regex, func in dispatch:
-            match = re.match(regex, parsed_url.path)
+            match = re.match(regex, url_path)
             if not match:
                 continue
             return func(**match.groupdict())
