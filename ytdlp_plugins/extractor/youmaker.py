@@ -282,12 +282,15 @@ class YoumakerIE(InfoExtractor):
     @property
     def _categories(self):
         if self._category_map is None:
-            category_list = (
-                self._call_api(
-                    None, "video/category/list", what="categories", fatal=False
+            category_list = self.cache.load("youmaker", "categorylist")
+            if category_list is None:
+                category_list = (
+                    self._call_api(
+                        None, "video/category/list", what="categories", fatal=False
+                    )
+                    or ()
                 )
-                or ()
-            )
+                self.cache.store("youmaker", "categorylist", category_list)
             self._category_map = {item["category_id"]: item for item in category_list}
         return self._category_map
 
@@ -488,7 +491,6 @@ class YoumakerIE(InfoExtractor):
                     video_title=title,
                 )
 
-        _ = self._categories  # preload categories
         return OnDemandPagedList(fetch_page, page_size)
 
     def _paged_channel_entries(self, uid, page_size=REQUEST_LIMIT):
@@ -513,11 +515,9 @@ class YoumakerIE(InfoExtractor):
                     video_title=title,
                 )
 
-        _ = self._categories  # preload categories
         return OnDemandPagedList(fetch_page, page_size)
 
     def _playlist_entries_by_id(self, uid):
-        _ = self._categories  # preload categories
         info = self._call_api(uid, f"playlist/{uid}", what="playlist metadata")
         return self.playlist_result(
             self._paged_playlist_entries(info["playlist_uid"]),
@@ -527,7 +527,6 @@ class YoumakerIE(InfoExtractor):
         )
 
     def _channel_entries_by_id(self, uid):
-        _ = self._categories  # preload categories
         info = self._call_api(
             uid, path=f"video/channel/metadata/{uid}", what="channel metadata"
         )
