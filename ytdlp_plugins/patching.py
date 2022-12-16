@@ -14,7 +14,7 @@ except ImportError:
 
 import yt_dlp
 
-from . import GLOBALS
+from . import GLOBALS, __version__
 from .utils import tabify, write_json_file
 
 
@@ -66,11 +66,14 @@ def plugin_debug_header(self):
     if plugin_list:
         plural_s = "s" if len(plugin_list) > 1 else ""
         self.write_debug(
-            f"Loaded {len(plugin_list)} plugin{plural_s} which are not part of yt-dlp. "
-            f"Use at your own risk."
+            f"ytdlp-plugins (v{__version__}) loaded {len(plugin_list)} plugin{plural_s} "
+            "which are not part of yt-dlp. Use at your own risk."
         )
         for line in tabify(sorted(plugin_list), join_string=" "):
             self.write_debug(" " + line)
+    else:
+        self.write_debug(f"ytdlp-plugins version {__version__}")
+
     if GLOBALS.OVERRIDDEN:
         self.write_debug("Overridden classes due to name collisions:")
         items = [
