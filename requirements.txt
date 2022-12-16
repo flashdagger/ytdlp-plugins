@@ -10,7 +10,7 @@ astroid==2.12.13
     # via pylint
 attrs==22.1.0
     # via pytest
-black==22.10.0 ; platform_python_implementation != "PyPy"
+black==22.12.0 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 bleach==5.0.1
     # via readme-renderer
@@ -18,7 +18,7 @@ brotli==1.0.9
     # via yt-dlp
 bump2version==1.0.1 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
-certifi==2022.9.24
+certifi==2022.12.7
     # via
     #   requests
     #   yt-dlp
@@ -45,9 +45,9 @@ exceptiongroup==1.0.4
     # via pytest
 execnet==1.9.0
     # via pytest-xdist
-filelock==3.8.0
+filelock==3.8.2
     # via virtualenv
-identify==2.5.9
+identify==2.5.10
     # via pre-commit
 idna==3.4
     # via requests
@@ -57,7 +57,7 @@ importlib-metadata==5.1.0
     #   twine
 iniconfig==1.1.1
     # via pytest
-isort==5.10.1
+isort==5.11.2
     # via pylint
 jaraco-classes==3.2.3
     # via keyring
@@ -79,13 +79,13 @@ mypy-extensions==0.4.3
     #   mypy
 nodeenv==1.7.0
     # via pre-commit
-packaging==21.3
+packaging==22.0
     # via pytest
-pathspec==0.10.2
+pathspec==0.10.3
     # via black
-pkginfo==1.8.3
+pkginfo==1.9.2
     # via twine
-platformdirs==2.5.4
+platformdirs==2.6.0
     # via
     #   black
     #   pylint
@@ -102,10 +102,8 @@ pygments==2.13.0
     # via
     #   readme-renderer
     #   rich
-pylint==2.15.6 ; platform_python_implementation != "PyPy"
+pylint==2.15.8 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
-pyparsing==3.0.9
-    # via packaging
 pytest==7.2.0
     # via
     #   -r requirements.in
@@ -113,7 +111,7 @@ pytest==7.2.0
     #   pytest-xdist
 pytest-subtests==0.9.0
     # via -r requirements.in
-pytest-xdist==3.0.2
+pytest-xdist==3.1.0
     # via -r requirements.in
 pywin32-ctypes==0.2.0
     # via keyring
@@ -143,7 +141,7 @@ tomli==2.0.1
     #   pytest
 tomlkit==0.11.6
     # via pylint
-twine==4.0.1 ; platform_python_implementation != "PyPy"
+twine==4.0.2 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 typing-extensions==4.4.0
     # via
@@ -155,7 +153,7 @@ urllib3==1.26.13
     # via
     #   requests
     #   twine
-virtualenv==20.17.0
+virtualenv==20.17.1
     # via pre-commit
 webencodings==0.5.1
     # via bleach
