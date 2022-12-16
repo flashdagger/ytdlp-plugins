@@ -7,7 +7,7 @@ You can install ytdlp-auf1 via pip:
 * Use [PyPI package](https://pypi.org/project/yt-dlp):
 
   `python3 -m pip install --upgrade ytdlp-auf1`
-* Install from Github branch:
+* Install from GitHub branch:
 
   `python3 -m pip install -U https://github.com/flashdagger/ytdlp-plugins/archive/refs/heads/auf1.zip`
 

@@ -11,7 +11,6 @@ from yt_dlp.extractor.peertube import PeerTubeIE
 from yt_dlp.utils import (
     ExtractorError,
     OnDemandPagedList,
-    UnsupportedError,
     base_url,
     clean_html,
     js_to_json,
@@ -74,11 +73,28 @@ class Auf1IE(InfoExtractor):
                 "categories": ["News & Politics"],
             },
             "params": {"skip_download": True},
-            "expected_warnings": [
-                "Retrying due to too many requests.",
-                "The read operation timed out",
-                "JSON API",
-            ],
+            "expected_warnings": ["JSON API"],
+        },
+        {
+            "url": "https://auf1.tv/nachrichten-auf1/nachrichten-auf1-vom-15-dezember-2022/",
+            "info_dict": {
+                "id": "nVBERN4MzFutVzoXsADf8F",
+                "title": "Nachrichten AUF1 vom 15. Dezember 2022",
+                "description": "md5:bc4def34dcc8401d84c5127c5f759543",
+                "ext": "mp4",
+                "thumbnail": r"re:https://(:?auf1.)?gegenstimme.tv/static/thumbnails/[\w-]+.jpg",
+                "timestamp": 1671121411,
+                "upload_date": "20221215",
+                "uploader": "AUF1.TV",
+                "uploader_id": "25408",
+                "duration": 1825,
+                "view_count": int,
+                "like_count": int,
+                "dislike_count": int,
+                "categories": ["News & Politics"],
+            },
+            "params": {"skip_download": True},
+            "expected_warnings": ["JSON API"],
         },
         {  # JSON API without payload.js
             "url": "https://auf1.tv/stefan-magnet-auf1/"
@@ -238,7 +254,7 @@ class Auf1IE(InfoExtractor):
     def _payloadjs(self, url, page_id):
         webpage = self._download_webpage(url, page_id)
         payloadjs_url = self._search_regex(
-            r'href="([^"]+/payload.js)"', webpage, "payload url"
+            r'href="([^"]+/_?payload.js)"', webpage, "payload url"
         )
         payloadjs_url = urljoin(base_url(url), payloadjs_url)
         payload_js = self._download_webpage(
@@ -250,7 +266,7 @@ class Auf1IE(InfoExtractor):
                 .*
                 \(function\ *\( (?P<vars>[^)]*) \)
                 \{\ *return\ * (?P<metadata>\{.+}) .*}
-                \( (?P<values>.*) \){3}
+                \( (?P<values>.*) \){2}
             """,
             payload_js,
         )
@@ -270,10 +286,10 @@ class Auf1IE(InfoExtractor):
         if method == "api":
             return self.call_with_retries(
                 lambda: self.call_api(f"getContent/{page_id}", page_id),
-                http_error_map={500: UnsupportedError(url)},
+                http_error_map={500: ExtractorError("JSON API failed (500)")},
             )
         payload = self._payloadjs(url, page_id)
-        return payload["data"][0]["payload"]
+        return payload["data"].popitem()[1]
 
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
