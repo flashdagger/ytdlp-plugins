@@ -1,8 +1,8 @@
 import ast
 import builtins
 from contextlib import suppress
-from inspect import getsourcelines, getsourcefile, getmro
-from typing import Dict, Any, List, Tuple, Union
+from inspect import getmro, getsourcefile, getsourcelines
+from typing import Any, Dict, List, Tuple, Union
 
 from .utils import unlazify
 

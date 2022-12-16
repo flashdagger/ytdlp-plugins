@@ -1,13 +1,13 @@
 import re
-from typing import Dict, Any
+from typing import Any, Dict
 
 from yt_dlp.postprocessor import FFmpegPostProcessor
 from yt_dlp.utils import (
     HEADRequest,
+    YoutubeDLError,
     determine_ext,
     int_or_none,
     traverse_obj,
-    YoutubeDLError,
 )
 
 

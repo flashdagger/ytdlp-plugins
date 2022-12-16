@@ -7,8 +7,8 @@ from contextlib import suppress
 from importlib import import_module
 from itertools import cycle
 from pathlib import Path
-from typing import Union, Dict
-from urllib.parse import urlparse, parse_qsl
+from typing import Dict, Optional, Union
+from urllib.parse import parse_qsl, urlparse
 
 
 def estimate_filesize(formats, duration):
@@ -59,7 +59,7 @@ class ParsedURL:
     parse_qsl() and regular expression groups
     """
 
-    def __init__(self, url: str, *, regex: str = None):
+    def __init__(self, url: str, *, regex: Optional[str] = None):
         self._parts = parts = urlparse(url)
         self._query: Dict[str, str] = dict(parse_qsl(parts.query))
         self._match = re.match(regex, url) if regex else None

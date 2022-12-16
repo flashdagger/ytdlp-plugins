@@ -2,9 +2,9 @@
 # -*- coding: UTF-8 -*-
 
 import warnings
-from contextlib import suppress, ContextDecorator, contextmanager, ExitStack
-from inspect import stack, getmodule
-from typing import Dict, Any, Callable, Optional, cast
+from contextlib import ContextDecorator, ExitStack, contextmanager, suppress
+from inspect import getmodule, stack
+from typing import Any, Callable, Dict, Optional, cast
 from unittest.mock import patch
 
 try:
