@@ -2,7 +2,7 @@
 import re
 from contextlib import suppress
 from sys import maxsize
-from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
@@ -19,7 +19,6 @@ from yt_dlp.utils import (
     urljoin,
 )
 from ytdlp_plugins.probe import headprobe_media
-from ytdlp_plugins.utils import ParsedURL
 
 __version__ = "2022.10.28"
 
@@ -397,17 +396,17 @@ class BrighteonIE(InfoExtractor):
             playlist_count=len(entries),
         )
 
-    def _real_extract(self, url):
+    def _real_extract(self, url: str):
         match = self._match_valid_url(url)
         taxonomy, video_id = match.groups()
-        parsed_url = ParsedURL(url)
+        parsed_url = dict(parse_qsl(urlparse(url).query))
         self._set_cookie("brighteon.com", "adBlockClosed", "1")
 
         if taxonomy in {"channels", "categories", "browse"}:
             return self._paged_url_entries(
                 video_id,
                 url,
-                start_page=parsed_url.query("page"),
+                start_page=parsed_url.get("page"),
                 use_json_api=taxonomy != "browse",
             )
 
@@ -415,7 +414,7 @@ class BrighteonIE(InfoExtractor):
         page_props = traverse_obj(json_obj, self.page_props_path(), default={})
 
         playlist_info = page_props.get("playlist", {})
-        if playlist_info and parsed_url.query("index") is None:
+        if playlist_info and parsed_url.get("index") is None:
             return self._playlist_entries(playlist_info, url)
 
         video_info = page_props.get("video", {})
