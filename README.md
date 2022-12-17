@@ -10,7 +10,7 @@ You can install ytdlp-brighteon via pip:
 * Use [PyPI package](https://pypi.org/project/yt-dlp):
 
   `python3 -m pip install --upgrade ytdlp-brighteon`
-* Install from Github branch:
+* Install from GitHub branch:
 
   `python3 -m pip install -U https://github.com/flashdagger/ytdlp-plugins/archive/refs/heads/brighteon.zip`
 
@@ -18,7 +18,7 @@ Note that on some systems, you may need to use `py` or `python` instead of `pyth
 
 ## example: show the 20 recent titles from channel
 
-`python3 -m ytdlp_plugins -e --playlist-items 1-20 https://www.brighteon.com/channels/brighteontv`
+`python3 -m ytdlp_plugins -e --playlist-items 1:20 https://www.brighteon.com/channels/brighteontv`
 
 ## yt-dlp
 
