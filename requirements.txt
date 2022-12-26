@@ -8,7 +8,7 @@
     # via -r requirements.in
 astroid==2.12.13
     # via pylint
-attrs==22.1.0
+attrs==22.2.0
     # via pytest
 black==22.12.0 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
@@ -41,27 +41,27 @@ distlib==0.3.6
     # via virtualenv
 docutils==0.19
     # via readme-renderer
-exceptiongroup==1.0.4
+exceptiongroup==1.1.0
     # via pytest
 execnet==1.9.0
     # via pytest-xdist
 filelock==3.8.2
     # via virtualenv
-identify==2.5.10
+identify==2.5.11
     # via pre-commit
 idna==3.4
     # via requests
-importlib-metadata==5.1.0
+importlib-metadata==5.2.0
     # via
     #   keyring
     #   twine
 iniconfig==1.1.1
     # via pytest
-isort==5.11.2
+isort==5.11.4
     # via pylint
 jaraco-classes==3.2.3
     # via keyring
-keyring==23.11.0
+keyring==23.13.1
     # via twine
 lazy-object-proxy==1.8.0
     # via astroid
@@ -92,7 +92,7 @@ platformdirs==2.6.0
     #   virtualenv
 pluggy==1.0.0
     # via pytest
-pre-commit==2.20.0 ; platform_python_implementation != "PyPy"
+pre-commit==2.21.0 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 pycryptodomex==3.16.0
     # via yt-dlp
@@ -102,7 +102,7 @@ pygments==2.13.0
     # via
     #   readme-renderer
     #   rich
-pylint==2.15.8 ; platform_python_implementation != "PyPy"
+pylint==2.15.9 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 pytest==7.2.0
     # via
@@ -131,8 +131,6 @@ rich==12.6.0
     # via twine
 six==1.16.0
     # via bleach
-toml==0.10.2
-    # via pre-commit
 tomli==2.0.1
     # via
     #   black
@@ -163,7 +161,7 @@ wrapt==1.14.1
     # via astroid
 yt-dlp==2022.11.11
     # via ytdlp-plugins
-ytdlp-plugins==2022.11.15
+ytdlp-plugins==2022.12.17
     # via ytdlp-auf1
 zipp==3.11.0
     # via importlib-metadata
