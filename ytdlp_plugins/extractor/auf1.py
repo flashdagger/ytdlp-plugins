@@ -45,7 +45,7 @@ class JSHLEX(shlex):
 class Auf1IE(InfoExtractor):
     IE_NAME = "auf1"
     _VALID_URL = r"""(?x)
-                    https?://
+                    (?:https?:)?//
                         (?:www\.)?
                         (?:auf1\.tv/)
                         (?P<category>[^/]+/)?
