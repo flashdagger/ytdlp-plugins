@@ -115,12 +115,12 @@ class ServusTVIE(InfoExtractor):
                 },
                 {
                     "info_dict": {
-                        "id": "aa-24hxtegah2112",
-                        "title": "Der Traum vom Paradies",
+                        "id": "aa-24hxt6ycw1w12",
+                        "title": "Der Generationenhof",
                         "series": "Ich, Bauer",
                         "season_number": 3,
-                        "episode_number": 3,
-                        "description": "md5:63af217f4de57d48de109d86d1036ee9",
+                        "episode_number": 1,
+                        "description": "md5:01335fd4f02d66d6ae9af2c5387d18a3",
                         "timestamp": int,
                         "upload_date": "20210501",
                     },
@@ -203,7 +203,7 @@ class ServusTVIE(InfoExtractor):
             "url": "https://www.servustv.com/natur/k/natur-kanal/269299/",
             "info_dict": {
                 "id": str,
-                "ext": "m4a",
+                "ext": "re:m3u8|m4a",
                 "title": str,
                 "description": str,
                 "duration": None,
@@ -674,7 +674,7 @@ class PmWissenIE(ServusTVIE):
                 "title": "Redewendungen Mediathek",
                 "description": "Alle Videos zum Thema Redewendungen",
             },
-            "playlist_mincount": 22,
+            "playlist_mincount": 20,
             "params": {"skip_download": True},
         },
         {
