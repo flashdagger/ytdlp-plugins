@@ -5,7 +5,7 @@ from yt_dlp.extractor.common import InfoExtractor
 
 
 # ℹ️ Instructions on making extractors can be found at:
-# 🔗 https://github.com/yt-dlp/yt-dlp/blob/master/CONTRIBUTING.md#adding-support-for-a-new-site
+# 🔗 https://github.com/yt-dlp/yt-dlp#developing-plugins
 
 
 class MyPluginIE(InfoExtractor):

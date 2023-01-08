@@ -4,15 +4,15 @@
 `pip install -e .`
 
 ## implement the extractor
-Simply put the code under `ytdlp_plugins/extractor/<name>.py`.
+Simply put the code under `yt_dlp_plugins/extractor/<name>.py`.
 
 Test by executing the extractor:
 
-`ytdlp-plugins -v <url>`
+`yt-dlp -v <url>`
 
 or just run the unit tests:
 
-`python -m unittest`
+`python .\setup.py test`
 
 ## create the package
 Edit `setup.cfg` according to your needs. 
