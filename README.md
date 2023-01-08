@@ -1,5 +1,13 @@
 # servustv.com support for yt-dlp
 
+> **_NOTE_:**  
+> 
+> Since version 2023.01.06 yt-dlp supports plugins from python packages.
+> The ytdlp-plugins package is no longer necessary.
+> 
+> For further details see https://github.com/yt-dlp/yt-dlp#plugins
+
+
 * supported domains: [servustv.com](https://servustv.com) and [pm-wissen.com](https://pm-wissen.com)
 * supported live channels:
   * [Hauptkanal](https://www.servustv.com/allgemein/p/jetzt-live/119753/) 
@@ -10,7 +18,7 @@
   * [Kanal: Wintersport](https://www.servustv.com/sport/k/wintersport-kanal/269301/)
 * playlist from topics (e.g. [Servus Nachrichten](https://www.servustv.com/aktuelles/b/servus-nachrichten/aa-1y5rjcd1h2111/)
   or [Motorsport](https://www.servustv.com/sport/p/motorsport/325/))
-* playlist from searches (e.g. [search term 'Spielfilme'](https://www.servustv.com/search/spielfilme/))
+* playlist from searches (e.g. [search term 'Spielfilme\'](https://www.servustv.com/search/spielfilme/))
 
 ## installation
 
@@ -27,10 +35,10 @@ Note that on some systems, you may need to use `py` or `python` instead of `pyth
 
 ## example: show all titles from channel
 
-  `python3 -m ytdlp_plugins -e https://www.servustv.com/unterhaltung/b/spielfilme/aa-1u4ebfxk52111/`
+  `python3 -m yt_dlp -e https://www.servustv.com/unterhaltung/b/spielfilme/aa-1u4ebfxk52111/`
 
 
-## yt-dlp
+## about yt-dlp
 
 [yt-dlp](https://github.com/yt-dlp/yt-dlp) is a [youtube-dl](https://github.com/ytdl-org/youtube-dl) fork based on the now
 inactive [youtube-dlc](https://github.com/blackjack4494/yt-dlc). The main focus of this project is adding new features
