@@ -93,12 +93,14 @@ class PluginFinder(MetaPathFinder):
                 locations.extend(
                     self.zip_ns_dir(Path(importer.archive).absolute(), parts)
                 )
+            elif hasattr(importer, "path"):
+                i_path = Path(importer.path)
+                path = i_path / Path(*parts[1:])
+                if i_path.name == parts[0] and path.is_dir():
+                    locations.append(path)
             elif hasattr(importer, "find_spec"):
                 spec = importer.find_spec(fullname)
-                path = Path(getattr(importer, "path", "."), *fullname.split("."))
-                if spec is None and path.is_absolute() and path.is_dir():
-                    locations.append(path)
-                elif spec and spec.origin is None:
+                if spec and spec.origin is None:
                     locations.extend(
                         Path(loc) for loc in spec.submodule_search_locations
                     )
@@ -208,6 +210,10 @@ def add_plugins():
             del extractor_map[key]
     GLOBALS.FOUND.clear()
     GLOBALS.OVERRIDDEN.clear()
+
+    # only detect plugins, they are already loaded by yt-dlp
+    native_plugins = load_plugins("yt_dlp_plugins.extractor", "IE")
+    GLOBALS.FOUND.update(native_plugins)
 
     ie_plugins = load_plugins(f"{PACKAGE_NAME}.extractor", "IE", extractor_map)
     GLOBALS.FOUND.update(ie_plugins)

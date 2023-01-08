@@ -1,3 +1,10 @@
+> **_NOTE_:**  
+> 
+> Since version 2023.01.06 yt-dlp natively supports plugins from python packages.
+> The listed plugins will be soon updated and dependency to this package will be removed.
+> 
+> For further details see https://github.com/yt-dlp/yt-dlp#plugins
+
 # a plugin manager for yt-dlp
 
 ## about ytdlp-plugins
