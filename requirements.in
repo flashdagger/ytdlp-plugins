@@ -11,3 +11,4 @@ pytest
 pytest-subtests
 pytest-xdist
 twine
+ytdlp-plugins

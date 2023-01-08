@@ -6,7 +6,7 @@
 #
 -e file:.
     # via -r requirements.in
-astroid==2.12.13
+astroid==2.13.2
     # via pylint
 attrs==22.2.0
     # via pytest
@@ -55,7 +55,7 @@ importlib-metadata==6.0.0
     # via
     #   keyring
     #   twine
-iniconfig==1.1.1
+iniconfig==2.0.0
     # via pytest
 isort==5.11.4
     # via pylint
@@ -83,7 +83,7 @@ packaging==22.0
     # via pytest
 pathspec==0.10.3
     # via black
-pkginfo==1.9.4
+pkginfo==1.9.6
     # via twine
 platformdirs==2.6.2
     # via
@@ -127,7 +127,7 @@ requests-toolbelt==0.10.1
     # via twine
 rfc3986==2.0.0
     # via twine
-rich==13.0.0
+rich==13.0.1
     # via twine
 six==1.16.0
     # via bleach
@@ -159,10 +159,12 @@ websockets==10.4
     # via yt-dlp
 wrapt==1.14.1
     # via astroid
-yt-dlp==2023.1.2
-    # via ytdlp-plugins
+yt-dlp==2023.1.6
+    # via
+    #   ytdlp-plugins
+    #   ytdlp-servustv
 ytdlp-plugins==2022.12.17
-    # via ytdlp-servustv
+    # via -r requirements.in
 zipp==3.11.0
     # via importlib-metadata
 
