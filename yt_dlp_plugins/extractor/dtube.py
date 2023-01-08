@@ -186,7 +186,6 @@ class DTubeIE(InfoExtractor):
             if media_format:
                 formats.append(media_format)
 
-        self._sort_formats(formats)
         return formats
 
     @staticmethod
