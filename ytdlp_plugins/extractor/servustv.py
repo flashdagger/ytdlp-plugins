@@ -1,7 +1,7 @@
 # coding: utf-8
 import re
-from typing import Dict, Tuple
-from urllib.parse import quote_plus, urlunparse
+from typing import Any, Dict, Iterator, Optional, Sequence, Tuple
+from urllib.parse import parse_qsl, quote_plus, urlparse, urlunparse
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
@@ -15,9 +15,9 @@ from yt_dlp.utils import (
     traverse_obj,
     unescapeHTML,
 )
-from ytdlp_plugins.utils import ParsedURL
 
 __version__ = "2022.11.15"
+AnyDict = Dict[str, Any]
 
 
 class ServusTVIE(InfoExtractor):
@@ -248,7 +248,7 @@ class ServusTVIE(InfoExtractor):
         self.timezone = "Europe/Vienna"
 
     @property
-    def country_code(self):
+    def country_code(self) -> str:
         return self.country_override or self._GEO_COUNTRIES[0]
 
     def initialize(self):
@@ -258,7 +258,7 @@ class ServusTVIE(InfoExtractor):
             self.to_screen(f"Set countrycode to {self.country_code!r}")
         super().initialize()
 
-    def _og_search_title(self, html, **kwargs):
+    def _og_search_title(self, html: str, **kwargs) -> str:
         site_name = self._og_search_property("site_name", html, default=None)
         title = super()._og_search_title(html, **kwargs)
         if site_name and title:
@@ -266,7 +266,7 @@ class ServusTVIE(InfoExtractor):
 
         return title
 
-    def _playlist_meta(self, page_data, webpage):
+    def _playlist_meta(self, page_data: AnyDict, webpage: str) -> AnyDict:
         return {
             "playlist_id": page_data.get("slug"),
             "playlist_title": traverse_obj(page_data, ("title", "rendered"))
@@ -277,7 +277,7 @@ class ServusTVIE(InfoExtractor):
             or self._og_search_description(webpage, default=None),
         }
 
-    def _auto_merge_formats(self, formats):
+    def _auto_merge_formats(self, formats: Sequence[AnyDict]):
         requested_format = self.get_param("format")
         audio_formats = [fmt for fmt in formats if fmt.get("vcodec") == "none"]
         audio_only = [fmt["format_id"] for fmt in audio_formats]
@@ -298,7 +298,7 @@ class ServusTVIE(InfoExtractor):
                 requested_format
             )
 
-    def _hls_duration(self, formats):
+    def _hls_duration(self, formats: Sequence[AnyDict]) -> Optional[float]:
         for fmt in formats:
             if not fmt["url"].endswith(".m3u8"):
                 return None
@@ -313,9 +313,11 @@ class ServusTVIE(InfoExtractor):
             )
             if matches and matches[-1] == "":
                 return sum(map(float, matches[:-1]))
-            return None
+            break
 
-    def _download_formats(self, video_url, video_id):
+        return None
+
+    def _download_formats(self, video_url: str, video_id: str):
         if not video_url:
             return [], {}
 
@@ -328,7 +330,6 @@ class ServusTVIE(InfoExtractor):
         except ExtractorError as exc:
             raise ExtractorError(exc.msg, video_id=video_id, expected=True) from exc
 
-        self._sort_formats(formats)
         for fmt in formats:
             if "height" in fmt:
                 fmt["format_id"] = f"{fmt['height']}p"
@@ -338,7 +339,7 @@ class ServusTVIE(InfoExtractor):
         return formats, subtitles
 
     @staticmethod
-    def program_info(info) -> Dict:
+    def program_info(info: AnyDict) -> AnyDict:
         program_info = {"series": info.get("label"), "chapter": info.get("chapter")}
         match = re.match(r"\D+(\d+)", info.get("season", ""))
         if match:
@@ -349,7 +350,7 @@ class ServusTVIE(InfoExtractor):
             program_info["chapter"] = match[2] and match[2].strip()
         return program_info
 
-    def _entry_by_id(self, video_id, video_url=None, is_live=False):
+    def _entry_by_id(self, video_id: str, video_url=None, is_live=False) -> AnyDict:
         info = self._download_json(
             self._API_URL,
             query={"videoId": video_id.upper(), "timeZone": self.timezone},
@@ -420,7 +421,7 @@ class ServusTVIE(InfoExtractor):
             "subtitles": subtitles,
         }
 
-    def _url_entry_from_post(self, post, **kwargs):
+    def _url_entry_from_post(self, post: AnyDict, **kwargs) -> AnyDict:
         duration = int_or_none(traverse_obj(post, ("stv_duration", "raw")))
         return self.url_result(
             post["link"],
@@ -438,7 +439,9 @@ class ServusTVIE(InfoExtractor):
             **kwargs,
         )
 
-    def _live_stream_from_schedule(self, schedule, stream_id):
+    def _live_stream_from_schedule(
+        self, schedule: Sequence[AnyDict], stream_id: Optional[str]
+    ) -> AnyDict:
         if self.country_code in self._LIVE_URLS:
             video_url = self._LIVE_URLS[self.country_code]
         else:
@@ -463,21 +466,24 @@ class ServusTVIE(InfoExtractor):
                 item["aa_id"].lower(), video_url=video_url, is_live=True
             )
 
-    def _paged_playlist_by_query(self, url, qid):
-        parsed_url = ParsedURL(url)
+        assert False, "Should not happen"
+
+    def _paged_playlist_by_query(self, url: str, qid: str):
+        url_parts = urlparse(url)
+        url_query = dict(parse_qsl(url_parts.query))
         # pylint: disable=protected-access
         # noinspection PyProtectedMember
-        query_api_url = urlunparse(parsed_url._parts._replace(query="", fragment=""))
+        query_api_url = urlunparse(url_parts._replace(query="", fragment=""))
 
         json_query = {
-            **parsed_url.query(),
+            **url_query,
             "geo_override": self.country_code,
             "post_type": "media_asset",
             # "filter_playability": "true",
             "per_page": self.PAGE_SIZE,
         }
 
-        def fetch_page(page_number):
+        def fetch_page(page_number: int) -> Iterator[AnyDict]:
             json_query.update({"page": page_number + 1})
             info = self._download_json(
                 query_api_url,
@@ -492,11 +498,11 @@ class ServusTVIE(InfoExtractor):
 
         return OnDemandPagedList(fetch_page, self.PAGE_SIZE)
 
-    def _entries_from_blocks(self, blocks):
+    def _entries_from_blocks(self, blocks: Sequence[AnyDict]) -> Iterator[AnyDict]:
         """return url results or multiple playlists"""
-        categories: Dict[str, Dict[str, Dict]] = {}
+        categories: Dict[str, AnyDict] = {}
 
-        def flatten(_blocks, depth=0):
+        def flatten(_blocks: Sequence[AnyDict], depth=0):
             for _block in _blocks:
                 post = _block.get("post", {})
                 if "/v/" in post.get("link", ""):
@@ -523,7 +529,7 @@ class ServusTVIE(InfoExtractor):
                 yield info
 
     @staticmethod
-    def _page_data(json_obj):
+    def _page_data(json_obj: AnyDict) -> AnyDict:
         for item in ("data", "post", "page"):
             page_data = traverse_obj(
                 json_obj, f"props/pageProps/{item}".split("/"), default={}
@@ -532,7 +538,7 @@ class ServusTVIE(InfoExtractor):
                 break
         return page_data
 
-    def _filter_query(self, json_obj, *names: str) -> Tuple[str, Dict]:
+    def _filter_query(self, json_obj: AnyDict, *names: str) -> Tuple[str, AnyDict]:
         data = traverse_obj(
             json_obj,
             "props/pageProps/initialLibData".split("/"),
@@ -546,10 +552,10 @@ class ServusTVIE(InfoExtractor):
 
         return "none", {}
 
-    def _real_extract(self, url):
+    def _real_extract(self, url: str) -> AnyDict:
         video_id = self._match_id(url)
-        parsed_url = ParsedURL(url)
-        url_query = {key.lower(): value for key, value in parsed_url.query().items()}
+        url_parts = urlparse(url)
+        url_query = {key.lower(): value for key, value in parse_qsl(url_parts.query)}
 
         # server accepts tz database names
         # see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
@@ -558,7 +564,7 @@ class ServusTVIE(InfoExtractor):
             self.to_screen(f"Set timezone to {self.timezone!r}")
 
         # single video
-        if "/v/" in parsed_url.path or parsed_url.path.startswith("/videos/"):
+        if "/v/" in url_parts.path or url_parts.path.startswith("/videos/"):
             return self._entry_by_id(video_id)
 
         webpage = self._download_webpage(url, video_id=video_id)
