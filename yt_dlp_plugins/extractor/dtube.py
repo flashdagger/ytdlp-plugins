@@ -1,10 +1,12 @@
 # coding: utf-8
 import json
 import re
+from contextlib import suppress
 from datetime import datetime, timedelta
 from itertools import count
 from urllib.parse import unquote_plus
 
+from yt_dlp import extractor
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     ExtractorError,
@@ -20,15 +22,21 @@ from yt_dlp.utils import (
 from ytdlp_plugins.probe import probe_media
 
 __version__ = "2022.10.28"
+_VALID_URL = r"""(?x)
+                https?://(?:www\.)?d\.tube/
+                (?:\#!/)?v/
+                (?P<id>[0-9a-z.-]+/[\w-]+)
+                """
 
+# dirty way to override existing extractor, since we change the URL regex
+# pylint: disable=protected-access
+with suppress(AttributeError):
+    extractor._extractors.DTubeIE._VALID_URL = _VALID_URL
+    extractor.lazy_extractors.DTubeIE._VALID_URL = _VALID_URL
 
 # pylint: disable=abstract-method
 class DTubeIE(InfoExtractor):
-    _VALID_URL = r"""(?x)
-                    https?://(?:www\.)?d\.tube/
-                    (?:\#!/)?v/
-                    (?P<id>[0-9a-z.-]+/[\w-]+)
-                    """
+    _VALID_URL = _VALID_URL
     IE_NAME = "d.tube"
 
     GATEWAY_URLS = {
@@ -49,18 +57,17 @@ class DTubeIE(InfoExtractor):
         "dailymotion": "https://www.dailymotion.com/video/{}",
     }
 
+    # pylint: disable=line-too-long
     _TESTS = [
         {
-            "url": "https://d.tube/v/famigliacurione/"
-            "QmUJquzf7DALjwUExoHtTjS8PgGqfGohzMr4W3XJ56q9pR",
+            "url": "https://d.tube/v/famigliacurione/QmUJquzf7DALjwUExoHtTjS8PgGqfGohzMr4W3XJ56q9pR",
             "md5": "4ad5272197655dc033bfd0cc039b71f2",
             "info_dict": {
                 "id": "famigliacurione/QmUJquzf7DALjwUExoHtTjS8PgGqfGohzMr4W3XJ56q9pR",
                 "title": "La Prova by SOSO",
                 "description": "md5:c942bfe98693a2e81510464d10869449",
                 "ext": "mp4",
-                "thumbnail": "https://cdn.steemitimages.com/"
-                "DQmbCfaJkTRrjerNhcyDCoviBqpXB8ZDh31NhQPWvcyEj6U/laprovathumb.jpg",
+                "thumbnail": "https://cdn.steemitimages.com/DQmbCfaJkTRrjerNhcyDCoviBqpXB8ZDh31NhQPWvcyEj6U/laprovathumb.jpg",
                 "tags": ["music", "hiphop"],
                 "duration": 71,
                 "uploader_id": "famigliacurione",
@@ -80,8 +87,7 @@ class DTubeIE(InfoExtractor):
                 "title": "Splinterlands Battle Share Theme: DIVINE SORCERESS",
                 "description": "md5:4521cc098e7dcad3e9a7f73095c9ffe9",
                 "ext": "mp4",
-                "thumbnail": "https://snap1.d.tube/ipfs/"
-                "QmWYECptp7XKVEUk4tBf9R6d5XaRUo6Hcow6abtuy1Q3Vt",
+                "thumbnail": "https://snap1.d.tube/ipfs/QmWYECptp7XKVEUk4tBf9R6d5XaRUo6Hcow6abtuy1Q3Vt",
                 "duration": 181,
                 "uploader_id": "reeta0119",
                 "upload_date": "20200306",
@@ -365,7 +371,7 @@ class DTubeQueryIE(DTubeUserIE):
     _TESTS = [
         {
             "url": "https://d.tube/#!/hotvideos",
-            "playlist_mincount": 100,
+            "playlist_mincount": 100,  # type: ignore
             "info_dict": {
                 "id": "hotvideos",
                 "title": "hotvideos",
@@ -373,7 +379,7 @@ class DTubeQueryIE(DTubeUserIE):
         },
         {
             "url": "https://d.tube/trendingvideos",
-            "playlist_mincount": 50,
+            "playlist_mincount": 50,  # type: ignore
             "info_dict": {
                 "id": "trendingvideos",
                 "title": "trendingvideos",
@@ -381,7 +387,7 @@ class DTubeQueryIE(DTubeUserIE):
         },
         {
             "url": "https://d.tube/newvideos",
-            "playlist_mincount": 50,
+            "playlist_mincount": 50,  # type: ignore
             "info_dict": {
                 "id": "newvideos",
                 "title": "newvideos",
