@@ -140,7 +140,7 @@ class YoumakerIE(InfoExtractor):
                 "id": "metoda-kpch-ogolnoswiatowa-agenda-komunistycznej-partii-chin-film",
                 "title": "startswith:Metoda KPCh",
                 "description": str,
-                "timestamp": (float, int),
+                "timestamp": (float, int, None),
                 "upload_date": str,
             },
             "playlist": [
@@ -162,8 +162,7 @@ class YoumakerIE(InfoExtractor):
         },
         {
             # test embedded videos from another site
-            "url": "https://www.theepochtimes.com/"
-            "dick-morris-discusses-his-book-the-return-trumps-big-2024-comeback_4819205.html",
+            "url": "https://www.theepochtimes.com/dick-morris-discusses-his-book-the-return-trumps-big-2024-comeback_4819205.html",
             "info_dict": {
                 "id": "9489f994-2a20-4812-b233-ac0e5c345632",
                 "ext": "mp4",
@@ -556,10 +555,7 @@ class YoumakerIE(InfoExtractor):
         raise UnsupportedError(url)
 
 
-# disable the Epoch extractor
+# forward embedded urls from Epoch via generic extractor
 class EpochIE(InfoExtractor):
-    _ENABLED = False
-
-    @classmethod
-    def suitable(cls, url):
-        return False
+    def _real_extract(self, url):
+        return self.url_result(url, ie="Generic")
