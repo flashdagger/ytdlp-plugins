@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 import re
+from contextlib import suppress
 from operator import itemgetter
 from urllib.parse import urlparse
 
@@ -16,6 +17,13 @@ from yt_dlp.utils import (
 
 __version__ = "2023.01.09"
 
+# pylint: disable=protected-access
+with suppress(AttributeError):
+    # dirty hack to disable EpochIE
+    from yt_dlp.extractor import epoch, lazy_extractors
+
+    lazy_extractors.EpochIE._ENABLED = False
+    epoch.EpochIE._ENABLED = False
 
 # pylint: disable=abstract-method
 class YoumakerIE(InfoExtractor):
@@ -141,7 +149,7 @@ class YoumakerIE(InfoExtractor):
                 "title": "startswith:Metoda KPCh",
                 "description": str,
                 "timestamp": (float, int, None),
-                "upload_date": str,
+                "upload_date": (str, None),
             },
             "playlist": [
                 {
@@ -166,8 +174,7 @@ class YoumakerIE(InfoExtractor):
             "info_dict": {
                 "id": "9489f994-2a20-4812-b233-ac0e5c345632",
                 "ext": "mp4",
-                "title": "LIVE: Dick Morris Discusses His Book "
-                "'The Return: Trump’s Big 2024 Comeback'",
+                "title": "LIVE: Dick Morris Discusses His Book 'The Return: Trump’s Big 2024 Comeback'",
                 "description": str,
                 "uploader": str,
                 "upload_date": "20221025",
@@ -362,23 +369,13 @@ class YoumakerIE(InfoExtractor):
 
     def _video_entry_by_metadata(self, info):
         try:
-            video_uid, title = itemgetter("video_uid", "title")(info)
+            video_uid = info["video_uid"]
         except KeyError as exc:
             raise ExtractorError(f"{exc!s} not found in video metadata") from exc
 
-        video_info = info.get("data", {})
-        tag_str = info.get("tag")
-        tags = (
-            [tag.strip() for tag in tag_str.strip("[]").split(",")] if tag_str else None
-        )
-        channel_url = (
-            f'{self._base_url}/channel/{info["channel_uid"]}'
-            if "channel_uid" in info
-            else None
-        )
-
-        live_status = "was_live" if info.get("live") else "not_live"
         release_timestamp = None
+        live_status = "was_live" if info.get("live") else "not_live"
+        video_info = info.get("data", {})
         playlist_url = traverse_obj(
             video_info, ("videoAssets", "Stream"), expected_type=str
         )
@@ -413,8 +410,6 @@ class YoumakerIE(InfoExtractor):
                 playlist_url = self._live_url(video_uid)
 
         formats, playlist_subtitles = self.handle_formats(playlist_url, video_uid)
-        duration = video_info.get("duration")
-
         if live_status != "not_live" and not formats:
             if live_status == "is_live":
                 live_status = "is_upcoming"
@@ -438,19 +433,23 @@ class YoumakerIE(InfoExtractor):
 
         return {
             "id": video_uid,
-            "title": title,
+            "title": info["title"],
             "description": info.get("description"),
             "formats": formats,
             "live_status": live_status,
             "timestamp": parse_iso8601(info.get("uploaded_at")),
             "release_timestamp": release_timestamp,
             "uploader": info.get("uploaded_by"),
-            "duration": duration,
+            "duration": video_info.get("duration"),
             "categories": self._categories_by_id(info.get("category_id")),
-            "tags": tags,
+            "tags": [tag.strip() for tag in info.get("tag", "").strip("[]").split(",")],
             "channel": info.get("channel_name"),
             "channel_id": info.get("channel_uid"),
-            "channel_url": channel_url,
+            "channel_url": (
+                f'{self._base_url}/channel/{info["channel_uid"]}'
+                if "channel_uid" in info
+                else None
+            ),
             "thumbnail": info.get("thumbmail_path"),
             "view_count": info.get("click"),
             "concurrent_view_count": traverse_obj(live_count_info, "liveCount"),
@@ -553,9 +552,3 @@ class YoumakerIE(InfoExtractor):
             return func(**match.groupdict())
 
         raise UnsupportedError(url)
-
-
-# forward embedded urls from Epoch via generic extractor
-class EpochIE(InfoExtractor):
-    def _real_extract(self, url):
-        return self.url_result(url, ie="Generic")
