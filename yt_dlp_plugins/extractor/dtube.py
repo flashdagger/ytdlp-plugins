@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from itertools import count
 from urllib.parse import unquote_plus
 
-from yt_dlp import extractor
+from yt_dlp.extractor import dtube, lazy_extractors
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     ExtractorError,
@@ -22,21 +22,21 @@ from yt_dlp.utils import (
 from ytdlp_plugins.probe import probe_media
 
 __version__ = "2023.01.08"
-_VALID_URL = r"""(?x)
-                https?://(?:www\.)?d\.tube/
-                (?:\#!/)?v/
-                (?P<id>[0-9a-z.-]+/[\w-]+)
-                """
 
-# dirty way to override existing extractor, since we change the URL regex
 # pylint: disable=protected-access
 with suppress(AttributeError):
-    extractor._extractors.DTubeIE._VALID_URL = _VALID_URL
-    extractor.lazy_extractors.DTubeIE._VALID_URL = _VALID_URL
+    # dirty way to override existing extractor, since we change the URL regex
+    dtube.DTubeIE._ENABLED = False
+    lazy_extractors.DTubeIE._ENABLED = False
+
 
 # pylint: disable=abstract-method
 class DTubeIE(InfoExtractor):
-    _VALID_URL = _VALID_URL
+    _VALID_URL = r"""(?x)
+                    https?://(?:www\.)?d\.tube/
+                    (?:\#!/)?v/
+                    (?P<id>[0-9a-z.-]+/[\w-]+)
+                    """
     IE_NAME = "d.tube"
 
     GATEWAY_URLS = {
