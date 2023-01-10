@@ -15,7 +15,7 @@ from yt_dlp.utils import (
     traverse_obj,
 )
 
-__version__ = "2023.01.09"
+__version__ = "2023.01.10"
 
 # pylint: disable=protected-access
 with suppress(AttributeError):
