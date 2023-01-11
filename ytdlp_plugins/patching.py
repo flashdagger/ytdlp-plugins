@@ -60,7 +60,7 @@ def plugin_debug_header(self):
         )
         version = f"(v{version})" if version else ""
         cls_path = f"{module.__name__}.{name}" if module else name
-        alt_name = getattr(cls(), "IE_NAME", name)
+        alt_name = getattr(cls, "IE_NAME", name)
         plugin_list.append((f"[{alt_name}]", f"via {cls_path!r}", version))
 
     if plugin_list:
@@ -139,7 +139,7 @@ SKIP_VT_MODE = patch_function_globals(yt_dlp.YoutubeDL.__init__, windows_enable_
 # pylint: disable=protected-access
 _PATCHES = (
     patch("yt_dlp.utils.bug_reports_message", bug_reports_message),
-    patch("yt_dlp.YoutubeDL.print_debug_header", plugin_debug_header),
+    patch.object(yt_dlp.YoutubeDL, "print_debug_header", plugin_debug_header),
     patch_function_globals(yt_dlp.YoutubeDL._write_info_json, write_json_file),
 )
 
