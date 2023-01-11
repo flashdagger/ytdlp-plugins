@@ -47,7 +47,7 @@ execnet==1.9.0
     # via pytest-xdist
 filelock==3.9.0
     # via virtualenv
-identify==2.5.12
+identify==2.5.13
     # via pre-commit
 idna==3.4
     # via requests
@@ -102,7 +102,7 @@ pygments==2.14.0
     # via
     #   readme-renderer
     #   rich
-pylint==2.15.9
+pylint==2.15.10
     # via -r requirements.in
 pytest==7.2.0
     # via
@@ -147,7 +147,7 @@ typing-extensions==4.4.0
     #   black
     #   mypy
     #   pylint
-urllib3==1.26.13
+urllib3==1.26.14
     # via
     #   requests
     #   twine
