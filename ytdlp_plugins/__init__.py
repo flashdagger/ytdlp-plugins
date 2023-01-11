@@ -19,7 +19,7 @@ from zipimport import zipimporter
 
 from yt_dlp.extractor.common import InfoExtractor
 
-__version__ = "2023.01.08"
+__version__ = "2023.01.11"
 PACKAGE_NAME = __name__
 
 
