@@ -1,3 +1,10 @@
+> **_NOTE_:**  
+> 
+> Since version 2023.01.06 yt-dlp supports plugins from python packages.
+> The ytdlp-plugins package is no longer necessary.
+> 
+> For further details see https://github.com/yt-dlp/yt-dlp#plugins
+
 # auf1.tv and auf1.radio support for yt-dlp
 
 ## installation
@@ -15,7 +22,7 @@ Note that on some systems, you may need to use `py` or `python` instead of `pyth
 
 ## example: show the 20 recent titles from channel
 
-`python3 -m ytdlp_plugins -e --playlist-items 1-20 https://auf1.tv/videos`
+`python3 -m yt_dlp -e --playlist-items 1-20 https://auf1.tv/videos`
 
 ## yt-dlp
 

@@ -10,3 +10,4 @@ pytest
 pytest-subtests
 pytest-xdist
 twine; platform_python_implementation != 'PyPy'
+ytdlp-plugins
