@@ -6,7 +6,7 @@
 #
 -e file:.
     # via -r requirements.in
-astroid==2.12.13
+astroid==2.13.2
     # via pylint
 attrs==22.2.0
     # via pytest
@@ -24,7 +24,7 @@ certifi==2022.12.7
     #   yt-dlp
 cfgv==3.3.1
     # via pre-commit
-charset-normalizer==2.1.1
+charset-normalizer==3.0.1
     # via requests
 click==8.1.3
     # via black
@@ -47,7 +47,7 @@ execnet==1.9.0
     # via pytest-xdist
 filelock==3.9.0
     # via virtualenv
-identify==2.5.12
+identify==2.5.13
     # via pre-commit
 idna==3.4
     # via requests
@@ -55,7 +55,7 @@ importlib-metadata==6.0.0
     # via
     #   keyring
     #   twine
-iniconfig==1.1.1
+iniconfig==2.0.0
     # via pytest
 isort==5.11.4
     # via pylint
@@ -79,11 +79,11 @@ mypy-extensions==0.4.3
     #   mypy
 nodeenv==1.7.0
     # via pre-commit
-packaging==22.0
+packaging==23.0
     # via pytest
 pathspec==0.10.3
     # via black
-pkginfo==1.9.4
+pkginfo==1.9.6
     # via twine
 platformdirs==2.6.2
     # via
@@ -102,7 +102,7 @@ pygments==2.14.0
     # via
     #   readme-renderer
     #   rich
-pylint==2.15.9 ; platform_python_implementation != "PyPy"
+pylint==2.15.10 ; platform_python_implementation != "PyPy"
     # via -r requirements.in
 pytest==7.2.0
     # via
@@ -119,7 +119,7 @@ pyyaml==6.0
     # via pre-commit
 readme-renderer==37.3
     # via twine
-requests==2.28.1
+requests==2.28.2
     # via
     #   requests-toolbelt
     #   twine
@@ -127,7 +127,7 @@ requests-toolbelt==0.10.1
     # via twine
 rfc3986==2.0.0
     # via twine
-rich==13.0.0
+rich==13.0.1
     # via twine
 six==1.16.0
     # via bleach
@@ -147,7 +147,7 @@ typing-extensions==4.4.0
     #   black
     #   mypy
     #   pylint
-urllib3==1.26.13
+urllib3==1.26.14
     # via
     #   requests
     #   twine
@@ -159,10 +159,12 @@ websockets==10.4
     # via yt-dlp
 wrapt==1.14.1
     # via astroid
-yt-dlp==2023.1.2
-    # via ytdlp-plugins
-ytdlp-plugins==2022.12.17
-    # via ytdlp-auf1
+yt-dlp==2023.1.6
+    # via
+    #   ytdlp-auf1
+    #   ytdlp-plugins
+ytdlp-plugins==2023.1.11
+    # via -r requirements.in
 zipp==3.11.0
     # via importlib-metadata
 
