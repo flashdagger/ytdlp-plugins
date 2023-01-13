@@ -1,12 +1,10 @@
 # coding: utf-8
 import json
 import re
-from contextlib import suppress
 from datetime import datetime, timedelta
 from itertools import count
 from urllib.parse import unquote_plus
 
-from yt_dlp.extractor import dtube, lazy_extractors
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     ExtractorError,
@@ -23,15 +21,9 @@ from ytdlp_plugins.probe import probe_media
 
 __version__ = "2023.01.10"
 
-# pylint: disable=protected-access
-with suppress(AttributeError):
-    # dirty way to override existing extractor, since we change the URL regex
-    dtube.DTubeIE._ENABLED = False
-    lazy_extractors.DTubeIE._ENABLED = False
-
 
 # pylint: disable=abstract-method
-class DTubeIE(InfoExtractor):
+class DTubePluginIE(InfoExtractor):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?v/
@@ -310,7 +302,7 @@ class DTubeIE(InfoExtractor):
         return self.entry_from_avalon_result(result)
 
 
-class DTubeUserIE(DTubeIE):
+class DTubeUserPluginIE(DTubePluginIE):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?c/
@@ -360,7 +352,7 @@ class DTubeUserIE(DTubeIE):
         )
 
 
-class DTubeQueryIE(DTubeUserIE):
+class DTubeQueryPluginIE(DTubeUserPluginIE):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?
@@ -407,7 +399,7 @@ class DTubeQueryIE(DTubeUserIE):
         )
 
 
-class DTubeSearchIE(DTubeIE):
+class DTubeSearchPluginIE(DTubePluginIE):
     _VALID_URL = r"""(?x)
                     https?://(?:www\.)?d\.tube/
                     (?:\#!/)?[st]/
