@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 import re
-from contextlib import suppress
 from operator import itemgetter
 from urllib.parse import urlparse
 
 from yt_dlp.extractor.common import InfoExtractor
+from yt_dlp.extractor.epoch import EpochIE
 from yt_dlp.utils import (
     ExtractorError,
     OnDemandPagedList,
@@ -17,13 +17,13 @@ from yt_dlp.utils import (
 
 __version__ = "2023.01.10"
 
-# pylint: disable=protected-access
-with suppress(AttributeError):
-    # dirty hack to disable EpochIE
-    from yt_dlp.extractor import epoch, lazy_extractors
+# pylint: disable=abstract-method, protected-access
+class YoumakerEmbedProxyIE(InfoExtractor):
+    _VALID_URL = EpochIE._VALID_URL
 
-    lazy_extractors.EpochIE._ENABLED = False
-    epoch.EpochIE._ENABLED = False
+    def _real_extract(self, url):
+        return self.url_result(url, "Generic")
+
 
 # pylint: disable=abstract-method
 class YoumakerIE(InfoExtractor):
