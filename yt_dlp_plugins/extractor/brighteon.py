@@ -23,7 +23,6 @@ from ytdlp_plugins.probe import headprobe_media
 __version__ = "2022.12.17"
 
 
-# pylint: disable=abstract-method
 class BrighteonIE(InfoExtractor):
     IE_NAME = "brighteon"
     _VALID_URL = r"""(?x)

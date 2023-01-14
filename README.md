@@ -1,3 +1,10 @@
+> **_NOTE_:**  
+> 
+> Since version 2023.01.06 yt-dlp supports plugins from python packages.
+> The ytdlp-plugins package is no longer necessary.
+> 
+> For further details see https://github.com/yt-dlp/yt-dlp#plugins
+
 # brighteon.com support for yt-dlp
 
 * support for un-nested channels, categories and playlists
@@ -18,7 +25,7 @@ Note that on some systems, you may need to use `py` or `python` instead of `pyth
 
 ## example: show the 20 recent titles from channel
 
-`python3 -m ytdlp_plugins -e --playlist-items 1:20 https://www.brighteon.com/channels/brighteontv`
+`python3 -m yt_dlp -e --playlist-items 1:20 https://www.brighteon.com/channels/brighteontv`
 
 ## yt-dlp
 

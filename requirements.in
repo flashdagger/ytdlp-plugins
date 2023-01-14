@@ -1,11 +1,11 @@
 # dev requirements
 -e file:.
-black
+black; platform_python_implementation != 'PyPy'
 bump2version; platform_python_implementation != 'PyPy'
 mypy; platform_python_implementation != 'PyPy'
 pre-commit; platform_python_implementation != 'PyPy'
 pyflakes
-pylint
+pylint; platform_python_implementation != 'PyPy'
 pytest
 pytest-subtests
 pytest-xdist
