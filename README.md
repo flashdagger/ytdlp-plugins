@@ -35,10 +35,9 @@ Note that on some systems, you may need to use `py` or `python` instead of `pyth
 
 ## example: show all titles from channel
 
-  `python3 -m yt_dlp -e https://www.servustv.com/unterhaltung/b/spielfilme/aa-1u4ebfxk52111/`
+`python3 -m yt_dlp --flat-playlist -e https://www.servustv.com/unterhaltung/b/spielfilme/aa-1u4ebfxk52111/`
 
-
-## about yt-dlp
+## yt-dlp
 
 [yt-dlp](https://github.com/yt-dlp/yt-dlp) is a [youtube-dl](https://github.com/ytdl-org/youtube-dl) fork based on the now
 inactive [youtube-dlc](https://github.com/blackjack4494/yt-dlc). The main focus of this project is adding new features
