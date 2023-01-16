@@ -277,27 +277,6 @@ class ServusTVIE(InfoExtractor):
             or self._og_search_description(webpage, default=None),
         }
 
-    def _auto_merge_formats(self, formats: Sequence[AnyDict]):
-        requested_format = self.get_param("format")
-        audio_formats = [fmt for fmt in formats if fmt.get("vcodec") == "none"]
-        audio_only = [fmt["format_id"] for fmt in audio_formats]
-        video_only = {
-            fmt["format_id"] for fmt in formats if fmt.get("acodec") == "none"
-        }
-
-        for fmt in audio_formats:
-            if fmt["ext"] == "m3u8":
-                fmt["ext"] = "m4a"
-
-        if self._downloader and len(audio_only) == 1 and requested_format in video_only:
-            requested_format = f"{requested_format}+{audio_only[0]}"
-            self.to_screen(
-                f"Adding audio stream {audio_only[0]!r} to video only format"
-            )
-            self._downloader.format_selector = self._downloader.build_format_selector(
-                requested_format
-            )
-
     def _hls_duration(self, formats: Sequence[AnyDict]) -> Optional[float]:
         for fmt in formats:
             if not fmt["url"].endswith(".m3u8"):
@@ -317,7 +296,7 @@ class ServusTVIE(InfoExtractor):
 
         return None
 
-    def _download_formats(self, video_url: str, video_id: str):
+    def _download_formats(self, video_url: str, video_id: str, is_live=False):
         if not video_url:
             return [], {}
 
@@ -333,8 +312,13 @@ class ServusTVIE(InfoExtractor):
         for fmt in formats:
             if "height" in fmt:
                 fmt["format_id"] = f"{fmt['height']}p"
-            if fmt.get("vcodec") == "none" and fmt.get("language"):
-                fmt["format_id"] = f"audio-{fmt['language']}"
+            elif fmt.get("vcodec") == "none":
+                if not is_live and "acodec" not in fmt:
+                    fmt["acodec"] = "mp4a.40.2"
+                    fmt["asr"] = 44100
+                    fmt["ext"] = "m4a"
+                if fmt.get("language"):
+                    fmt["format_id"] = f"audio-{fmt['language']}"
 
         return formats, subtitles
 
@@ -381,9 +365,9 @@ class ServusTVIE(InfoExtractor):
                 raise GeoRestrictedError(errormsg, countries=countries)
             self.raise_no_formats(errormsg, expected=True)
 
-        formats, subtitles = self._download_formats(video_url, video_id)
-        self._auto_merge_formats(formats)
-
+        formats, subtitles = self._download_formats(
+            video_url, video_id, is_live=is_live
+        )
         program_info = self.program_info(info)
         duration = info.get("duration")
         if is_live:
