@@ -258,11 +258,15 @@ class DTubePluginIE(InfoExtractor):
             "_type": _type,
             "url": redirect_url or f"https://d.tube/v/{video_id}",
             "id": video_id,
-            "title": info.get("title"),
-            "description": info.get("desc") or info.get("description"),
+            "title": traverse_obj(info, ("title",), ("info", "title")),
+            "description": traverse_obj(
+                info, ("desc",), ("description",), ("content", "description")
+            ),
             "thumbnail": info.get("thumbnailUrl"),
             "tags": tags,
-            "duration": float_or_none(info.get("duration"))
+            "duration": float_or_none(
+                traverse_obj(info, ("duration",), ("info", "duration"))
+            )
             or int_or_none(info.get("dur"))
             or parse_duration(info.get("dur")),
             "timestamp": float_or_none(result.get("ts"), scale=1000),
