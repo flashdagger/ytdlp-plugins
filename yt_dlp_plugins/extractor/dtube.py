@@ -52,41 +52,22 @@ class DTubePluginIE(InfoExtractor):
     # pylint: disable=line-too-long
     _TESTS = [
         {
-            "url": "https://d.tube/v/famigliacurione/QmUJquzf7DALjwUExoHtTjS8PgGqfGohzMr4W3XJ56q9pR",
-            "md5": "4ad5272197655dc033bfd0cc039b71f2",
+            "url": "https://d.tube/v/truehnchannel3.0/QmNXrihTWmHiLVXxLabfXFakFzJVLq1LimfH2X1sNma5ak",
+            "md5": "d7b147de74210442e6b14d934f96c585",
             "info_dict": {
-                "id": "famigliacurione/QmUJquzf7DALjwUExoHtTjS8PgGqfGohzMr4W3XJ56q9pR",
-                "title": "La Prova by SOSO",
-                "description": "md5:c942bfe98693a2e81510464d10869449",
+                "id": "truehnchannel3.0/QmNXrihTWmHiLVXxLabfXFakFzJVLq1LimfH2X1sNma5ak",
+                "title": "HAPPY WEEKEND #TRUEHNERS #TRUEHNER FROM THE TEAM OF TRUE_HUMANNATURE - THE TRUEHN BACKED FASHION & BEAUTY BRAND ",
+                "description": "md5:452385a9aef03447baa2aae9c801eb14",
                 "ext": "mp4",
-                "thumbnail": "https://cdn.steemitimages.com/DQmbCfaJkTRrjerNhcyDCoviBqpXB8ZDh31NhQPWvcyEj6U/laprovathumb.jpg",
-                "tags": ["music", "hiphop"],
-                "duration": 71,
-                "uploader_id": "famigliacurione",
-                "upload_date": "20211223",
-                "timestamp": 1640297596.628,
+                "thumbnail": "https://ipfs.io/ipfs/QmcFBCAx8c8PLew7JfjVmn3VK6MjrSMfCerq5b5y9iNdp8?filename=AAAAAAAAAAA%20TRUEHUMAN%20NATURE.jpg",
+                "tags": ["truehnchannel"],
+                "duration": 3,
+                "uploader_id": "truehnchannel3.0",
+                "upload_date": "20230603",
+                "timestamp": 1685782622.873,
             },
             "params": {
-                "format": "480",
-            },
-        },
-        # fallback files
-        {
-            "url": "https://d.tube/#!/v/reeta0119/QmX9rAqkTzYfUoi5VFuitzYQXyybFtURyUUWcYkyPXzkkz",
-            "md5": "179f4435eb5068d3b1c6188ec3065d9a",
-            "info_dict": {
-                "id": "reeta0119/QmX9rAqkTzYfUoi5VFuitzYQXyybFtURyUUWcYkyPXzkkz",
-                "title": "Splinterlands Battle Share Theme: DIVINE SORCERESS",
-                "description": "md5:4521cc098e7dcad3e9a7f73095c9ffe9",
-                "ext": "mp4",
-                "thumbnail": "https://snap1.d.tube/ipfs/QmWYECptp7XKVEUk4tBf9R6d5XaRUo6Hcow6abtuy1Q3Vt",
-                "duration": 181,
-                "uploader_id": "reeta0119",
-                "upload_date": "20200306",
-                "timestamp": 1583519894.482,
-            },
-            "params": {
-                "format": "480",
+                "format": "src",
             },
         },
         {
