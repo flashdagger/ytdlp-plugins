@@ -301,7 +301,9 @@ class Auf1IE(InfoExtractor):
             except ExtractorError as exc:
                 self.report_warning(exc, page_id)
                 metadata = self._metadata(url, page_id=page_id, method="payloadjs")
-            peertube_url = self.parse_url(metadata.get("videoUrl"))
+            peertube_url = self.parse_url(
+                traverse_obj(metadata, ("videoUrl",), ("videoUrls", "peertube"))
+            )
             return (
                 self.peertube_extract(peertube_url)
                 if peertube_url
