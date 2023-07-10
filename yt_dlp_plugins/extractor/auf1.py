@@ -20,7 +20,7 @@ from yt_dlp.utils import (
     urljoin,
 )
 
-__version__ = "2023.01.05"
+__version__ = "2023.07.10"
 
 
 class JSHLEX(shlex):
