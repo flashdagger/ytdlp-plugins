@@ -61,7 +61,7 @@ class Auf1IE(InfoExtractor):
                 "title": "Ampelkoalition: Eine Abrissbirne für Deutschland?",
                 "description": "md5:9265dda76d30e842e1f75aa3cb3e3884",
                 "ext": "mp4",
-                "thumbnail": r"re:https://(:?auf1.)?gegenstimme.tv/static/thumbnails/[\w-]+.jpg",
+                "thumbnail": r"re:https://videos\.auf1\.tv/static/thumbnails/[\w-]+\.jpg",
                 "timestamp": 1638446905,
                 "upload_date": "20211202",
                 "uploader": "AUF1.TV",
@@ -82,7 +82,7 @@ class Auf1IE(InfoExtractor):
                 "title": "Nachrichten AUF1 vom 15. Dezember 2022",
                 "description": "md5:bc4def34dcc8401d84c5127c5f759543",
                 "ext": "mp4",
-                "thumbnail": r"re:https://(:?auf1.)?gegenstimme.tv/static/thumbnails/[\w-]+.jpg",
+                "thumbnail": r"re:https://videos\.auf1\.tv/static/thumbnails/[\w-]+\.jpg",
                 "timestamp": 1671121411,
                 "upload_date": "20221215",
                 "uploader": "AUF1.TV",
@@ -130,7 +130,7 @@ class Auf1IE(InfoExtractor):
             "info_dict": {
                 "id": "nachrichten-auf1",
                 "title": "Nachrichten AUF1",
-                "description": "md5:5b1f113270133adfd94f6ae3014e3d6f",
+                "description": "md5:dcb992e2bb7fd020a417634b949f2951",
             },
             "playlist_mincount": 100,
             "expected_warnings": [
