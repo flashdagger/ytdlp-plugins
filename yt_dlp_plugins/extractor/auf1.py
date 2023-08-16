@@ -166,7 +166,7 @@ class Auf1IE(InfoExtractor):
     def sparse_info(metadata):
         return {
             "id": metadata.get("public_id", "unknown"),
-            "url": metadata.get("videoUrl"),
+            "url": traverse_obj(metadata, ("videoUrl",), ("videoUrls", "peertube")),
             "title": metadata.get("title"),
             "description": clean_html(traverse_obj(metadata, "text", "preview_text")),
             "duration": parse_duration(metadata.get("duration")),
@@ -307,7 +307,7 @@ class Auf1IE(InfoExtractor):
             return (
                 self.peertube_extract(peertube_url)
                 if peertube_url
-                else self.sparse_info(metadata)
+                else self.sparse_info(metadata or {})
             )
 
         # video playlist
