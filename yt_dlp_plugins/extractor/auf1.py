@@ -76,24 +76,26 @@ class Auf1IE(InfoExtractor):
             "expected_warnings": ["JSON API"],
         },
         {
-            "url": "https://auf1.tv/nachrichten-auf1/nachrichten-auf1-vom-15-dezember-2022/",
+            "url": "https://auf1.tv/nachrichten-auf1/linker-terror-gegen-die-buerger-antifa-greift-gezielt-infrastruktur-an/",
             "info_dict": {
-                "id": "nVBERN4MzFutVzoXsADf8F",
-                "title": "Nachrichten AUF1 vom 15. Dezember 2022",
-                "description": "md5:bc4def34dcc8401d84c5127c5f759543",
+                "id": "uJagEv6ndjvZyVNajmR1df",
+                "title": "Linker Terror gegen die Bürger: Antifa greift gezielt Infrastruktur an",
+                "description": "md5:d42a98464738fecb38aaf54cd53b0d2f",
                 "ext": "mp4",
-                "thumbnail": r"re:https://videos\.auf1\.tv/static/thumbnails/[\w-]+\.jpg",
-                "timestamp": 1671121411,
-                "upload_date": "20221215",
-                "uploader": "AUF1.TV",
-                "uploader_id": "25408",
-                "duration": 1825,
-                "view_count": int,
-                "like_count": int,
-                "dislike_count": int,
-                "categories": ["News & Politics"],
+                "thumbnail": r"re:https://auf1\.eu/static/thumbnails/[\w-]+\.jpg",
+                "timestamp": 1635426805,
+                "upload_date": "20211028",
+                "uploader": "redaktion",
+                "uploader_id": "3",
+                "duration": 286,
+                "view_count": 8538,
+                "like_count": 0,
+                "dislike_count": 0,
             },
-            "params": {"skip_download": True},
+            "params": {
+                "skip_download": True,
+                "extractor_args": {"auf1": {"legacy": [""]}},
+            },
             "expected_warnings": ["JSON API"],
         },
         {  # JSON API without payload.js
@@ -293,13 +295,17 @@ class Auf1IE(InfoExtractor):
 
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
+        metadata = {}
 
         # single video
         if category:
-            try:
-                metadata = self._metadata(url, page_id=page_id, method="api")
-            except ExtractorError as exc:
-                self.report_warning(exc, page_id)
+            if not self._configuration_arg("legacy"):
+                try:
+                    metadata = self._metadata(url, page_id=page_id, method="api")
+                except ExtractorError as exc:
+                    self.report_warning(exc, page_id)
+
+            if not metadata:
                 metadata = self._metadata(url, page_id=page_id, method="payloadjs")
             peertube_url = self.parse_url(
                 traverse_obj(metadata, ("videoUrl",), ("videoUrls", "peertube"))
