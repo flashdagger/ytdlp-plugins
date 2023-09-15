@@ -7,17 +7,13 @@ from shlex import shlex
 from urllib.error import HTTPError
 
 from yt_dlp.extractor.common import InfoExtractor
-from yt_dlp.extractor.peertube import PeerTubeIE
 from yt_dlp.utils import (
     ExtractorError,
     OnDemandPagedList,
-    base_url,
     clean_html,
-    js_to_json,
     parse_duration,
     parse_iso8601,
     traverse_obj,
-    urljoin,
 )
 
 __version__ = "2023.07.10"
@@ -52,79 +48,19 @@ class Auf1IE(InfoExtractor):
                         (?P<id>[^/]+)
                     """
 
-    peertube_extract_url = None
     _TESTS = [
-        {
-            "url": "https://auf1.tv/nachrichten-auf1/ampelkoalition-eine-abrissbirne-fuer-deutschland/",
+        {  # JSON API without _payload.json
+            "url": "https://auf1.tv/stefan-magnet-auf1/heiko-schoening-chaos-und-krieg-gehoeren-leider-zu-deren-plan/",
             "info_dict": {
-                "id": "rKjpWNnocoARnj4pQMRKXQ",
-                "title": "Ampelkoalition: Eine Abrissbirne für Deutschland?",
-                "description": "md5:9265dda76d30e842e1f75aa3cb3e3884",
-                "ext": "mp4",
-                "thumbnail": r"re:https://videos\.auf1\.tv/static/thumbnails/[\w-]+\.jpg",
-                "timestamp": 1638446905,
-                "upload_date": "20211202",
-                "uploader": "AUF1.TV",
-                "uploader_id": "25408",
-                "duration": 818,
-                "view_count": int,
-                "like_count": int,
-                "dislike_count": int,
-                "categories": ["News & Politics"],
-            },
-            "params": {"skip_download": True},
-            "expected_warnings": ["JSON API"],
-        },
-        {
-            "url": "https://auf1.tv/nachrichten-auf1/linker-terror-gegen-die-buerger-antifa-greift-gezielt-infrastruktur-an/",
-            "info_dict": {
-                "id": "uJagEv6ndjvZyVNajmR1df",
-                "title": "Linker Terror gegen die Bürger: Antifa greift gezielt Infrastruktur an",
-                "description": "md5:d42a98464738fecb38aaf54cd53b0d2f",
-                "ext": "mp4",
-                "thumbnail": r"re:https://auf1\.eu/static/thumbnails/[\w-]+\.jpg",
-                "timestamp": 1635426805,
-                "upload_date": "20211028",
-                "uploader": "redaktion",
-                "uploader_id": "3",
-                "duration": 286,
-                "view_count": 8538,
-                "like_count": 0,
-                "dislike_count": 0,
-            },
-            "params": {
-                "skip_download": True,
-                "extractor_args": {"auf1": {"legacy": [""]}},
-            },
-            "expected_warnings": ["JSON API"],
-        },
-        {  # JSON API without payload.js
-            "url": "https://auf1.tv/stefan-magnet-auf1/"
-            "heiko-schoening-chaos-und-krieg-gehoeren-leider-zu-deren-plan/",
-            "info_dict": {
-                "id": "dVk8Q3VNMLi7b7uhyuSSp6",
+                "id": "heiko-schoening-chaos-und-krieg-gehoeren-leider-zu-deren-plan",
                 "ext": "mp4",
                 "title": "Heiko Schöning: „Chaos und Krieg gehören leider zu deren Plan“",
-                "description": "md5:6fb9e7eb469fc544223018a2ff3c998c",
-                "timestamp": int,
-                "uploader": str,
-                "uploader_id": str,
-                "upload_date": "20220307",
-                "channel": str,
-                "channel_url": "contains:/video-channels/auf1.tv",
+                "description": "md5:620fae46004a2adc7f4c92fe73442748",
+                "timestamp": 1646743800,
+                "upload_date": "20220308",
                 "duration": 2089,
-                "view_count": int,
-                "like_count": int,
-                "dislike_count": int,
-                "tags": [],
-                "categories": ["News & Politics"],
             },
             "params": {"skip_download": True},
-            "expected_warnings": [
-                "Retrying due to too many requests.",
-                "The read operation timed out",
-                "JSON API",
-            ],
         },
         {
             # playlist for category
@@ -132,7 +68,7 @@ class Auf1IE(InfoExtractor):
             "info_dict": {
                 "id": "nachrichten-auf1",
                 "title": "Nachrichten AUF1",
-                "description": "md5:dcb992e2bb7fd020a417634b949f2951",
+                "description": "md5:e472da8d2bc2fa45e7e9ffe996ee1381",
             },
             "playlist_mincount": 100,
             "expected_warnings": [
@@ -157,23 +93,31 @@ class Auf1IE(InfoExtractor):
     ]
 
     @staticmethod
-    def parse_url(url: str):
-        if not url:
-            return None
-        match = re.match(r"^https?://([^/]+)/videos/embed/([^?]+)", url)
-        # pylint: disable=consider-using-f-string
-        return "peertube:{}:{}".format(*match.groups()) if match else None
+    def parse_url(url: dict):
+        _format = {}
+        if "src" in url:
+            _format["url"] = url["src"]
+        label = url.get("label")
+        if label:
+            _format["format_id"] = label
+            height = re.match(r"(\d+)p", label)
+            if height:
+                _format["height"] = int(height.group(1))
 
-    @staticmethod
-    def sparse_info(metadata):
+        return _format
+
+    def sparse_info(self, metadata):
+        peertube_urls = traverse_obj(
+            metadata, ("videoData", "urls", "peertube"), default=()
+        )
         return {
             "id": metadata.get("public_id", "unknown"),
-            "url": traverse_obj(metadata, ("videoUrl",), ("videoUrls", "peertube")),
             "title": metadata.get("title"),
             "description": clean_html(traverse_obj(metadata, "text", "preview_text")),
             "duration": parse_duration(metadata.get("duration")),
             "timestamp": parse_iso8601(metadata.get("published_at") or None),
             "thumbnail": metadata.get("thumbnail_url"),
+            "formats": [fmt for fmt in map(self.parse_url, peertube_urls) if fmt],
         }
 
     def call_api(self, endpoint, video_id=None, fatal=True):
@@ -221,17 +165,6 @@ class Auf1IE(InfoExtractor):
                         raise exception from exc
                 raise
 
-    def peertube_extract(self, url):
-        if self.peertube_extract_url is None:
-            peertube_extractor = self._downloader.get_info_extractor(
-                PeerTubeIE.ie_key()
-            )
-            self.peertube_extract_url = getattr(peertube_extractor, "_real_extract")
-
-        return self.call_with_retries(
-            lambda: self.peertube_extract_url(url),
-        )
-
     def playlist_from_entries(self, all_videos, **kwargs):
         entries = []
         for item in all_videos:
@@ -253,36 +186,34 @@ class Auf1IE(InfoExtractor):
             **kwargs,
         )
 
-    def _payloadjs(self, url, page_id):
-        webpage = self._download_webpage(url, page_id)
-        payloadjs_url = self._search_regex(
-            r'href="([^"]+/_?payload.js)"', webpage, "payload url"
+    def _payloadjson(self, url, page_id):
+        payload_json = self._download_json(
+            f"{url}/_payload.json",
+            page_id,
+            note="Downloading _payload.json",
+            errnote="Unable to download _payload.json",
         )
-        payloadjs_url = urljoin(base_url(url), payloadjs_url)
-        payload_js = self._download_webpage(
-            payloadjs_url, page_id, note="Downloading payload.js"
-        )
+        if not isinstance(payload_json, list):
+            raise ExtractorError("unexpected _payload.json format")
 
-        match = re.match(
-            r"""(?x)
-                .*
-                \(function\ *\( (?P<vars>[^)]*) \)
-                \{\ *return\ * (?P<metadata>\{.+}) .*}
-                \( (?P<values>.*) \){2}
-            """,
-            payload_js,
-        )
-        if match is None:
-            raise ExtractorError("Failed parsing payload.js")
+        def resolve(idx: int):
+            assert isinstance(idx, int)
+            item = payload_json[idx]
+            _type = type(item)
 
-        variables, metadata, values = match.groups()
-        var_mapping = dict(zip(variables.split(","), JSHLEX(values)))
+            if _type in transformation:
+                assert idx not in seen_idx
+                seen_idx.add(idx)
+                return transformation[_type](item)
 
-        control_character_mapping = dict.fromkeys(range(32))
-        js_string = js_to_json(metadata, vars=var_mapping).translate(
-            control_character_mapping
-        )
-        return json.loads(js_string)
+            return item
+
+        transformation = {
+            dict: lambda _item: {_key: resolve(_idx) for _key, _idx in _item.items()},
+            list: lambda _item: [resolve(_idx) for _idx in _item],
+        }
+        seen_idx = set()
+        return resolve(3)
 
     def _metadata(self, url, *, page_id, method="api"):
         if method == "api":
@@ -290,8 +221,7 @@ class Auf1IE(InfoExtractor):
                 lambda: self.call_api(f"getContent/{page_id}", page_id),
                 http_error_map={500: ExtractorError("JSON API failed (500)")},
             )
-        payload = self._payloadjs(url, page_id)
-        return payload["data"].popitem()[1]
+        return self._payloadjson(url, page_id)
 
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
@@ -299,22 +229,16 @@ class Auf1IE(InfoExtractor):
 
         # single video
         if category:
-            if not self._configuration_arg("legacy"):
-                try:
-                    metadata = self._metadata(url, page_id=page_id, method="api")
-                except ExtractorError as exc:
-                    self.report_warning(exc, page_id)
+            try:
+                metadata = self._metadata(url, page_id=page_id, method="api")
+            except ExtractorError as exc:
+                self.report_warning(exc, page_id)
 
             if not metadata:
-                metadata = self._metadata(url, page_id=page_id, method="payloadjs")
-            peertube_url = self.parse_url(
-                traverse_obj(metadata, ("videoUrl",), ("videoUrls", "peertube"))
-            )
-            return (
-                self.peertube_extract(peertube_url)
-                if peertube_url
-                else self.sparse_info(metadata or {})
-            )
+                metadata = self._metadata(url, page_id=page_id, method="_payload.json")
+
+            info = self.sparse_info(metadata or {})
+            return info
 
         # video playlist
         if page_id == "videos":
@@ -411,7 +335,7 @@ class Auf1RadioIE(InfoExtractor):
     def formats(self, url: str, duration):
         format_info = {"url": url}
         if url.endswith(".mp3"):
-            format_info.update(self.MP3_FORMAT)
+            format_info.update(self.MP3_FORMAT)  # type: ignore
             if duration:
                 format_info["filesize_approx"] = duration * 8000
         return [format_info]
@@ -433,7 +357,7 @@ class Auf1RadioIE(InfoExtractor):
 
         def fetch(page, _last_page):
             page_note = (
-                f"{page+1}/{_last_page}" if isinstance(_last_page, int) else page + 1
+                f"{page + 1}/{_last_page}" if isinstance(_last_page, int) else page + 1
             )
             return self.call_api(
                 f"{endpoint}{playlist_id}",
