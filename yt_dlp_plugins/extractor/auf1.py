@@ -16,7 +16,7 @@ from yt_dlp.utils import (
     traverse_obj,
 )
 
-__version__ = "2023.07.10"
+__version__ = "2023.09.15"
 
 
 class JSHLEX(shlex):
