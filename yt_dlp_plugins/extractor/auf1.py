@@ -1,4 +1,5 @@
 # coding: utf-8
+import json
 import re
 import time
 from contextlib import suppress
@@ -27,6 +28,7 @@ class Auf1IE(InfoExtractor):
                         (?P<category>[^/]+/)?
                         (?P<id>[^/]+)
                     """
+    _SEARCH_TOKEN = "hIfCEELGEvs3dIqTkwNsEF5ggfO7Z1EAcHTYVOcveA8X69fpw03Fhg6ItdD9E7Rw"
 
     _TESTS = [
         {  # JSON API without _payload.json
@@ -185,6 +187,27 @@ class Auf1IE(InfoExtractor):
             http_error_map={500: ExtractorError("JSON API failed (500)")},
         )
 
+    def _searchapi(self, query=None):
+        data = {"q": "", "offset": 0, "limit": 20, "sort": ["published_at:desc"]}
+        data.update((query or {}))
+        _from = data["offset"]
+        _to = _from + data["limit"] - 1
+        results = self._download_json(
+            "https://auf1.tv/findme/indexes/contents/search",
+            "search API",
+            headers={
+                "Authorization": f"Bearer {self._SEARCH_TOKEN}",
+                "Content-Type": "application/json",
+            },
+            data=json.dumps(data).encode("utf-8"),
+            note=f"requesting items {_from}-{_to}",
+            errnote="Unable to get response from search API",
+        )
+        hits = results.pop("hits")
+        with open("search.json", "w") as fd:
+            json.dump(results, fd, indent=2)
+        return hits
+
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
 
@@ -201,10 +224,16 @@ class Auf1IE(InfoExtractor):
 
         # video playlist
         if page_id == "videos":
+            pagesize = 100
+
+            def load_page(page):
+                _entries = self._searchapi(
+                    {"offset": page * pagesize, "limit": pagesize}
+                )
+                yield from map(self.url_entry, _entries)
+
             return self.playlist_result(
-                entries=map(
-                    self.url_entry, self.call_api("getVideos", video_id="all_videos")
-                ),
+                entries=OnDemandPagedList(load_page, pagesize),
                 playlist_id="all_videos",
                 playlist_title="AUF1.TV - Alle Videos",
             )
