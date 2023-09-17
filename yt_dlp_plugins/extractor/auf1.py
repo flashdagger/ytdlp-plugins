@@ -189,11 +189,23 @@ class Auf1IE(InfoExtractor):
         )
 
     def _searchapi(self, query=None):
-        data = {"q": "", "offset": 0, "limit": 20, "sort": ["published_at:desc"]}
+        """
+        uses meilisearch [see https://www.meilisearch.com/docs/reference/api/search]
+        """
+        data = {"q": "", "sort": ["published_at:desc"]}
         data.update((query or {}))
-        _from = data["offset"] + 1
-        _to = _from + data["limit"]
-        results = self._download_json(
+        max_hits = traverse_obj(data, ("limit",), ("hitsPerPage",), default=None)
+        if "offset" in data and max_hits:
+            _from = data["offset"] + 1
+            _to = _from + max_hits - 1
+            items = f" {_from}-{_to}"
+        elif "page" in data and max_hits:
+            _from = (data["page"] - 1) * max_hits + 1
+            _to = _from + max_hits - 1
+            items = f" {_from}-{_to}"
+        else:
+            items = ""
+        return self._download_json(
             "https://auf1.tv/findme/indexes/contents/search",
             "search API",
             headers={
@@ -201,13 +213,13 @@ class Auf1IE(InfoExtractor):
                 "Content-Type": "application/json",
             },
             data=json.dumps(data).encode("utf-8"),
-            note=f"requesting items {_from}-{_to}",
+            note=f"requesting items{items}",
             errnote="Unable to get response from search API",
         )
-        hits = results.pop("hits")
-        with open("search.json", "w") as fd:
-            json.dump(results, fd, indent=2)
-        return hits
+
+    def _facets(self):
+        result = self._searchapi({"q": "", "facets": ["show_name"]})
+        return traverse_obj(result, ("facetDistribution", "show_name"), default={})
 
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
@@ -218,8 +230,7 @@ class Auf1IE(InfoExtractor):
         if category:
             try:
                 payload = self._payloadjson(url, page_id)
-            except ExtractorError as exc:
-                self.report_warning(exc, page_id)
+            except ExtractorError:
                 payload = self._payloadapi(page_id)
 
             info = self.sparse_info(payload)
@@ -230,15 +241,20 @@ class Auf1IE(InfoExtractor):
             pagesize = 100
 
             def load_page(page):
-                _entries = self._searchapi(
-                    {"offset": page * pagesize, "limit": pagesize}
+                result = self._searchapi(
+                    {
+                        "page": page + 1,
+                        "hitsPerPage": pagesize,
+                        # "filter": [['show_name="Elsa AUF1"']],
+                    },
                 )
-                yield from map(self.url_entry, _entries)
+                yield from map(self.url_entry, result["hits"])
 
             return self.playlist_result(
                 entries=OnDemandPagedList(load_page, pagesize),
                 playlist_id="all_videos",
                 playlist_title="AUF1.TV - Alle Videos",
+                playlist_count=1000,
             )
 
         try:
