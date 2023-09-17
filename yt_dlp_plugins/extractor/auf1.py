@@ -29,7 +29,6 @@ class Auf1IE(InfoExtractor):
                         (?P<category>[^/]+/)?
                         (?P<id>[^/]+)
                     """
-    _SEARCH_TOKEN = "hIfCEELGEvs3dIqTkwNsEF5ggfO7Z1EAcHTYVOcveA8X69fpw03Fhg6ItdD9E7Rw"
 
     _TESTS = [
         {  # JSON API without _payload.json
@@ -196,6 +195,22 @@ class Auf1IE(InfoExtractor):
             http_error_map={500: ExtractorError("JSON API failed (500)")},
         )
 
+    def _search_api_key(self, *, force_refresh=False):
+        context = ("auf1", "search_api_key")
+        if not force_refresh:
+            maybe_cached = self.cache.load(*context)
+            if maybe_cached:
+                return maybe_cached
+
+        info_id = "searchApiKey"
+        webpage = self._download_webpage("https://auf1.tv", info_id)
+        new_key = self._search_regex(
+            r"\bsearchApiKey: *\"([0-9a-zA-Z]{64})\"", webpage, info_id
+        )
+
+        self.cache.store(*context, new_key)
+        return new_key
+
     def _searchapi(self, query=None):
         """
         uses meilisearch [see https://www.meilisearch.com/docs/reference/api/search]
@@ -213,17 +228,21 @@ class Auf1IE(InfoExtractor):
             items = f" {_from}-{_to}"
         else:
             items = ""
-        return self._download_json(
-            "https://auf1.tv/findme/indexes/contents/search",
-            "search API",
-            headers={
-                "Authorization": f"Bearer {self._SEARCH_TOKEN}",
-                "Content-Type": "application/json",
-            },
-            data=json.dumps(data).encode("utf-8"),
-            note=f"requesting items{items}",
-            errnote="Unable to get response from search API",
-        )
+        try:
+            return self._download_json(
+                "https://auf1.tv/findme/indexes/contents/search",
+                "search API",
+                headers={
+                    "Authorization": f"Bearer {self._search_api_key()}",
+                    "Content-Type": "application/json",
+                },
+                data=json.dumps(data).encode("utf-8"),
+                note=f"requesting items{items}",
+                errnote="Unable to get response from search API",
+            )
+        except ExtractorError:
+            self._search_api_key(force_refresh=True)
+            raise
 
     def _facets(self):
         result = self._searchapi({"q": "", "facets": ["show_name"]})
