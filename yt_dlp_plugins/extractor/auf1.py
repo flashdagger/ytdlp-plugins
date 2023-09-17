@@ -198,19 +198,16 @@ class Auf1IE(InfoExtractor):
 
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
-        payload = {}
 
         # single video
         if category:
             try:
-                payload = self._payloadapi(page_id)
+                payload = self._payloadjson(url, page_id)
             except ExtractorError as exc:
                 self.report_warning(exc, page_id)
+                payload = self._payloadapi(page_id)
 
-            if not payload:
-                payload = self._payloadjson(url, page_id)
-
-            info = self.sparse_info(payload or {})
+            info = self.sparse_info(payload)
             return info
 
         # video playlist
