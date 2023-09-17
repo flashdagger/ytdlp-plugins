@@ -215,29 +215,27 @@ class Auf1IE(InfoExtractor):
         seen_idx = set()
         return resolve(3)
 
-    def _metadata(self, url, *, page_id, method="api"):
-        if method == "api":
-            return self.call_with_retries(
-                lambda: self.call_api(f"getContent/{page_id}", page_id),
-                http_error_map={500: ExtractorError("JSON API failed (500)")},
-            )
-        return self._payloadjson(url, page_id)
+    def _payloadapi(self, page_id):
+        return self.call_with_retries(
+            lambda: self.call_api(f"getContent/{page_id}", page_id),
+            http_error_map={500: ExtractorError("JSON API failed (500)")},
+        )
 
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
-        metadata = {}
+        payload = {}
 
         # single video
         if category:
             try:
-                metadata = self._metadata(url, page_id=page_id, method="api")
+                payload = self._payloadapi(page_id)
             except ExtractorError as exc:
                 self.report_warning(exc, page_id)
 
-            if not metadata:
-                metadata = self._metadata(url, page_id=page_id, method="_payload.json")
+            if not payload:
+                payload = self._payloadjson(url, page_id)
 
-            info = self.sparse_info(metadata or {})
+            info = self.sparse_info(payload or {})
             return info
 
         # video playlist
@@ -251,18 +249,18 @@ class Auf1IE(InfoExtractor):
             )
 
         try:
-            metadata = self.call_with_retries(
+            payload = self.call_with_retries(
                 lambda: self.call_api(f"getShow/{page_id}", page_id),
             )
         except ExtractorError as exc:
             self.report_warning(exc, page_id)
-            metadata = self._metadata(url, page_id=page_id, method="payloadjs")
+            payload = self._payloadapi(page_id)
 
         return self.playlist_from_entries(
-            metadata.get("contents"),
+            payload.get("contents"),
             playlist_id=page_id,
-            playlist_title=metadata.get("name"),
-            description=clean_html(metadata.get("description")),
+            playlist_title=payload.get("name"),
+            description=clean_html(payload.get("description")),
         )
 
 
