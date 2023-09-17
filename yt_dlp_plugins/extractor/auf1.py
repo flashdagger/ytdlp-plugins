@@ -13,6 +13,7 @@ from yt_dlp.utils import (
     parse_duration,
     parse_iso8601,
     traverse_obj,
+    UnsupportedError,
 )
 
 __version__ = "2023.09.15"
@@ -190,8 +191,8 @@ class Auf1IE(InfoExtractor):
     def _searchapi(self, query=None):
         data = {"q": "", "offset": 0, "limit": 20, "sort": ["published_at:desc"]}
         data.update((query or {}))
-        _from = data["offset"]
-        _to = _from + data["limit"] - 1
+        _from = data["offset"] + 1
+        _to = _from + data["limit"]
         results = self._download_json(
             "https://auf1.tv/findme/indexes/contents/search",
             "search API",
@@ -210,6 +211,8 @@ class Auf1IE(InfoExtractor):
 
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
+        if "?" in page_id:
+            raise UnsupportedError(url)
 
         # single video
         if category:
