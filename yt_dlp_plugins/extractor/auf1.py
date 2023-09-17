@@ -41,6 +41,10 @@ class Auf1IE(InfoExtractor):
                 "duration": 2089,
             },
             "params": {"skip_download": True},
+            # no _payload.json, fallback to API requests
+            "expected_warnings": [
+                "Unable to download _payload.json",
+            ],
         },
         {
             # playlist for category
@@ -51,11 +55,6 @@ class Auf1IE(InfoExtractor):
                 "description": "md5:e472da8d2bc2fa45e7e9ffe996ee1381",
             },
             "playlist_mincount": 100,
-            "expected_warnings": [
-                "Retrying due to too many requests.",
-                "The read operation timed out",
-                "JSON API",
-            ],
         },
         {
             # playlist for all videos
@@ -65,10 +64,6 @@ class Auf1IE(InfoExtractor):
                 "title": "AUF1.TV - Alle Videos",
             },
             "playlist_mincount": 200,
-            "expected_warnings": [
-                "Retrying due to too many requests.",
-                "JSON API",
-            ],
         },
     ]
 
