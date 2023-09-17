@@ -140,26 +140,15 @@ class Auf1IE(InfoExtractor):
                         raise exception from exc
                 raise
 
-    def playlist_from_entries(self, all_videos, **kwargs):
-        entries = []
-        for item in all_videos:
-            public_id = item.get("public_id")
-            if not public_id:
-                continue
-            category = traverse_obj(item, ("show", "public_id"), default="video")
-            entries.append(
-                {
-                    "_type": "url",
-                    "ie_key": self.ie_key(),
-                    **self.sparse_info(item),
-                    "url": f"//auf1.tv/{category}/{public_id}/",
-                }
-            )
-
-        return self.playlist_result(
-            entries,
-            **kwargs,
-        )
+    def url_entry(self, payload):
+        public_id = payload["public_id"]
+        category = traverse_obj(payload, ("show", "public_id"), default="video")
+        return {
+            "_type": "url",
+            "ie_key": self.ie_key(),
+            **self.sparse_info(payload),
+            "url": f"//auf1.tv/{category}/{public_id}/",
+        }
 
     def _payloadjson(self, url, page_id):
         payload_json = self._download_json(
@@ -212,24 +201,22 @@ class Auf1IE(InfoExtractor):
 
         # video playlist
         if page_id == "videos":
-            return self.playlist_from_entries(
-                self.call_with_retries(
-                    lambda: self.call_api("getVideos", video_id="all_videos"),
+            return self.playlist_result(
+                entries=map(
+                    self.url_entry, self.call_api("getVideos", video_id="all_videos")
                 ),
                 playlist_id="all_videos",
                 playlist_title="AUF1.TV - Alle Videos",
             )
 
         try:
-            payload = self.call_with_retries(
-                lambda: self.call_api(f"getShow/{page_id}", page_id),
-            )
+            payload = self._payloadjson(url, page_id)
         except ExtractorError as exc:
             self.report_warning(exc, page_id)
-            payload = self._payloadapi(page_id)
+            payload = self.call_api(f"getShow/{page_id}", page_id)
 
-        return self.playlist_from_entries(
-            payload.get("contents"),
+        return self.playlist_result(
+            map(self.url_entry, payload.get("contents")),
             playlist_id=page_id,
             playlist_title=payload.get("name"),
             description=clean_html(payload.get("description")),
