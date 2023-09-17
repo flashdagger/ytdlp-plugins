@@ -13,7 +13,7 @@ from yt_dlp.utils import (
     parse_duration,
     parse_iso8601,
     traverse_obj,
-    UnsupportedError,
+    parse_qs,
 )
 
 __version__ = "2023.09.15"
@@ -64,9 +64,17 @@ class Auf1IE(InfoExtractor):
             "url": "https://auf1.tv/videos",
             "info_dict": {
                 "id": "all_videos",
-                "title": "AUF1.TV - Alle Videos",
+                "title": "Alle Videos",
             },
             "playlist_mincount": 200,
+        },
+        {
+            "url": "https://auf1.tv/videos?sendung=Nachrichten%20AUF1",
+            "info_dict": {
+                "id": "all_videos",
+                "title": "Nachrichten AUF1",
+            },
+            "playlist_mincount": 50,
         },
     ]
 
@@ -223,8 +231,7 @@ class Auf1IE(InfoExtractor):
 
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
-        if "?" in page_id:
-            raise UnsupportedError(url)
+        params = parse_qs(url)
 
         # single video
         if category:
@@ -237,15 +244,17 @@ class Auf1IE(InfoExtractor):
             return info
 
         # video playlist
-        if page_id == "videos":
+        if page_id.startswith("videos"):
             pagesize = 100
+            show_name = params.get("sendung", [""])[0]
+            _filter = f"show_name={show_name!r}" if show_name else None
 
             def load_page(page):
                 result = self._searchapi(
                     {
                         "page": page + 1,
                         "hitsPerPage": pagesize,
-                        # "filter": [['show_name="Elsa AUF1"']],
+                        "filter": _filter,
                     },
                 )
                 yield from map(self.url_entry, result["hits"])
@@ -253,7 +262,7 @@ class Auf1IE(InfoExtractor):
             return self.playlist_result(
                 entries=OnDemandPagedList(load_page, pagesize),
                 playlist_id="all_videos",
-                playlist_title="AUF1.TV - Alle Videos",
+                playlist_title=show_name or "Alle Videos",
                 playlist_count=1000,
             )
 
