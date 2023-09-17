@@ -1,9 +1,7 @@
 # coding: utf-8
-import json
 import re
 import time
 from contextlib import suppress
-from shlex import shlex
 from urllib.error import HTTPError
 
 from yt_dlp.extractor.common import InfoExtractor
@@ -17,24 +15,6 @@ from yt_dlp.utils import (
 )
 
 __version__ = "2023.09.15"
-
-
-class JSHLEX(shlex):
-    def __init__(self, instream):
-        super().__init__(
-            instream=instream, infile=None, posix=True, punctuation_chars=False
-        )
-        self.whitespace = ", \t\r\n"
-        self.whitespace_split = True
-
-    def __next__(self):
-        value = super().__next__()
-        try:
-            json.loads(value)
-        except json.JSONDecodeError:
-            quote_escaped = value.replace('"', '\\"')
-            value = f'"{quote_escaped}"'
-        return value
 
 
 # pylint: disable=abstract-method
