@@ -458,27 +458,6 @@ class BrighteonTvIE(BrighteonIE):
             "params": {"skip_download": True},
         },
         {
-            "url": "https://www.brighteon.tv/LiveEspanol/",
-            "info_dict": {
-                "id": "brighteontv-espanol",
-                "ext": "mp4",
-                "title": "startswith:Brighteon.TV Espanol",
-                "description": str,
-                "channel_id": "8c536b2f-e9a1-4e4c-a422-3867d0e472e4",
-                "tags": [
-                    "Brighteon.TV",
-                    "Video",
-                    "Live",
-                    "Streaming",
-                    "Shows",
-                    "Events",
-                    "Documentaries",
-                ],
-                "is_live": True,
-            },
-            "params": {"skip_download": True},
-        },
-        {
             "url": "https://www.brighteon.tv/LiveEvents/",
             "info_dict": {
                 "id": "brighteon2-show",
