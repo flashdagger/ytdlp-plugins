@@ -18,7 +18,6 @@ from yt_dlp.utils import (
     update_url_query,
     urljoin,
 )
-from ytdlp_plugins.probe import headprobe_media
 
 __version__ = "2023.09.28"
 
@@ -254,17 +253,6 @@ class BrighteonIE(InfoExtractor):
 
         return formats
 
-    def _update_formats(self, formats):
-        for fmt in formats:
-            if fmt.get("height"):
-                fmt["fps"] = 30 if fmt["height"] >= 540 else 15
-            if self.get_param("check_formats") is False or not (
-                fmt.get("format_note", "").startswith("DASH video")
-            ):
-                continue
-            info = headprobe_media(self, fmt["url"])[0]
-            fmt.update(info)
-
     def _entry_from_info(self, video_info, channel_info, from_playlist=False):
         video_id = video_info["id"]
         url = f"{self._BASE_URL}/{video_id}"
@@ -289,7 +277,6 @@ class BrighteonIE(InfoExtractor):
                         "asr": 48000,
                     }
                 )
-            self._update_formats(formats)
             self._auto_merge_formats(formats)
 
         # merge channel_info items into video_info
