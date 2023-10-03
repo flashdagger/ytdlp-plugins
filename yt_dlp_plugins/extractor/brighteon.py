@@ -236,9 +236,15 @@ class BrighteonIE(InfoExtractor):
                     self._rename_formats(mpg_formats, "mpeg")
                     media_formats.extend(mpg_formats)
             elif url.endswith(".mpd"):
-                media_formats = self._extract_mpd_formats(
-                    url, video_id=video_id, fatal=False
-                )
+                try:
+                    media_formats = self._extract_mpd_formats(
+                        url, video_id=video_id, fatal=False
+                    )
+                except KeyError as exc:
+                    media_formats = ()
+                    self.report_warning(
+                        f"MPD extraction failed with: KeyError({exc})", only_once=True
+                    )
                 self._rename_formats(media_formats, "dash")
                 for fmt in media_formats:
                     fmt["manifest_stream_number"] = 0
@@ -481,7 +487,7 @@ class BrighteonTvIE(BrighteonIE):
         stream_info = traverse_obj(json_obj, self.page_props_path("stream"))
         video_info = self._entry_from_info(stream_info, {})
         video_info.update(
-            dict(description=description, tags=tags.split(", "), is_live=True)
+            {"description": description, "tags": tags.split(", "), "is_live": True}
         )
 
         return video_info

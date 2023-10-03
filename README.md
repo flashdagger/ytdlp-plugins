@@ -11,6 +11,11 @@
 * support for un-nested channels, categories and playlists
 * live stream support for brighteon.tv
 
+## release notes
+
+**Broken formats:** Some MPD manifests cannot be parsed by yt-dlp. They will be
+skipped with a warning until the issue is resolved.
+
 ## installation
 
 You can install ytdlp-brighteon via pip:
