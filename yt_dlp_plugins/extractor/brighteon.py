@@ -19,7 +19,7 @@ from yt_dlp.utils import (
     urljoin,
 )
 
-__version__ = "2023.09.28"
+__version__ = "2023.10.03"
 
 
 class BrighteonIE(InfoExtractor):
