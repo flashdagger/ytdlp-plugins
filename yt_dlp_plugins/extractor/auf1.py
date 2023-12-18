@@ -54,7 +54,7 @@ class Auf1IE(InfoExtractor):
             "info_dict": {
                 "id": "nachrichten-auf1",
                 "title": "Nachrichten AUF1",
-                "description": "md5:e472da8d2bc2fa45e7e9ffe996ee1381",
+                "description": "md5:2036aadd56448b0270e30c454a54e9a9",
             },
             "playlist_mincount": 100,
         },
@@ -78,6 +78,12 @@ class Auf1IE(InfoExtractor):
     ]
 
     @staticmethod
+    def parse_peertube_url(url: str):
+        match = re.match(r"^https?://([^/]+)/videos/embed/([^?]+)", url)
+        # pylint: disable=consider-using-f-string
+        return "peertube:{}:{}".format(*match.groups()) if match else None
+
+    @staticmethod
     def parse_url(url: dict):
         _format = {}
         if "src" in url:
@@ -92,17 +98,30 @@ class Auf1IE(InfoExtractor):
         return _format
 
     def sparse_info(self, metadata):
-        peertube_urls = traverse_obj(
-            metadata, ("videoData", "urls", "peertube"), default=()
-        )
+        formats = []
+        http_headers = {"Referer": "https://auf1.tv/"}
+        video_id = metadata.get("public_id", "unknown")
+        for _provider, urls in traverse_obj(
+            metadata, ("videoData", "urls"), default={}
+        ).items():
+            if isinstance(urls, list):
+                formats.extend(fmt for fmt in map(self.parse_url, urls) if fmt)
+            elif isinstance(urls, dict) and urls.get("src", "").endswith(".m3u8"):
+                formats.extend(
+                    self._extract_m3u8_formats(
+                        urls["src"], video_id, headers=http_headers
+                    )
+                )
+
         return {
-            "id": metadata.get("public_id", "unknown"),
+            "id": video_id,
             "title": metadata.get("title"),
             "description": clean_html(traverse_obj(metadata, "text", "preview_text")),
             "duration": parse_duration(metadata.get("duration")),
             "timestamp": parse_iso8601(metadata.get("published_at") or None),
             "thumbnail": metadata.get("thumbnail_url"),
-            "formats": [fmt for fmt in map(self.parse_url, peertube_urls) if fmt],
+            "formats": formats,
+            "http_headers": http_headers,
         }
 
     def call_api(self, endpoint, video_id=None, fatal=True):
@@ -205,7 +224,7 @@ class Auf1IE(InfoExtractor):
         info_id = "searchApiKey"
         webpage = self._download_webpage("https://auf1.tv", info_id)
         new_key = self._search_regex(
-            r"\bsearchApiKey: *\"([0-9a-zA-Z]{64})\"", webpage, info_id
+            r"\bsearchApiKey: *\"([0-9a-zA-Z]{32,64})\"", webpage, info_id
         )
 
         self.cache.store(*context, new_key)
