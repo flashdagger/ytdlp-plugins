@@ -3,12 +3,12 @@ repos:
     hooks:
     - id: black
       name: black
-      language: script
-      entry: ./use_venv.py black
+      language: python
+      entry: black
       types: [python]
     - id: pyflakes
       name: pyflakes
-      language: script
-      entry: ./use_venv.py pyflakes
+      language: python
+      entry: pyflakes
       types: [python]
       exclude: ^tests/

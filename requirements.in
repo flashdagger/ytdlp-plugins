@@ -1,14 +1,6 @@
 # dev requirements
 -e file:.
-black==19.3b0; platform_python_implementation == 'PyPy'
-black; platform_python_implementation != 'PyPy'
-bump2version
-mypy; platform_python_implementation != 'PyPy'
-pre-commit
-pyflakes
-pylint
 pytest
 pytest-subtests
 pytest-xdist
-twine
 ytdlp-plugins
