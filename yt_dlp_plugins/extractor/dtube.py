@@ -182,11 +182,11 @@ class DTubePluginIE(InfoExtractor):
         return files
 
     def avalon_api(self, endpoint, video_id, **kwargs):
-        options = dict(
-            note="Downloading avalon metadata",
-            errnote="Unable to download avalon metadata",
-            fatal=False,
-        )
+        options = {
+            "note": "Downloading avalon metadata",
+            "errnote": "Unable to download avalon metadata",
+            "fatal": False,
+        }
         options.update(kwargs)
         result = self._download_json(
             f"https://avalon.d.tube/{endpoint}",
