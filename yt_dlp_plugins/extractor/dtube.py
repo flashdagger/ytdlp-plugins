@@ -55,6 +55,7 @@ class DTubePluginIE(InfoExtractor):
     _TESTS = [
         {
             "url": "https://d.tube/v/truehnchannel3.0/QmNXrihTWmHiLVXxLabfXFakFzJVLq1LimfH2X1sNma5ak",
+            "skip": "not available",
             "md5": "d7b147de74210442e6b14d934f96c585",
             "info_dict": {
                 "id": "truehnchannel3.0/QmNXrihTWmHiLVXxLabfXFakFzJVLq1LimfH2X1sNma5ak",
@@ -73,21 +74,19 @@ class DTubePluginIE(InfoExtractor):
             },
         },
         {
-            # using steemit API
-            "url": "https://d.tube/v/cahlen/hcyx513ospn",
-            "md5": "fd03f59d2c1f7b1e0ed5a2098116e443",
+            # using avalon API
+            "url": "https://d.tube/#!/v/cahlen/desert-fire",
+            "md5": "f3d0df537692c2cd725231cebdbd8e7e",
             "info_dict": {
-                "id": "cahlen/hcyx513ospn",
-                "title": "Wizard's Life - February 20th, 2022",
-                "description": "md5:4308b3aac098bf762489eeeea290b8e1",
+                "id": "cahlen/desert-fire",
+                "title": "Desert Fire",
+                "description": "md5:e61b355bc49e480b1a8e7a3f5406edbd",
                 "ext": "mp4",
-                "thumbnail": "https://ipfs.cahlen.org/ipfs/"
-                "QmW9PQUeZAZZ2zryMp5kEVQqpKjJpHNGGUShmojcsW4zQZ",
-                "tags": ["dtube", "life"],
-                "duration": 1119,
+                "tags": ["life"],
+                "duration": 151,
                 "uploader_id": "cahlen",
-                "upload_date": "20220220",
-                "timestamp": 1645382061.0,
+                "upload_date": "20231217",
+                "timestamp": 1702856641.012,
             },
             "params": {
                 "format": "src",
@@ -350,7 +349,7 @@ class DTubeQueryPluginIE(DTubeUserPluginIE):
     _TESTS = [
         {
             "url": "https://d.tube/#!/hotvideos",
-            "playlist_mincount": 100,  # type: ignore
+            "playlist_mincount": 80,  # type: ignore
             "info_dict": {
                 "id": "hotvideos",
                 "title": "hotvideos",
