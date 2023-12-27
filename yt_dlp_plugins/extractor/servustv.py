@@ -16,7 +16,7 @@ from yt_dlp.utils import (
     unescapeHTML,
 )
 
-__version__ = "2023.01.08"
+__version__ = "2023.12.27"
 AnyDict = Dict[str, Any]
 
 
