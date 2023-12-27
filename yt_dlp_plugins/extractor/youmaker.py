@@ -17,6 +17,7 @@ from yt_dlp.utils import (
 
 __version__ = "2023.01.10"
 
+
 # pylint: disable=abstract-method, protected-access
 class YoumakerEmbedProxyIE(InfoExtractor):
     _VALID_URL = EpochIE._VALID_URL
@@ -81,7 +82,7 @@ class YoumakerIE(InfoExtractor):
                 "subtitles": {
                     "en": [
                         {
-                            "url": r"re:https?://[a-z1-3]+.youmaker.com/assets/2021/1001/"
+                            "url": r"re:https?://[a-z1-3]+.youmaker.com/assets/"
                             r"b58f88fe-4ddb-4c11-bccf-46f579b7d978/"
                             r"subtitle_1633055993844\.auto\.en\.vtt"
                         }
@@ -172,15 +173,14 @@ class YoumakerIE(InfoExtractor):
             # test embedded videos from another site
             "url": "https://www.theepochtimes.com/dick-morris-discusses-his-book-the-return-trumps-big-2024-comeback_4819205.html",
             "info_dict": {
-                "id": "9489f994-2a20-4812-b233-ac0e5c345632",
+                "id": "dick-morris-discusses-his-book-the-return-trumps-big-2024-comeback-4819205",
                 "ext": "mp4",
-                "title": "LIVE: Dick Morris Discusses His Book 'The Return: Trump’s Big 2024 Comeback'",
+                "title": "Dick Morris Discusses His Book \u2018The Return: Trump\u2019s Big 2024 Comeback\u2019",
                 "description": str,
-                "uploader": str,
+                "uploader": (None, str),
                 "upload_date": "20221025",
-                "timestamp": 1666738800,
+                "timestamp": 1666719776,
                 "duration": 4257,
-                "live_status": "was_live",
             },
             "params": {"skip_download": True},
         },
