@@ -103,26 +103,26 @@ class ServusTVIE(InfoExtractor):
             "playlist": [
                 {
                     "info_dict": {
-                        "id": "aa-22rankb9h2112",
-                        "title": "Der Engelswand-Bauer",
+                        "id": "aarj7qi65ikr255p922y",
+                        "title": "Wir suchen keine Idylle",
                         "series": "Ich, Bauer",
-                        "season_number": 2,
-                        "episode_number": 3,
-                        "description": "md5:22149f1593cac13703dc31f87162badb",
+                        "season_number": 4,
+                        "episode_number": 2,
+                        "description": "md5:8375fc598827c13c36bda1a98f89fa22",
                         "timestamp": int,
-                        "upload_date": "20210501",
+                        "upload_date": "20220101",
                     },
                 },
                 {
                     "info_dict": {
-                        "id": "aa-24hxt6ycw1w12",
-                        "title": "Der Generationenhof",
+                        "id": "aat544m75z6xm4p93c7z",
+                        "title": "Jetzt oder nie!",
                         "series": "Ich, Bauer",
                         "season_number": 3,
-                        "episode_number": 1,
-                        "description": "md5:01335fd4f02d66d6ae9af2c5387d18a3",
+                        "episode_number": 4,
+                        "description": "md5:483c6d034a102caab4398826358b76af",
                         "timestamp": int,
-                        "upload_date": "20210501",
+                        "upload_date": "20220101",
                     },
                 },
             ],
@@ -642,13 +642,13 @@ class PmWissenIE(ServusTVIE):
     _TESTS = [
         {
             # test embedded links from 3rd party sites
-            "url": "https://www.pm-wissen.com/umwelt/v/aa-24mus4g2w2112/",
+            "url": "https://www.pm-wissen.com/umwelt/v/aaljbkmy7jwhcb6lb8lt/",
             "info_dict": {
-                "id": "aa-24mus4g2w2112",
+                "id": "aaljbkmy7jwhcb6lb8lt",
                 "ext": "mp4",
-                "title": "Meer ohne Plastik?",
+                "title": "Wie geht Weingärung?",
                 "description": str,
-                "duration": 418,
+                "duration": 340,
                 "timestamp": int,
                 "upload_date": str,
                 "is_live": False,
@@ -664,7 +664,7 @@ class PmWissenIE(ServusTVIE):
                 "title": "Redewendungen Mediathek",
                 "description": "Alle Videos zum Thema Redewendungen",
             },
-            "playlist_mincount": 20,
+            "playlist_mincount": 10,
             "params": {"skip_download": True},
         },
         {
@@ -734,7 +734,7 @@ class PmWissenSearchIE(PmWissenIE):
                 "title": "search: 'weltall'",
             },
             "params": {"skip_download": True, "geo_bypass": False},
-            "playlist_mincount": 21,
+            "playlist_mincount": 15,
         }
     ]
 
