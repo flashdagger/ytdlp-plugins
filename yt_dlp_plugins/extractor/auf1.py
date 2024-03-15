@@ -104,14 +104,21 @@ class Auf1IE(InfoExtractor):
         for _provider, urls in traverse_obj(
             metadata, ("videoData", "urls"), default={}
         ).items():
-            if isinstance(urls, list):
-                formats.extend(fmt for fmt in map(self.parse_url, urls) if fmt)
-            elif isinstance(urls, dict) and urls.get("src", "").endswith(".m3u8"):
-                formats.extend(
-                    self._extract_m3u8_formats(
-                        urls["src"], video_id, headers=http_headers
+            if isinstance(urls, dict):
+                urls = [urls]
+            if not isinstance(urls, list):
+                continue
+
+            for item in urls:
+                src = item.get("src", "")
+                if src.endswith(".m3u8"):
+                    formats.extend(
+                        self._extract_m3u8_formats(src, video_id, headers=http_headers)
                     )
-                )
+                else:
+                    fmt = self.parse_url(item)
+                    if fmt:
+                        formats.append(fmt)
 
         return {
             "id": video_id,
