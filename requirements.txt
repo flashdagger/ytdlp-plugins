@@ -6,11 +6,11 @@
 #
 -e file:.
     # via -r requirements.in
-attrs==23.1.0
+attrs==23.2.0
     # via pytest-subtests
 brotli==1.1.0
     # via yt-dlp
-certifi==2023.11.17
+certifi==2024.2.2
     # via
     #   requests
     #   yt-dlp
@@ -26,30 +26,30 @@ iniconfig==2.0.0
     # via pytest
 mutagen==1.47.0
     # via yt-dlp
-packaging==23.2
+packaging==24.0
     # via pytest
-pluggy==1.3.0
+pluggy==1.4.0
     # via pytest
-pycryptodomex==3.19.0
+pycryptodomex==3.20.0
     # via yt-dlp
-pytest==7.4.3
+pytest==8.1.1
     # via
     #   -r requirements.in
     #   pytest-subtests
     #   pytest-xdist
-pytest-subtests==0.11.0
+pytest-subtests==0.12.1
     # via -r requirements.in
 pytest-xdist==3.5.0
     # via -r requirements.in
 requests==2.31.0
     # via yt-dlp
-urllib3==2.1.0
+urllib3==2.2.1
     # via
     #   requests
     #   yt-dlp
 websockets==12.0
     # via yt-dlp
-yt-dlp==2023.11.16
+yt-dlp==2024.3.10
     # via
     #   ytdlp-auf1
     #   ytdlp-plugins
