@@ -261,7 +261,6 @@ def create_parser():
     description = "Setup and use a python virtual environment"
     parser = argparse.ArgumentParser(
         description=description,
-        epilog="2020 Marcel Kuszak <marcel.kuszak@hella.com>",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
