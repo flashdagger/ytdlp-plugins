@@ -8,7 +8,8 @@
 > For further details see https://github.com/yt-dlp/yt-dlp#plugins
 
 
-* supported domains: [servustv.com](https://servustv.com) and [pm-wissen.com](https://pm-wissen.com)
+* supported domains: [servustv.com](https://servustv.com) 
+* unsupported domain: [pm-wissen.com](https://pm-wissen.com)
 * supported live channels:
   * [Hauptkanal](https://www.servustv.com/allgemein/p/jetzt-live/119753/) 
   * [Wetterpanorama](https://www.servustv.com/aktuelles/v/aa9bgcvsvf7sq8y4sm14/) 
@@ -18,7 +19,7 @@
   * [Kanal: Wintersport](https://www.servustv.com/sport/k/wintersport-kanal/269301/)
 * playlist from topics (e.g. [Servus Nachrichten](https://www.servustv.com/aktuelles/b/servus-nachrichten/aa-1y5rjcd1h2111/)
   or [Motorsport](https://www.servustv.com/sport/p/motorsport/325/))
-* playlist from searches (e.g. [search term 'Spielfilme\'](https://www.servustv.com/search/spielfilme/))
+* playlist from searches (not supported)
 
 ## installation
 
