@@ -1,7 +1,8 @@
 # coding: utf-8
+
 import re
 from typing import Any, Dict, Iterator, Optional, Sequence, Tuple
-from urllib.parse import parse_qsl, quote_plus, urlparse, urlunparse
+from urllib.parse import parse_qsl, urlparse, urlunparse
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
@@ -103,24 +104,24 @@ class ServusTVIE(InfoExtractor):
             "playlist": [
                 {
                     "info_dict": {
-                        "id": "aarj7qi65ikr255p922y",
-                        "title": "Wir suchen keine Idylle",
-                        "series": "Ich, Bauer",
-                        "season_number": 4,
-                        "episode_number": 2,
-                        "description": "md5:8375fc598827c13c36bda1a98f89fa22",
-                        "timestamp": int,
-                        "upload_date": "20220101",
-                    },
-                },
-                {
-                    "info_dict": {
                         "id": "aat544m75z6xm4p93c7z",
                         "title": "Jetzt oder nie!",
                         "series": "Ich, Bauer",
                         "season_number": 3,
                         "episode_number": 4,
                         "description": "md5:483c6d034a102caab4398826358b76af",
+                        "timestamp": int,
+                        "upload_date": "20220101",
+                    },
+                },
+                {
+                    "info_dict": {
+                        "id": "aarj7qi65ikr255p922y",
+                        "title": "Wir suchen keine Idylle",
+                        "series": "Ich, Bauer",
+                        "season_number": 4,
+                        "episode_number": 2,
+                        "description": "md5:8375fc598827c13c36bda1a98f89fa22",
                         "timestamp": int,
                         "upload_date": "20220101",
                     },
@@ -522,7 +523,8 @@ class ServusTVIE(InfoExtractor):
                 break
         return page_data
 
-    def _filter_query(self, json_obj: AnyDict, *names: str) -> Tuple[str, AnyDict]:
+    @staticmethod
+    def _filter_query(json_obj: AnyDict, *names: str) -> Tuple[str, AnyDict]:
         data = traverse_obj(
             json_obj,
             "props/pageProps/initialLibData".split("/"),
@@ -593,155 +595,3 @@ class ServusTVIE(InfoExtractor):
             entries,
             **self._playlist_meta(page_data, webpage),
         )
-
-
-class ServusSearchIE(ServusTVIE):
-    IE_NAME = "servustv:search"
-    _VALID_URL = r"""(?x)
-                    https?://
-                        (?:www\.)?servustv.com
-                        /search
-                        /(?P<id>[^/?#]+)
-                        (?:/all-videos/\d+)?/?$
-                    """
-
-    _TESTS = [
-        {
-            # search playlist
-            "url": "https://www.servustv.com/search/hubert+staller/",
-            "info_dict": {
-                "id": "search_hubert+staller",
-                "title": "search: 'hubert staller'",
-                "description": None,
-            },
-            "params": {"skip_download": True, "geo_bypass": False},
-            "playlist_mincount": 1,
-            "playlist_maxcount": 10,
-        }
-    ]
-
-    def _playlist_meta(self, page_data, webpage):
-        search_term = page_data.get("searchTerm", "[searchTerm]")
-
-        return {
-            "playlist_id": f"search_{quote_plus(search_term)}",
-            "playlist_title": f"search: {search_term!r}",
-        }
-
-
-class PmWissenIE(ServusTVIE):
-    IE_NAME = "pm-wissen"
-    _VALID_URL = r"""(?x)
-                    https?://
-                        (?:www\.)?(?:pm-wissen)\.com/
-                        (?:
-                            videos | (?: [\w-]+/(?: v | [p]/[\w-]+ ) )
-                        )
-                        /(?P<id>[A-Za-z0-9-]+)
-                    """
-    _TESTS = [
-        {
-            # test embedded links from 3rd party sites
-            "url": "https://www.pm-wissen.com/umwelt/v/aaljbkmy7jwhcb6lb8lt/",
-            "info_dict": {
-                "id": "aaljbkmy7jwhcb6lb8lt",
-                "ext": "mp4",
-                "title": "Wie geht Weingärung?",
-                "description": str,
-                "duration": 340,
-                "timestamp": int,
-                "upload_date": str,
-                "is_live": False,
-                "thumbnail": r"re:^https?://.*\.jpg",
-            },
-            "params": {"skip_download": True, "format": "bestvideo"},
-        },
-        {
-            # topic playlist
-            "url": "https://www.pm-wissen.com/mediathek/p/redewendungen-mediathek/11908/",
-            "info_dict": {
-                "id": "redewendungen-mediathek",
-                "title": "Redewendungen Mediathek",
-                "description": "Alle Videos zum Thema Redewendungen",
-            },
-            "playlist_mincount": 10,
-            "params": {"skip_download": True},
-        },
-        {
-            # playlist from blocks (fails on older yt-dlp versions)
-            "url": "https://www.pm-wissen.com/mediathek/p/highlights-mediathek/11900/",
-            "info_dict": {
-                "id": "highlights-mediathek",
-                "title": "Mediathek",
-                "description": "md5:2260ac68a6ee376912beb4c73e3d5b33",
-            },
-            "playlist_mincount": 12,
-            "params": {"skip_download": True},
-        },
-    ]
-    JSON_OBJ_ID = "__FRONTITY_CONNECT_STATE__"
-
-    @staticmethod
-    def _page_data(json_obj):
-        for item in ("page", "data"):
-            page_data = traverse_obj(json_obj, f"source/{item}".split("/"), default={})
-            if page_data:
-                page_data = next(iter(page_data.values()))
-                break
-
-        return page_data
-
-    def _filter_query(self, json_obj, *names: str) -> Tuple[str, Dict]:
-        link = traverse_obj(json_obj, ("router", "link"), default="")
-        data = traverse_obj(
-            json_obj,
-            ("source", "data", link),
-            default={},
-        )
-        for filter_info in data.get("filters", ()):
-            name = filter_info.get("value", "none")
-            if name in names:
-                return name, filter_info
-
-        page_data = self._page_data(json_obj)
-        category = page_data.get("categories", ())
-        if category:
-            return category[0], {
-                "url": "https://backend.pm-wissen.com/wp-json/rbmh/v2/query-filters/query/?"
-                f"categories={category[0]}&f[primary_type_group]=all-videos&filter_bundles=true&"
-                "filter_non_visible_types=true&geo_override=DE&orderby=rbmh_playability&"
-                "page=3&per_page=12&post_type=media_asset&query_filters=primary_type_group"
-            }
-
-        return "none", {}
-
-
-class PmWissenSearchIE(PmWissenIE):
-    IE_NAME = "pm-wissen:search"
-    _VALID_URL = r"""(?x)
-                    https?://
-                        (?:www\.)?pm-wissen.com
-                        /search
-                        /(?P<id>[^/?#]+)
-                        (?:/all-videos/\d+)?/?$
-                    """
-    _TESTS = [
-        {
-            # search playlist
-            "url": "https://www.pm-wissen.com/search/weltall/",
-            "info_dict": {
-                "id": "search_weltall",
-                "title": "search: 'weltall'",
-            },
-            "params": {"skip_download": True, "geo_bypass": False},
-            "playlist_mincount": 15,
-        }
-    ]
-
-    def _playlist_meta(self, page_data, webpage):
-        search_query = page_data.get("searchQuery", "[searchQuery]")
-
-        return {
-            "playlist_id": f"search_{quote_plus(search_query)}",
-            "playlist_title": f"search: {search_query!r}",
-        }
