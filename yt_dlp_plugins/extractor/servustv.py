@@ -17,7 +17,7 @@ from yt_dlp.utils import (
     urljoin,
 )
 
-__version__ = "2024.04.28"
+__version__ = "2024.10.05"
 AnyDict = Dict[str, Any]
 
 
