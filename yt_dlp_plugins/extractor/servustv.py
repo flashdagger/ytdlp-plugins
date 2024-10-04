@@ -1,5 +1,4 @@
 # coding: utf-8
-
 import re
 from typing import Any, Dict, Iterator, Optional, Sequence, Tuple
 from urllib.parse import parse_qsl, urlparse, urlunparse
@@ -36,7 +35,7 @@ class ServusTVIE(InfoExtractor):
     _GEO_COUNTRIES = ["AT", "DE", "CH", "LI", "LU", "IT"]
     _GEO_BYPASS = False
 
-    _API_URL = "https://api-player.redbull.com/stv/servus-tv"
+    _API_URL = "https://api-player.redbull.com/stv/servus-tv-playnet"
     _LOGO = "https://presse.servustv.com/Content/76166/cfbc6a68-fd77-46d6-8149-7f84f76efe5c/"
     _LIVE_URLS = {
         "AT": "https://dms.redbull.tv/v4/destination/stv/stv-linear"
