@@ -14,6 +14,7 @@ from yt_dlp.utils import (
     parse_iso8601,
     traverse_obj,
     unescapeHTML,
+    urljoin,
 )
 
 __version__ = "2024.04.28"
@@ -26,41 +27,43 @@ class ServusTVIE(InfoExtractor):
                     https?://
                         (?:www\.)?servustv\.com/
                         (?:
-                            videos | (?: [\w-]+/(?: v | [abkp]/[\w-]+ ) )
+                            videos | (?: [\w-]+/(?: v | [abkp] ) )
                         )
                         /(?P<id>[A-Za-z0-9-]+)
                     """
 
     PAGE_SIZE = 20
+    BASE_URL = "https://servustv.com/"
     _GEO_COUNTRIES = ["AT", "DE", "CH", "LI", "LU", "IT"]
     _GEO_BYPASS = False
 
     _API_URL = "https://api-player.redbull.com/stv/servus-tv-playnet"
     _LOGO = "https://presse.servustv.com/Content/76166/cfbc6a68-fd77-46d6-8149-7f84f76efe5c/"
+
     _LIVE_URLS = {
-        "AT": "https://dms.redbull.tv/v4/destination/stv/stv-linear"
-        "/personal_computer/chrome/at/de_AT/playlist.m3u8",
-        "DE": "https://dms.redbull.tv/v4/destination/stv/stv-linear"
-        "/personal_computer/chrome/de/de_DE/playlist.m3u8",
+        "AT": "https://dms.redbull.tv/v5/destination/stv/stv-linear"
+        "/personal_computer/http/at/de_AT/playlist.m3u8",
+        "DE": "https://dms.redbull.tv/v5/destination/stv/stv-linear"
+        "/personal_computer/http/de/de_DE/playlist.m3u8",
     }
 
     _TESTS = [
         {
             # new URL schema
-            "url": "https://www.servustv.com/wissen/v/aa-273cebhp12111/",
+            "url": "https://www.servustv.com/wissen/v/aa-28wxkyg3s1w11/",
             "info_dict": {
-                "id": "aa-273cebhp12111",
+                "id": "aa-28wxkyg3s1w11",
                 "ext": "mp4",
-                "title": "Was lebt im Steinbruch?",
-                "series": "P.M. Wissen",
-                "season_number": 1,
-                "episode_number": 113,
-                "description": "md5:a905b6135469cf60a07d4d0ae1e8d49a",
-                "duration": 271,
+                "title": "Faszinierende Lebensräume",
+                "series": "P.M. Wissen Best Of",
+                "season_number": 4,
+                "episode_number": 5,
+                "description": "Wir betrachten sie in der Vergangenheit, Gegenwart und Zukunft",
+                "duration": 2793,
                 "timestamp": int,
-                "categories": ["P.M. Wissen"],
+                "categories": ["P.M. Wissen Best Of"],
                 "age_limit": 0,
-                "upload_date": "20211111",
+                "upload_date": "20241003",
                 "is_live": False,
                 "thumbnail": r"re:^https?://.*\.jpg",
             },
@@ -72,17 +75,20 @@ class ServusTVIE(InfoExtractor):
         },
         {
             # old URL schema
-            "url": "https://www.servustv.com/videos/aa-273cebhp12111/",
+            "url": "https://www.servustv.com/videos/aa-28wxkyg3s1w11/",
             "info_dict": {
-                "id": "aa-273cebhp12111",
+                "id": "aa-28wxkyg3s1w11",
                 "ext": "mp4",
-                "title": "Was lebt im Steinbruch?",
-                "description": "md5:a905b6135469cf60a07d4d0ae1e8d49a",
-                "duration": 271,
+                "title": "Faszinierende Lebensräume",
+                "series": "P.M. Wissen Best Of",
+                "season_number": 4,
+                "episode_number": 5,
+                "description": "Wir betrachten sie in der Vergangenheit, Gegenwart und Zukunft",
+                "duration": 2793,
                 "timestamp": int,
-                "categories": ["P.M. Wissen"],
+                "categories": ["P.M. Wissen Best Of"],
                 "age_limit": 0,
-                "upload_date": "20211111",
+                "upload_date": "20241003",
                 "is_live": False,
                 "thumbnail": r"re:^https?://.*\.jpg",
             },
@@ -130,51 +136,7 @@ class ServusTVIE(InfoExtractor):
                 "geo_bypass_country": "AT",
                 "format": "bestvideo",
                 "skip_download": True,
-                "playlist_items": ":4",
-            },
-        },
-        {
-            # block post playlist
-            "url": "https://www.servustv.com/aktuelles/a/"
-            "corona-auf-der-suche-nach-der-wahrheit-teil-3-die-themen/193214/",
-            "info_dict": {
-                "id": "corona-auf-der-suche-nach-der-wahrheit-teil-3-die-themen",
-                "title": "Corona – auf der Suche nach der Wahrheit, Teil 3: Die Themen",
-                "description": "md5:a8a9c163eaf76f5ead9efac244e54935",
-            },
-            "playlist": [
-                {
-                    "info_dict": {
-                        "id": "aa-28zh3u3dn2111",
-                        "title": "Corona-Doku: Teil 3",
-                        "description": "md5:5e020c2618a6d6d2b8a316891c8b8195",
-                        "timestamp": int,
-                        "upload_date": "20211222",
-                    },
-                },
-                {
-                    "info_dict": {
-                        "id": "aa-27juub3a91w11",
-                        "title": "Teil 1: Corona – auf der Suche nach der Wahrheit",
-                        "description": "md5:b8de3e9d911bb2cdc0422cf720d795b5",
-                        "timestamp": int,
-                        "upload_date": "20210505",
-                    },
-                },
-                {
-                    "info_dict": {
-                        "id": "aa-28a3dbyxh1w11",
-                        "title": "Teil 2: Corona – auf der Suche nach der Wahrheit",
-                        "description": "md5:9904e42bb1b99c731e651ed2276a87e6",
-                        "timestamp": int,
-                        "upload_date": "20210801",
-                    },
-                },
-            ],
-            "params": {
-                "geo_bypass_country": "DE",
-                "format": "bestvideo",
-                "skip_download": True,
+                "playlist_items": "4,3",
             },
         },
         {
@@ -219,25 +181,6 @@ class ServusTVIE(InfoExtractor):
                 "outtmpl": "livestream.%(ext)s",
                 "format": "bestaudio",
             },
-        },
-        {
-            # block page playlist
-            "url": "https://www.servustv.com/sport/p/motorsport/325/",
-            "info_dict": {
-                "id": "motorsport",
-                "title": "Motorsport",
-                "description": "md5:cc8e904daecaa697fcf03af3edb3c743",
-            },
-            "playlist_mincount": 2,
-            "params": {
-                "geo_bypass_country": "DE",
-                "format": "bestvideo",
-                "skip_download": True,
-            },
-        },
-        {
-            "url": "https://www.servustv.com/allgemein/v/aagevnv3syv5kuu8cpfq/",
-            "only_matching": True,
         },
     ]
     JSON_OBJ_ID = "__NEXT_DATA__"
@@ -350,7 +293,6 @@ class ServusTVIE(InfoExtractor):
 
         if video_url is None:
             video_url = info.get("videoUrl")
-
         live_status = "is_live" if is_live else "not_live"
         errors = ", ".join(info.get("playabilityErrors", ()))
         if errors and not video_url:
@@ -408,7 +350,7 @@ class ServusTVIE(InfoExtractor):
     def _url_entry_from_post(self, post: AnyDict, **kwargs) -> AnyDict:
         duration = int_or_none(traverse_obj(post, ("stv_duration", "raw")))
         return self.url_result(
-            post["link"],
+            urljoin(self.BASE_URL, post["link"]),
             video_id=post.get("slug"),
             video_title=unescapeHTML(
                 traverse_obj(
@@ -424,7 +366,7 @@ class ServusTVIE(InfoExtractor):
         )
 
     def _live_stream_from_schedule(
-        self, schedule: Sequence[AnyDict], stream_id: Optional[str]
+        self, aa_id: str, stream_id: Optional[str]
     ) -> AnyDict:
         if self.country_code in self._LIVE_URLS:
             video_url = self._LIVE_URLS[self.country_code]
@@ -433,24 +375,10 @@ class ServusTVIE(InfoExtractor):
                 "/de_DE/", f"/de_{self.country_code}/"
             )
 
-        if not stream_id or stream_id.startswith("stvlive"):
-            pass
-        elif stream_id in {"nature", "science", "sports", "wintersport"}:
+        if stream_id:
             video_url = video_url.replace("/stv-linear/", f"/{stream_id}/")
-        else:
-            raise ExtractorError(f"Unsupported live stream {stream_id!r}")
 
-        for item in sorted(
-            schedule, key=lambda x: x.get("is_live", False), reverse=True
-        ):
-            if item.get("is_live", False) is False:
-                self.report_warning("Livestream might not be available")
-
-            return self._entry_by_id(
-                item["aa_id"].lower(), video_url=video_url, is_live=True
-            )
-
-        assert False, "Should not happen"
+        return self._entry_by_id(aa_id.lower(), video_url=video_url, is_live=True)
 
     def _paged_playlist_by_query(self, url: str, qid: str):
         url_parts = urlparse(url)
@@ -496,7 +424,9 @@ class ServusTVIE(InfoExtractor):
                         post, url_transparent=True, _block=category
                     )
                     entries[entry["id"]] = entry
-                flatten(_block.get("innerBlocks", ()), depth=depth + 1)
+                if depth == 0:
+                    flatten(_block.get("innerBlocks", ()), depth=depth + 1)
+                    break
 
         flatten(blocks)
         if len(categories) == 1:
@@ -514,7 +444,10 @@ class ServusTVIE(InfoExtractor):
 
     @staticmethod
     def _page_data(json_obj: AnyDict) -> AnyDict:
-        for item in ("data", "post", "page"):
+        for item in (
+            "videoData",
+            "data",
+        ):
             page_data = traverse_obj(
                 json_obj, f"props/pageProps/{item}".split("/"), default={}
             )
@@ -568,11 +501,11 @@ class ServusTVIE(InfoExtractor):
         page_data = self._page_data(json_obj)
 
         # find livestreams
-        live_schedule = page_data.get("stv_live_player_schedule")
-        if live_schedule:
-            return self._live_stream_from_schedule(
-                live_schedule, page_data.get("stv_linear_stream_id")
-            )
+        schedule_id = traverse_obj(
+            json_obj, "props/pageProps/scheduleId".split("/"), default=None
+        )
+        if schedule_id or "/jetzt-live" in url_parts.path:
+            return self._live_stream_from_schedule(page_data["stv_id"], schedule_id)
 
         # create playlist from query
         qid, filter_info = self._filter_query(json_obj, "all-videos", "upcoming")
