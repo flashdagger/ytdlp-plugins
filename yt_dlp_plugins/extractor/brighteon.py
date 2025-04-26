@@ -20,7 +20,7 @@ from yt_dlp.utils import (
     update_url_query,
 )
 
-__version__ = "2023.10.03"
+__version__ = "2024.04.26"
 
 
 class BrighteonIE(InfoExtractor):
