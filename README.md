@@ -7,8 +7,8 @@
 
 # brighteon.com support for yt-dlp
 
-* support for un-nested channels, categories and playlists
-* live stream support for brighteon.tv
+* support for un-nested channels and categories
+* live stream support for brighteon.tv was removed since the service is inoperable
 
 ## release notes
 
