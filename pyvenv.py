@@ -24,7 +24,7 @@ REQ_TXT = (CURRENT_PATH / "requirements.txt").relative_to(Path.cwd())
 REQ_IN = CURRENT_PATH / "requirements.in"
 WINDOWS = sys.platform.startswith("win")
 LINUX = sys.platform.startswith("linux")
-
+MACOS = sys.platform.startswith("darwin")
 LOG = logging.getLogger("PYVENV")
 
 
@@ -80,7 +80,7 @@ def assert_python_version():
 def find_executable(name, path):
     if WINDOWS:
         bin_dir = path / "Scripts"
-    elif LINUX:
+    elif LINUX or MACOS:
         bin_dir = path / "bin"
     else:
         return None
@@ -184,6 +184,7 @@ def package_executable(venv_path: Path, package_name, executable_name):
 
 
 def sync(venv_path: Path):
+    print(venv_path)
     python_executable = venv_python(venv_path)
     assert python_executable, "{} not found".format(python_executable)
 

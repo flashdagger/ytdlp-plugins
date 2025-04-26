@@ -7,9 +7,9 @@ if [ -z "$PS1" ] ; then
     exit
 fi
 
-SCRIPT_PATH=$(dirname $(realpath -s $CUR_FILE))
+SCRIPT_PATH=$(dirname $(realpath $CUR_FILE))
 VENV_SCRIPT=${SCRIPT_PATH}/pyvenv.py
-VENV_PATH=${VIRTUAL_ENV:-${SCRIPT_PATH}/venv_lx}
+VENV_PATH=${VIRTUAL_ENV:-${SCRIPT_PATH}/.venv}
 ACTIVATE_SH=${VENV_PATH}/bin/activate
 
-python3 $VENV_SCRIPT --min-version 3.6 -r requirements.pypy.txt --path $VENV_PATH && source $ACTIVATE_SH
+python3 $VENV_SCRIPT --min-version 3.6 -r requirements.txt --path $VENV_PATH && source $ACTIVATE_SH
