@@ -1,6 +1,6 @@
 # coding: utf-8
 import re
-from typing import Any, Dict, Iterator, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
 from urllib.parse import parse_qsl, urlparse, urlunparse
 
 from yt_dlp.extractor.common import InfoExtractor
@@ -26,10 +26,7 @@ class ServusTVIE(InfoExtractor):
     _VALID_URL = r"""(?x)
                     https?://
                         (?:www\.)?servustv\.com/
-                        (?:
-                            videos | (?: [\w-]+/(?: v | [abkp] ) )
-                        )
-                        /(?P<id>[A-Za-z0-9-]+)
+                        (?: [\w-]+ / [abkpv] / )? (?P<id>[A-Za-z0-9-]+)
                     """
 
     PAGE_SIZE = 20
@@ -50,47 +47,22 @@ class ServusTVIE(InfoExtractor):
     _TESTS = [
         {
             # new URL schema
-            "url": "https://www.servustv.com/wissen/v/aa-28wxkyg3s1w11/",
+            "url": "https://www.servustv.com/wissen/v/aal97b7ww3e22jrymhse/",
             "info_dict": {
-                "id": "aa-28wxkyg3s1w11",
+                "id": "aal97b7ww3e22jrymhse",
                 "ext": "mp4",
-                "title": "Faszinierende Lebensräume",
-                "series": "P.M. Wissen Best Of",
-                "season_number": 4,
-                "episode_number": 5,
-                "description": "Wir betrachten sie in der Vergangenheit, Gegenwart und Zukunft",
-                "duration": 2793,
+                "title": "Bunte Antike?",
+                "series": "P.M. Wissen",
+                "season_number": 1,
+                "episode_number": 176,
+                "description": "Thema u.a.: Wie Forscher Farben aus der R\u00f6merzeit wieder leuchten lassen",
+                "duration": 2837,
                 "timestamp": int,
-                "categories": ["P.M. Wissen Best Of"],
+                "categories": ["P.M. Wissen"],
                 "age_limit": 0,
-                "upload_date": "20241003",
+                "upload_date": "20240229",
                 "is_live": False,
-                "thumbnail": r"re:^https?://.*\.jpg",
-            },
-            "params": {
-                "skip_download": True,
-                "format": "bestvideo",
-                "geo_bypass_country": "DE",
-            },
-        },
-        {
-            # old URL schema
-            "url": "https://www.servustv.com/videos/aa-28wxkyg3s1w11/",
-            "info_dict": {
-                "id": "aa-28wxkyg3s1w11",
-                "ext": "mp4",
-                "title": "Faszinierende Lebensräume",
-                "series": "P.M. Wissen Best Of",
-                "season_number": 4,
-                "episode_number": 5,
-                "description": "Wir betrachten sie in der Vergangenheit, Gegenwart und Zukunft",
-                "duration": 2793,
-                "timestamp": int,
-                "categories": ["P.M. Wissen Best Of"],
-                "age_limit": 0,
-                "upload_date": "20241003",
-                "is_live": False,
-                "thumbnail": r"re:^https?://.*\.jpg",
+                "thumbnail": r"re:^https?://.*\.jpeg",
             },
             "params": {
                 "skip_download": True,
@@ -141,7 +113,7 @@ class ServusTVIE(InfoExtractor):
         },
         {
             # main live stream
-            "url": "https://www.servustv.com/allgemein/p/jetzt-live/119753/",
+            "url": "https://www.servustv.com/jetzt-live/",
             "info_dict": {
                 "id": str,
                 "ext": "mp4",
@@ -412,35 +384,28 @@ class ServusTVIE(InfoExtractor):
 
     def _entries_from_blocks(self, blocks: Sequence[AnyDict]) -> Iterator[AnyDict]:
         """return url results or multiple playlists"""
-        categories: Dict[str, AnyDict] = {}
+        entries = []
 
         def flatten(_blocks: Sequence[AnyDict], depth=0):
             for _block in _blocks:
-                post = _block.get("post", {})
-                if "/v/" in post.get("link", ""):
+                heading = traverse_obj(_block, ("attrs", "heading")) or ""
+                if depth == 0 and heading.endswith("Sendung verpasst?"):
+                    flatten(_block.get("innerBlocks", ()), depth=depth + 1)
+                elif depth == 1:
+                    post = _block.get("post", {})
                     category = post.get("stv_category_name")
-                    entries = categories.setdefault(str(category), {})
                     entry = self._url_entry_from_post(
                         post, url_transparent=True, _block=category
                     )
-                    entries[entry["id"]] = entry
-                if depth == 0:
-                    flatten(_block.get("innerBlocks", ()), depth=depth + 1)
-                    break
+                    entries.append(entry)
 
         flatten(blocks)
-        if len(categories) == 1:
-            yield from categories.popitem()[1].values()
-        else:
-            for name, entry_map in categories.items():
-                info = self.playlist_result(
-                    list(entry_map.values()),
-                    playlist_id=name.lower().replace(" ", "_"),
-                    playlist_title=name,
-                    extractor=self.IE_NAME,
-                    extractor_key=self.ie_key(),
-                )
-                yield info
+        info = self.playlist_result(
+            list(entries),
+            extractor=self.IE_NAME,
+            extractor_key=self.ie_key(),
+        )
+        yield info
 
     @staticmethod
     def _page_data(json_obj: AnyDict) -> AnyDict:
@@ -482,7 +447,7 @@ class ServusTVIE(InfoExtractor):
             self.to_screen(f"Set timezone to {self.timezone!r}")
 
         # single video
-        if "/v/" in url_parts.path or url_parts.path.startswith("/videos/"):
+        if "/v/" in url_parts.path:
             return self._entry_by_id(video_id)
 
         webpage = self._download_webpage(url, video_id=video_id)
@@ -498,16 +463,28 @@ class ServusTVIE(InfoExtractor):
                 json_obj, "props/pageProps/geo".split("/"), default=None
             )
 
-        page_data = self._page_data(json_obj)
-
         # find livestreams
-        schedule_id = traverse_obj(
-            json_obj, "props/pageProps/scheduleId".split("/"), default=None
+        channel_id = traverse_obj(
+            json_obj, "props/pageProps/initChannelId".split("/"), default=None
         )
-        if schedule_id or "/jetzt-live" in url_parts.path:
-            return self._live_stream_from_schedule(page_data["stv_id"], schedule_id)
+
+        if channel_id:
+            for item in traverse_obj(
+                json_obj, "props/pageProps/miniGuideData".split("/"), default=()
+            ):
+                if item["channelId"] == channel_id:
+                    page_data = item["pageData"]
+                    break
+            else:
+                raise UnsupportedError(url)
+
+            return self._live_stream_from_schedule(page_data["stv_id"], channel_id)
 
         # create playlist from query
+        page_data = self._page_data(json_obj)
+        if not page_data:
+            raise UnsupportedError(url)
+
         qid, filter_info = self._filter_query(json_obj, "all-videos", "upcoming")
         if filter_info:
             return self.playlist_result(
@@ -517,9 +494,9 @@ class ServusTVIE(InfoExtractor):
             )
 
         # create playlist from block data
-        embedded_video = page_data.get("stv_embedded_video")
-        entries = [self._url_entry_from_post(embedded_video)] if embedded_video else []
-        entries.extend(self._entries_from_blocks(page_data.get("blocks", ())))
+
+        entries: List[AnyDict] = []
+        entries.extend(self._entries_from_blocks(page_data["blocks"]))
         if not entries:
             raise UnsupportedError(url)
 
