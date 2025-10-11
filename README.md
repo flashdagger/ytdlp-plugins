@@ -9,7 +9,6 @@
 
 
 * supported domains: [servustv.com](https://servustv.com) 
-* unsupported domain: [pm-wissen.com](https://pm-wissen.com)
 * supported live channels:
   * [Hauptkanal](https://www.servustv.com/allgemein/p/jetzt-live/119753/) 
   * [Wetterpanorama](https://www.servustv.com/aktuelles/v/aa9bgcvsvf7sq8y4sm14/) 
