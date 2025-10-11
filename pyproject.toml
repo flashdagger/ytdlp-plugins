@@ -73,8 +73,11 @@ addopts = "test -v --tb=line -W ignore::DeprecationWarning"
 cache_dir = ".cache/pytest"
 
 [tool.mypy]
-python_version = "3.7"
+python_version = "3.9"
 cache_dir = ".cache/mypy"
 namespace_packages = true
 exclude = "build|venv"
 ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"
