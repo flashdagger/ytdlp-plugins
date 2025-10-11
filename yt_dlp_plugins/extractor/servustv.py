@@ -1,13 +1,14 @@
 # coding: utf-8
 import re
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
-from urllib.parse import parse_qsl, urlparse, urlunparse
+from itertools import count
+from typing import Any, Dict, Optional, Sequence
+from urllib.parse import parse_qsl, urlparse
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     ExtractorError,
     GeoRestrictedError,
-    OnDemandPagedList,
+    LazyList,
     UnsupportedError,
     get_element_by_id,
     int_or_none,
@@ -35,6 +36,7 @@ class ServusTVIE(InfoExtractor):
     _GEO_BYPASS = False
 
     _API_URL = "https://api-player.redbull.com/stv/servus-tv-playnet"
+    _ASSET_API_URL = "https://www.servustv.com/api/v1/media-asset/landing-page-archive/"
     _LOGO = "https://presse.servustv.com/Content/76166/cfbc6a68-fd77-46d6-8149-7f84f76efe5c/"
 
     _LIVE_URLS = {
@@ -108,7 +110,7 @@ class ServusTVIE(InfoExtractor):
                 "geo_bypass_country": "AT",
                 "format": "bestvideo",
                 "skip_download": True,
-                "playlist_items": "4,3",
+                "playlist_items": "2,4",
             },
         },
         {
@@ -134,7 +136,7 @@ class ServusTVIE(InfoExtractor):
         },
         {
             # topic live stream
-            "url": "https://www.servustv.com/natur/k/natur-kanal/269299/",
+            "url": "https://www.servustv.com/natur/k/natur-kanal/pn5265d2299446c/",
             "info_dict": {
                 "id": str,
                 "ext": "re:m3u8|m4a",
@@ -352,61 +354,6 @@ class ServusTVIE(InfoExtractor):
 
         return self._entry_by_id(aa_id.lower(), video_url=video_url, is_live=True)
 
-    def _paged_playlist_by_query(self, url: str, qid: str):
-        url_parts = urlparse(url)
-        url_query = dict(parse_qsl(url_parts.query))
-        # pylint: disable=protected-access
-        # noinspection PyProtectedMember
-        query_api_url = urlunparse(url_parts._replace(query="", fragment=""))
-
-        json_query = {
-            **url_query,
-            "geo_override": self.country_code,
-            "post_type": "media_asset",
-            # "filter_playability": "true",
-            "per_page": self.PAGE_SIZE,
-        }
-
-        def fetch_page(page_number: int) -> Iterator[AnyDict]:
-            json_query.update({"page": page_number + 1})
-            info = self._download_json(
-                query_api_url,
-                query=json_query,
-                video_id=qid,
-                note=f"Downloading entries "
-                f"{page_number * self.PAGE_SIZE + 1}-{(page_number + 1) * self.PAGE_SIZE}",
-            )
-
-            for post in info["posts"]:
-                yield self._url_entry_from_post(post)
-
-        return OnDemandPagedList(fetch_page, self.PAGE_SIZE)
-
-    def _entries_from_blocks(self, blocks: Sequence[AnyDict]) -> Iterator[AnyDict]:
-        """return url results or multiple playlists"""
-        entries = []
-
-        def flatten(_blocks: Sequence[AnyDict], depth=0):
-            for _block in _blocks:
-                heading = traverse_obj(_block, ("attrs", "heading")) or ""
-                if depth == 0 and heading.endswith("Sendung verpasst?"):
-                    flatten(_block.get("innerBlocks", ()), depth=depth + 1)
-                elif depth == 1:
-                    post = _block.get("post", {})
-                    category = post.get("stv_category_name")
-                    entry = self._url_entry_from_post(
-                        post, url_transparent=True, _block=category
-                    )
-                    entries.append(entry)
-
-        flatten(blocks)
-        info = self.playlist_result(
-            list(entries),
-            extractor=self.IE_NAME,
-            extractor_key=self.ie_key(),
-        )
-        yield info
-
     @staticmethod
     def _page_data(json_obj: AnyDict) -> AnyDict:
         for item in (
@@ -420,20 +367,25 @@ class ServusTVIE(InfoExtractor):
                 break
         return page_data
 
-    @staticmethod
-    def _filter_query(json_obj: AnyDict, *names: str) -> Tuple[str, AnyDict]:
-        data = traverse_obj(
-            json_obj,
-            "props/pageProps/initialLibData".split("/"),
-            "props/pageProps/data".split("/"),
-            default={},
-        )
-        for filter_info in data.get("filters", ()):
-            name = filter_info.get("value", "none")
-            if name in names:
-                return name, filter_info
-
-        return "none", {}
+    def _entries_from_api_query(self, category: str, video_id: str):
+        total = 0
+        for page in count(1):
+            info = self._download_json(
+                self._ASSET_API_URL,
+                query={
+                    "geo": self.country_code,
+                    "currentPage": page,
+                    "category": category,
+                    "newCurrentFilter": "allevideos",
+                },
+                video_id=video_id,
+                note=f"Downloading entries page {page}",
+            )
+            items = info.get("items", ())
+            total += len(items)
+            yield from (self._url_entry_from_post(post) for post in items)
+            if total >= info.get("count", 0):
+                return
 
     def _real_extract(self, url: str) -> AnyDict:
         video_id = self._match_id(url)
@@ -480,27 +432,15 @@ class ServusTVIE(InfoExtractor):
 
             return self._live_stream_from_schedule(page_data["stv_id"], channel_id)
 
-        # create playlist from query
         page_data = self._page_data(json_obj)
         if not page_data:
             raise UnsupportedError(url)
 
-        qid, filter_info = self._filter_query(json_obj, "all-videos", "upcoming")
-        if filter_info:
-            return self.playlist_result(
-                self._paged_playlist_by_query(filter_info["url"], qid=qid),
-                **self._playlist_meta(page_data, webpage),
-                playlist_count=filter_info.get("count", "N/A"),
-            )
-
-        # create playlist from block data
-
-        entries: List[AnyDict] = []
-        entries.extend(self._entries_from_blocks(page_data["blocks"]))
-        if not entries:
-            raise UnsupportedError(url)
-
+        # create playlist from api query
+        litems = self._entries_from_api_query(
+            category=page_data["stv_category_name"], video_id=video_id
+        )
         return self.playlist_result(
-            entries,
+            LazyList(litems),
             **self._playlist_meta(page_data, webpage),
         )
