@@ -1,6 +1,6 @@
 [project]
 name = "ytdlp-servustv"
-version = "2024.10.05"
+version = "2025.10.11"
 description = "yt-dlp extractor for servustv.com"
 readme = "README.md"
 authors = [
