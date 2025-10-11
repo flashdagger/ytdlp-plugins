@@ -1,14 +1,15 @@
 # coding: utf-8
 import re
-from itertools import count
-from typing import Any, Dict, Optional, Sequence
+from math import ceil
+from typing import Any, Dict, List, Optional, Sequence
 from urllib.parse import parse_qsl, urlparse
 
 from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     ExtractorError,
     GeoRestrictedError,
-    LazyList,
+    InAdvancePagedList,
+    OnDemandPagedList,
     UnsupportedError,
     get_element_by_id,
     int_or_none,
@@ -30,7 +31,7 @@ class ServusTVIE(InfoExtractor):
                         (?: [\w-]+ / [abkpv] / )? (?P<id>[A-Za-z0-9-]+)
                     """
 
-    PAGE_SIZE = 20
+    PAGE_SIZE = 12
     BASE_URL = "https://servustv.com/"
     _GEO_COUNTRIES = ["AT", "DE", "CH", "LI", "LU", "IT"]
     _GEO_BYPASS = False
@@ -334,7 +335,7 @@ class ServusTVIE(InfoExtractor):
                     "stv_teaser_title",
                 )
             ),
-            description=traverse_obj(post, "stv_teaser_description"),
+            description=post.get("stv_teaser_description"),
             duration=duration and duration * 0.001,
             **kwargs,
         )
@@ -354,38 +355,21 @@ class ServusTVIE(InfoExtractor):
 
         return self._entry_by_id(aa_id.lower(), video_url=video_url, is_live=True)
 
-    @staticmethod
-    def _page_data(json_obj: AnyDict) -> AnyDict:
-        for item in (
-            "videoData",
-            "data",
-        ):
-            page_data = traverse_obj(
-                json_obj, f"props/pageProps/{item}".split("/"), default={}
-            )
-            if page_data:
-                break
-        return page_data
-
-    def _entries_from_api_query(self, category: str, video_id: str):
-        total = 0
-        for page in count(1):
-            info = self._download_json(
-                self._ASSET_API_URL,
-                query={
-                    "geo": self.country_code,
-                    "currentPage": page,
-                    "category": category,
-                    "newCurrentFilter": "allevideos",
-                },
-                video_id=video_id,
-                note=f"Downloading entries page {page}",
-            )
-            items = info.get("items", ())
-            total += len(items)
-            yield from (self._url_entry_from_post(post) for post in items)
-            if total >= info.get("count", 0):
-                return
+    def _posts_from_api_query(
+        self, category: str, page: int, video_id: str
+    ) -> List[AnyDict]:
+        info = self._download_json(
+            self._ASSET_API_URL,
+            query={
+                "geo": self.country_code,
+                "currentPage": page,
+                "category": category,
+                "newCurrentFilter": "allevideos",
+            },
+            video_id=video_id,
+            note=f"Downloading entries page {page}",
+        )
+        return info.get("items", ())
 
     def _real_extract(self, url: str) -> AnyDict:
         video_id = self._match_id(url)
@@ -407,23 +391,17 @@ class ServusTVIE(InfoExtractor):
             json_obj = self._parse_json(
                 get_element_by_id(self.JSON_OBJ_ID, webpage), video_id
             )
+            page_props = traverse_obj(json_obj, ("props", "pageProps"))
         except TypeError as exc:
             raise ExtractorError("Cannot extract metadata.") from exc
 
         if self.country_override is None:
-            self.country_override = traverse_obj(
-                json_obj, "props/pageProps/geo".split("/"), default=None
-            )
+            self.country_override = page_props.get("geo")
 
         # find livestreams
-        channel_id = traverse_obj(
-            json_obj, "props/pageProps/initChannelId".split("/"), default=None
-        )
-
+        channel_id = page_props.get("initChannelId")
         if channel_id:
-            for item in traverse_obj(
-                json_obj, "props/pageProps/miniGuideData".split("/"), default=()
-            ):
+            for item in page_props.get("miniGuideData", ()):
                 if item["channelId"] == channel_id:
                     page_data = item["pageData"]
                     break
@@ -432,15 +410,32 @@ class ServusTVIE(InfoExtractor):
 
             return self._live_stream_from_schedule(page_data["stv_id"], channel_id)
 
-        page_data = self._page_data(json_obj)
+        # return playlist
+        def pagefunc(page):
+            initial_items = initial_libdata.get("items")
+            if page == 0 and initial_items:
+                yield from map(self._url_entry_from_post, initial_items)
+            else:
+                items = self._posts_from_api_query(
+                    page_data["stv_category_name"], page + 1, video_id
+                )
+                yield from map(self._url_entry_from_post, items)
+
+        page_data = page_props.get("data")
         if not page_data:
             raise UnsupportedError(url)
 
-        # create playlist from api query
-        litems = self._entries_from_api_query(
-            category=page_data["stv_category_name"], video_id=video_id
-        )
+        initial_libdata = page_props.get("initialLibData")
+        count: int = initial_libdata.get("count", 0)
+
+        if count:
+            page_count = ceil(count / self.PAGE_SIZE)
+            entries = InAdvancePagedList(pagefunc, page_count, self.PAGE_SIZE)
+        else:
+            entries = OnDemandPagedList(pagefunc, self.PAGE_SIZE)
+
         return self.playlist_result(
-            LazyList(litems),
+            entries,
             **self._playlist_meta(page_data, webpage),
+            playlist_count=count or "N/A",
         )
