@@ -1,16 +1,52 @@
-[tool.poetry]
+[project]
 name = "ytdlp-servustv"
 version = "2024.10.05"
-package-mode = false
+description = "yt-dlp extractor for servustv.com"
+readme = "README.md"
+authors = [
+    { name = "flashdagger", email = "flashdagger@googlemail.com" },
+]
+license = "Unlicense"
+requires-python = ">= 3.9"
+dependencies = [
+    "yt-dlp >= 2023.01.06",
+]
+keywords = [
+    "yt-dlp",
+    "youtube-dl",
+    "servustv",
+    "extractors",
+    "plugins",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Environment :: Plugins",
+    "Topic :: Multimedia :: Video",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
+
+
+[tool.poetry]
+packages = [{ include = "yt_dlp_plugins" }]
+
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.4"
 pytest-subtests = "*"
 pytest-xdist = "*"
 ytdlp-plugins = "*"
+
 
 [build-system]
 requires = ["poetry-core"]
