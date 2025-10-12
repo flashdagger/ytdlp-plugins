@@ -425,7 +425,7 @@ class ServusTVIE(InfoExtractor):
         if not page_data:
             raise UnsupportedError(url)
 
-        initial_libdata = page_props.get("initialLibData")
+        initial_libdata = page_props.get("initialLibData", {})
         count: int = initial_libdata.get("count", 0)
 
         if count:
