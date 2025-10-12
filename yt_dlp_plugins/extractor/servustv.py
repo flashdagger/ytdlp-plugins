@@ -323,11 +323,12 @@ class ServusTVIE(InfoExtractor):
         }
 
     def _url_entry_from_post(self, post: AnyDict, **kwargs) -> AnyDict:
-        duration = int_or_none(traverse_obj(post, ("stv_duration", "raw")))
-        return self.url_result(
-            urljoin(self.BASE_URL, post["link"]),
-            video_id=post.get("slug"),
-            video_title=unescapeHTML(
+        return {
+            "_type": "url_transparent",
+            "ie_key": self.ie_key(),
+            "id": post.get("slug"),
+            "url": urljoin(self.BASE_URL, post["link"]),
+            "title": unescapeHTML(
                 traverse_obj(
                     post,
                     ("title", "rendered"),
@@ -335,10 +336,18 @@ class ServusTVIE(InfoExtractor):
                     "stv_teaser_title",
                 )
             ),
-            description=post.get("stv_teaser_description"),
-            duration=duration and duration * 0.001,
+            "description": post.get("stv_teaser_description"),
+            "duration": (
+                int_or_none(traverse_obj(post, ("stv_duration", "raw")), scale=1000)
+            ),
+            "timestamp": (
+                int_or_none(traverse_obj(post, ("stv_date", "raw")), scale=1000)
+            ),
+            "release_timestamp": (
+                int_or_none(traverse_obj(post, ("stv_sunrise", "raw")), scale=1000)
+            ),
             **kwargs,
-        )
+        }
 
     def _live_stream_from_schedule(
         self, aa_id: str, stream_id: Optional[str]
