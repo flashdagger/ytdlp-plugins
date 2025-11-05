@@ -9,6 +9,7 @@ from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import (
     ExtractorError,
     OnDemandPagedList,
+    UnsupportedError,
     clean_html,
     parse_duration,
     parse_iso8601,
@@ -54,7 +55,6 @@ class Auf1IE(InfoExtractor):
             "info_dict": {
                 "id": "nachrichten-auf1",
                 "title": "Nachrichten AUF1",
-                "description": "md5:f86e25c5142e2593c6a56d379ceac57e",
             },
             "playlist_mincount": 100,
         },
@@ -245,16 +245,18 @@ class Auf1IE(InfoExtractor):
         data.update((query or {}))
         payload = {"queries": [data]}
         max_hits = traverse_obj(data, ("limit",), ("hitsPerPage",), default=None)
+
         if "offset" in data and max_hits:
             _from = int(data["offset"]) + 1
             _to = _from + max_hits - 1
-            items = f" {_from}-{_to}"
+            items = f"{_from}-{_to}"
         elif "page" in data and max_hits:
             _from = (int(data["page"]) - 1) * max_hits + 1
             _to = _from + max_hits - 1
-            items = f" {_from}-{_to}"
+            items = f"{_from}-{_to}"
         else:
             items = ""
+
         try:
             return self._download_json(
                 "https://auf1.tv/findme/multi-search",
@@ -264,16 +266,33 @@ class Auf1IE(InfoExtractor):
                     "Content-Type": "application/json",
                 },
                 data=json.dumps(payload).encode("utf-8"),
-                note=f"requesting items{items}",
+                note=f"requesting items {items}",
                 errnote="Unable to get response from search API",
             )["results"][0]
         except ExtractorError:
             self._search_api_key(force_refresh=True)
             raise
 
-    def _facets(self):
-        result = self._searchapi({"q": "", "facets": ["show_name"]})
-        return traverse_obj(result, ("facetDistribution", "show_name"), default={})
+    def _playlist_from_show(self, show_name, playlist_id):
+        pagesize = 100
+        _filter = f"show_name={show_name!r}" if show_name else "show_name IS NOT EMPTY"
+
+        def load_page(page):
+            result = self._searchapi(
+                {
+                    "offset": page * pagesize,
+                    "limit": pagesize,
+                    "filter": _filter,
+                },
+            )
+            yield from map(self.url_entry, result["hits"])
+
+        return self.playlist_result(
+            entries=OnDemandPagedList(load_page, pagesize),
+            playlist_id=playlist_id,
+            playlist_title=show_name or "Alle Videos",
+            playlist_count=1000,
+        )
 
     def _real_extract(self, url):
         category, page_id = self._match_valid_url(url).groups()
@@ -291,40 +310,16 @@ class Auf1IE(InfoExtractor):
 
         # video playlist
         if page_id.startswith("videos"):
-            pagesize = 100
-            show_name = params.get("sendung", [""])[0]
-            _filter = (
-                f"show_name={show_name!r}" if show_name else "show_name IS NOT EMPTY"
+            return self._playlist_from_show(
+                params.get("sendung", [""])[0], "all_videos"
             )
 
-            def load_page(page):
-                result = self._searchapi(
-                    {
-                        "offset": page * pagesize,
-                        "limit": pagesize,
-                        "filter": _filter,
-                    },
-                )
-                yield from map(self.url_entry, result["hits"])
+        html = self._download_webpage(url, page_id)
+        title = self._og_search_title(html)
+        if not title:
+            raise UnsupportedError(url)
 
-            return self.playlist_result(
-                entries=OnDemandPagedList(load_page, pagesize),
-                playlist_id="all_videos",
-                playlist_title=show_name or "Alle Videos",
-            )
-
-        try:
-            payload = self._payloadjson(url, page_id)
-        except ExtractorError as exc:
-            self.report_warning(exc, page_id)
-            payload = self.call_api(f"getShow/{page_id}", page_id)
-
-        return self.playlist_result(
-            map(self.url_entry, payload.get("contents")),
-            playlist_id=page_id,
-            playlist_title=payload.get("name"),
-            description=clean_html(payload.get("description")),
-        )
+        return self._playlist_from_show(title, page_id)
 
 
 # pylint: disable=abstract-method
