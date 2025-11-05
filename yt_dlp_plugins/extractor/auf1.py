@@ -12,8 +12,8 @@ from yt_dlp.utils import (
     clean_html,
     parse_duration,
     parse_iso8601,
-    traverse_obj,
     parse_qs,
+    traverse_obj,
 )
 
 __version__ = "2024.03.16"
@@ -54,7 +54,7 @@ class Auf1IE(InfoExtractor):
             "info_dict": {
                 "id": "nachrichten-auf1",
                 "title": "Nachrichten AUF1",
-                "description": "md5:2036aadd56448b0270e30c454a54e9a9",
+                "description": "md5:f86e25c5142e2593c6a56d379ceac57e",
             },
             "playlist_mincount": 100,
         },
@@ -245,11 +245,11 @@ class Auf1IE(InfoExtractor):
         data.update((query or {}))
         max_hits = traverse_obj(data, ("limit",), ("hitsPerPage",), default=None)
         if "offset" in data and max_hits:
-            _from = data["offset"] + 1
+            _from = int(data["offset"]) + 1
             _to = _from + max_hits - 1
             items = f" {_from}-{_to}"
         elif "page" in data and max_hits:
-            _from = (data["page"] - 1) * max_hits + 1
+            _from = (int(data["page"]) - 1) * max_hits + 1
             _to = _from + max_hits - 1
             items = f" {_from}-{_to}"
         else:
