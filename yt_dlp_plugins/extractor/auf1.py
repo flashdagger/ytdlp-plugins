@@ -239,10 +239,11 @@ class Auf1IE(InfoExtractor):
 
     def _searchapi(self, query=None):
         """
-        uses meilisearch [see https://www.meilisearch.com/docs/reference/api/search]
+        uses meilisearch [see https://www.meilisearch.com/docs/reference/api/multi_search]
         """
-        data = {"q": "", "sort": ["published_at:desc"]}
+        data = {"indexUid": "frontend", "q": "", "sort": ["published_at:desc"]}
         data.update((query or {}))
+        payload = {"queries": [data]}
         max_hits = traverse_obj(data, ("limit",), ("hitsPerPage",), default=None)
         if "offset" in data and max_hits:
             _from = int(data["offset"]) + 1
@@ -256,16 +257,16 @@ class Auf1IE(InfoExtractor):
             items = ""
         try:
             return self._download_json(
-                "https://auf1.tv/findme/indexes/contents/search",
+                "https://auf1.tv/findme/multi-search",
                 "search API",
                 headers={
                     "Authorization": f"Bearer {self._search_api_key()}",
                     "Content-Type": "application/json",
                 },
-                data=json.dumps(data).encode("utf-8"),
+                data=json.dumps(payload).encode("utf-8"),
                 note=f"requesting items{items}",
                 errnote="Unable to get response from search API",
-            )
+            )["results"][0]
         except ExtractorError:
             self._search_api_key(force_refresh=True)
             raise
@@ -292,13 +293,15 @@ class Auf1IE(InfoExtractor):
         if page_id.startswith("videos"):
             pagesize = 100
             show_name = params.get("sendung", [""])[0]
-            _filter = f"show_name={show_name!r}" if show_name else None
+            _filter = (
+                f"show_name={show_name!r}" if show_name else "show_name IS NOT EMPTY"
+            )
 
             def load_page(page):
                 result = self._searchapi(
                     {
-                        "page": page + 1,
-                        "hitsPerPage": pagesize,
+                        "offset": page * pagesize,
+                        "limit": pagesize,
                         "filter": _filter,
                     },
                 )
@@ -308,7 +311,6 @@ class Auf1IE(InfoExtractor):
                 entries=OnDemandPagedList(load_page, pagesize),
                 playlist_id="all_videos",
                 playlist_title=show_name or "Alle Videos",
-                playlist_count=1000,
             )
 
         try:
