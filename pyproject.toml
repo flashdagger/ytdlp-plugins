@@ -1,6 +1,61 @@
+[project]
+name = "ytdlp-auf1"
+version = "2024.03.16"
+description = "yt-dlp extractor for auf1.tv"
+readme = "README.md"
+authors = [
+    { name = "flashdagger", email = "flashdagger@googlemail.com" },
+]
+license = "Unlicense"
+requires-python = ">= 3.9"
+dependencies = [
+    "yt-dlp >= 2023.01.06",
+]
+keywords = [
+    "yt-dlp",
+    "youtube-dl",
+    "auf1",
+    "extractors",
+    "plugins",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Environment :: Plugins",
+    "Topic :: Multimedia :: Video",
+]
+
+
+
+[tool.poetry]
+packages = [{ include = "yt_dlp_plugins" }]
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.4"
+pytest-subtests = "*"
+pytest-xdist = "*"
+ytdlp-plugins = "*"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
 [tool.black]
 line-length = 88
-target_version = ['py37', 'py38', 'py39', 'py310']
+target_version = ['py39', 'py310', 'py311', 'py312']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -18,8 +73,11 @@ addopts = "test -v --tb=line -W ignore::DeprecationWarning"
 cache_dir = ".cache/pytest"
 
 [tool.mypy]
-python_version = "3.7"
+python_version = "3.9"
 cache_dir = ".cache/mypy"
 namespace_packages = true
 exclude = "build|venv"
 ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"

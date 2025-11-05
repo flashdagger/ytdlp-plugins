@@ -1,6 +1,0 @@
-# dev requirements
--e file:.
-pytest
-pytest-subtests
-pytest-xdist
-ytdlp-plugins
