@@ -17,7 +17,7 @@ from yt_dlp.utils import (
     traverse_obj,
 )
 
-__version__ = "2024.03.16"
+__version__ = "2025.11.09"
 
 
 # pylint: disable=abstract-method

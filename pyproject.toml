@@ -1,6 +1,6 @@
 [project]
 name = "ytdlp-auf1"
-version = "2024.03.16"
+version = "2025.11.09"
 description = "yt-dlp extractor for auf1.tv"
 readme = "README.md"
 authors = [
